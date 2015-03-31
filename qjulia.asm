@@ -18,7 +18,7 @@ section '.text' code readable executable
   }
 ;========================================================================
   align 16
-  update:
+  generate_fractal:
                     push  rsi rdi rbx rbp r12 r13 r14 r15
                      sub  rsp,24
     .for_each_tile:
@@ -163,6 +163,20 @@ section '.text' code readable executable
     .k_1000000_0 dq 1000000.0
 ;========================================================================
   align 16
+  update:
+                     sub  rsp,8
+            vbroadcastss  ymm0,[eyepxyz]
+            vbroadcastss  ymm1,[eyepxyz+4]
+            vbroadcastss  ymm2,[eyepxyz+8]
+            vbroadcastss  ymm3,[eyefxyz]
+            vbroadcastss  ymm4,[eyefxyz+4]
+            vbroadcastss  ymm5,[eyefxyz+8]
+                     mov  [tileidx],0
+                    call  generate_fractal
+                     add  rsp,8
+                     ret
+;========================================================================
+  align 16
   init:
                      sub  rsp,8
                   invoke  GetModuleHandle,0
@@ -246,7 +260,6 @@ section '.text' code readable executable
                       je  .quit
                      jmp  .main_loop
     @@:
-                     mov  [tileidx],0
                     call  update_frame_stats
                     call  update
                   invoke  BitBlt,[win_hdc],0,0,k_win_width,k_win_height,[bmp_hdc],0,0,SRCCOPY
@@ -319,6 +332,12 @@ section '.data' data readable writeable
 
   displayptr dq 0
   tileidx dd 0,0
+
+  eyepxyz dd 0.0,0.0,7.0
+  eyefxyz dd 0.0,0.0,0.0
+
+  align 32
+
 
 ;========================================================================
 section '.idata' import data readable writeable
