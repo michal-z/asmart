@@ -171,6 +171,11 @@ section '.text' code readable executable
             vbroadcastss  ymm3,[eyefxyz]
             vbroadcastss  ymm4,[eyefxyz+4]
             vbroadcastss  ymm5,[eyefxyz+8]
+                  vsubps  ymm0,ymm0,ymm3
+                  vsubps  ymm1,ymm1,ymm4
+                  vsubps  ymm2,ymm2,ymm5
+                  vmulps  ymm3,ymm0,ymm0
+
                      mov  [tileidx],0
                     call  generate_fractal
                      add  rsp,8
