@@ -165,18 +165,36 @@ section '.text' code readable executable
   align 16
   update:
                      sub  rsp,8
-            vbroadcastss  ymm0,[eyepxyz]
-            vbroadcastss  ymm1,[eyepxyz+4]
-            vbroadcastss  ymm2,[eyepxyz+8]
+              iaca_begin
+            vbroadcastss  ymm0,[eyepxyz]                ; ymm0 = eye x pos
             vbroadcastss  ymm3,[eyefxyz]
+            vbroadcastss  ymm1,[eyepxyz+4]              ; ymm1 = eye y pos
             vbroadcastss  ymm4,[eyefxyz+4]
+            vbroadcastss  ymm2,[eyepxyz+8]              ; ymm2 = eye z pos
             vbroadcastss  ymm5,[eyefxyz+8]
-                  vsubps  ymm0,ymm0,ymm3
-                  vsubps  ymm1,ymm1,ymm4
-                  vsubps  ymm2,ymm2,ymm5
-                  vmulps  ymm3,ymm0,ymm0
-
-                     mov  [tileidx],0
+                  vsubps  ymm3,ymm0,ymm3
+                  vsubps  ymm4,ymm1,ymm4
+                  vsubps  ymm5,ymm2,ymm5
+                  vmulps  ymm6,ymm3,ymm3
+             vfmadd231ps  ymm6,ymm4,ymm4
+             vfmadd231ps  ymm6,ymm5,ymm5
+                vrsqrtps  ymm6,ymm6
+                  vmulps  ymm3,ymm3,ymm6
+                  vmulps  ymm4,ymm4,ymm6
+                  vmulps  ymm5,ymm5,ymm6                ; (ymm3,ymm4,ymm5) = normalized(iz)
+                  vxorps  ymm8,ymm8,ymm8
+                  vsubps  ymm8,ymm8,ymm3
+                  vxorps  ymm7,ymm7,ymm7
+                 vmovaps  ymm6,ymm5                     ; (ymm6,ymm7,ymm8) = ix
+                  vmulps  ymm9,ymm8,ymm8
+                  vmulps  ymm10,ymm6,ymm6
+                  vaddps  ymm9,ymm9,ymm10
+                vrsqrtps  ymm9,ymm9
+                  vmulps  ymm6,ymm6,ymm9
+                  vmulps  ymm8,ymm8,ymm9                ; (ymm6,ymm7,ymm8) = normalized(ix)
+                iaca_end
+                     xor  eax,eax
+               lock xchg  [tileidx],eax
                     call  generate_fractal
                      add  rsp,8
                      ret
