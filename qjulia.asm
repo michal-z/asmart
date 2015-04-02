@@ -165,23 +165,27 @@ section '.text' code readable executable
   align 16
   update:
                      sub  rsp,8
-              iaca_begin
-            vbroadcastss  ymm0,[eyepxyz]                ; ymm0 = eye x pos
-            vbroadcastss  ymm3,[eyefxyz]
-            vbroadcastss  ymm1,[eyepxyz+4]              ; ymm1 = eye y pos
-            vbroadcastss  ymm4,[eyefxyz+4]
-            vbroadcastss  ymm2,[eyepxyz+8]              ; ymm2 = eye z pos
-            vbroadcastss  ymm5,[eyefxyz+8]
+            vbroadcastss  ymm0,[eye_position]           ; ymm0 = eye x pos
+            vbroadcastss  ymm3,[eye_focus]
+            vbroadcastss  ymm1,[eye_position+4]         ; ymm1 = eye y pos
+            vbroadcastss  ymm4,[eye_focus+4]
+            vbroadcastss  ymm2,[eye_position+8]         ; ymm2 = eye z pos
+            vbroadcastss  ymm5,[eye_focus+8]
                   vsubps  ymm3,ymm0,ymm3
                   vsubps  ymm4,ymm1,ymm4
                   vsubps  ymm5,ymm2,ymm5
                   vmulps  ymm6,ymm3,ymm3
-             vfmadd231ps  ymm6,ymm4,ymm4
-             vfmadd231ps  ymm6,ymm5,ymm5
+                  vmulps  ymm7,ymm4,ymm4
+                  vmulps  ymm8,ymm5,ymm5
+                  vaddps  ymm6,ymm6,ymm7
+                  vaddps  ymm6,ymm6,ymm8
                 vrsqrtps  ymm6,ymm6
                   vmulps  ymm3,ymm3,ymm6
                   vmulps  ymm4,ymm4,ymm6
                   vmulps  ymm5,ymm5,ymm6                ; (ymm3,ymm4,ymm5) = normalized(iz)
+                 vmovaps  [eye_zaxis],ymm3
+                 vmovaps  [eye_zaxis+32],ymm4
+                 vmovaps  [eye_zaxis+64],ymm5
                   vxorps  ymm8,ymm8,ymm8
                   vsubps  ymm8,ymm8,ymm3
                   vxorps  ymm7,ymm7,ymm7
@@ -192,7 +196,9 @@ section '.text' code readable executable
                 vrsqrtps  ymm9,ymm9
                   vmulps  ymm6,ymm6,ymm9
                   vmulps  ymm8,ymm8,ymm9                ; (ymm6,ymm7,ymm8) = normalized(ix)
-                iaca_end
+                 vmovaps  [eye_xaxis],ymm6
+                 vmovaps  [eye_xaxis+32],ymm7
+                 vmovaps  [eye_xaxis+64],ymm8
                      xor  eax,eax
                lock xchg  [tileidx],eax
                     call  generate_fractal
@@ -356,12 +362,13 @@ section '.data' data readable writeable
   displayptr dq 0
   tileidx dd 0,0
 
-  eyepxyz dd 0.0,0.0,7.0
-  eyefxyz dd 0.0,0.0,0.0
+  eye_position dd 0.0,0.0,7.0
+  eye_focus dd 0.0,0.0,0.0
 
   align 32
-
-
+  eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
+  eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
+  eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 ;========================================================================
 section '.idata' import data readable writeable
 
