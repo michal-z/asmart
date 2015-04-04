@@ -165,6 +165,7 @@ section '.text' code readable executable
   align 16
   update:
                      sub  rsp,8
+              iaca_begin
             vbroadcastss  ymm0,[eye_position]           ; ymm0 = eye x pos
             vbroadcastss  ymm3,[eye_focus]
             vbroadcastss  ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -199,6 +200,25 @@ section '.text' code readable executable
                  vmovaps  [eye_xaxis],ymm6
                  vmovaps  [eye_xaxis+32],ymm7
                  vmovaps  [eye_xaxis+64],ymm8
+                  vmulps  ymm9,ymm5,ymm7
+                  vmulps  ymm10,ymm3,ymm8
+                  vmulps  ymm11,ymm4,ymm6
+             vfmsub231ps  ymm9,ymm4,ymm8
+             vfmsub231ps  ymm10,ymm5,ymm6
+             vfmsub231ps  ymm11,ymm3,ymm7               ; (ymm9,ymm10,ymm11) = iy
+                  vmulps  ymm12,ymm9,ymm9
+                  vmulps  ymm13,ymm10,ymm10
+                  vmulps  ymm14,ymm11,ymm11
+                  vaddps  ymm12,ymm12,ymm13
+                  vaddps  ymm12,ymm12,ymm14
+                vrsqrtps  ymm12,ymm12
+                  vmulps  ymm9,ymm9,ymm12
+                  vmulps  ymm10,ymm10,ymm12
+                  vmulps  ymm11,ymm11,ymm12             ; (ymm9,ymm10,ymm11) = normalized(iy)
+                 vmovaps  [eye_yaxis],ymm9
+                 vmovaps  [eye_yaxis+32],ymm10
+                 vmovaps  [eye_yaxis+64],ymm11
+                iaca_end
                      xor  eax,eax
                lock xchg  [tileidx],eax
                     call  generate_fractal
