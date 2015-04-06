@@ -54,15 +54,43 @@ section '.text' code readable executable
                vcvtsi2ss  xmm1,xmm1,edx                           ; (0, 0, 0, yf = (float)(y - k_win_height / 2))
             vbroadcastss  ymm0,xmm0                               ; ymm0 = (xf ... xf)
             vbroadcastss  ymm1,xmm1                               ; ymm1 = (yf ... yf)
-                  vaddps  ymm0,ymm0,[.k_x_offset]
-                  vaddps  ymm1,ymm1,[.k_y_offset]
-                  vmulps  ymm0,ymm0,[.k_win_width_rcp]
-                  vmulps  ymm1,ymm1,[.k_win_height_rcp]
-                  vmulps  ymm0,ymm0,ymm0
-                  vmulps  ymm1,ymm1,ymm1
+                  vaddps  ymm0,ymm0,[generate_fractal@k_x_offset]
+                  vaddps  ymm1,ymm1,[generate_fractal@k_y_offset]
+                 vmovaps  ymm2,[generate_fractal@k_rd_z]
+                  vmulps  ymm0,ymm0,[generate_fractal@k_win_width_rcp]
+                  vmulps  ymm1,ymm1,[generate_fractal@k_win_height_rcp]
+                  vmulps  ymm3,ymm0,[eye_xaxis]
+                  vmulps  ymm4,ymm0,[eye_yaxis]
+                  vmulps  ymm5,ymm0,[eye_zaxis]
+                  vmulps  ymm6,ymm1,[eye_xaxis+32]
+                  vmulps  ymm7,ymm1,[eye_yaxis+32]
+                  vmulps  ymm8,ymm1,[eye_zaxis+32]
+                  vmulps  ymm9,ymm2,[eye_xaxis+64]
+                  vmulps  ymm10,ymm2,[eye_yaxis+64]
+                  vmulps  ymm11,ymm2,[eye_zaxis+64]
+                  vaddps  ymm3,ymm3,ymm4
+                  vaddps  ymm6,ymm6,ymm7
+                  vaddps  ymm9,ymm9,ymm10
+                  vaddps  ymm3,ymm3,ymm5
+                  vaddps  ymm6,ymm6,ymm8
+                  vaddps  ymm9,ymm9,ymm11
+            vbroadcastss  ymm0,[eye_position]
+            vbroadcastss  ymm1,[eye_position+32]
+            vbroadcastss  ymm2,[eye_position+64]
+                  vmulps  ymm10,ymm3,ymm3
+                  vmulps  ymm11,ymm6,ymm6
+                  vmulps  ymm12,ymm9,ymm9
+                  vaddps  ymm10,ymm10,ymm11
+                  vaddps  ymm10,ymm10,ymm12
+                  vmulps  ymm3,ymm3,ymm10
+                  vmulps  ymm4,ymm6,ymm10
+                  vmulps  ymm5,ymm9,ymm10
+                    ;call  raymarch_distance
+                  ;vmulps  ymm0,ymm0,ymm0
+                  ;vmulps  ymm1,ymm1,ymm1
                   vxorps  ymm4,ymm4,ymm4                          ; ymm4 = (0 ... 0)
-                 vmovaps  ymm3,[.k_1_0]                           ; ymm3 = (1.0 ... 1.0)
-                 vmovaps  ymm2,[.k_255_0]                         ; ymm2 = (255.0 ... 255.0)
+                 vmovaps  ymm3,[k_1_0]                            ; ymm3 = (1.0 ... 1.0)
+                 vmovaps  ymm2,[k_255_0]                          ; ymm2 = (255.0 ... 255.0)
                   vmaxps  ymm0,ymm0,ymm4
                   vmaxps  ymm1,ymm1,ymm4
                   vminps  ymm0,ymm0,ymm3
@@ -90,14 +118,6 @@ section '.text' code readable executable
                      add  rsp,24
                      pop  r15 r14 r13 r12 rbp rbx rdi rsi
                      ret
-    align 32
-    .k_color: dd 8 dup 0xffffffff
-    .k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-    .k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-    .k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
-    .k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
-    .k_255_0: dd 8 dup 255.0
-    .k_1_0: dd 8 dup 1.0
 ;========================================================================
   align 16
   get_time:
@@ -140,7 +160,7 @@ section '.text' code readable executable
                   vmovss  [time_delta],xmm1
                   vmovsd  xmm1,[update_frame_stats@prev_update_time]      ; xmm1 = (0, prev_update_time)
                   vsubsd  xmm2,xmm0,xmm1                                  ; xmm2 = (0, time - prev_update_time)
-                  vmovsd  xmm3,[.k_1_0]                                   ; xmm3 = (0, 1.0)
+                  vmovsd  xmm3,[update_frame_stats@k_1_0]                 ; xmm3 = (0, 1.0)
                  vcomisd  xmm2,xmm3
                       jb  @f
                   vmovsd  [update_frame_stats@prev_update_time],xmm0
@@ -149,7 +169,7 @@ section '.text' code readable executable
                vcvtsi2sd  xmm1,xmm1,eax                                   ; xmm1 = (0, frame)
                   vdivsd  xmm0,xmm1,xmm2                                  ; xmm0 = (0, frame / (time - prev_update_time))
                   vdivsd  xmm1,xmm2,xmm1
-                  vmulsd  xmm1,xmm1,[.k_1000000_0]
+                  vmulsd  xmm1,xmm1,[update_frame_stats@k_1000000_0]
                vcvtsd2si  r10,xmm0
                vcvtsd2si  r11,xmm1
                      mov  [update_frame_stats@frame],0
@@ -158,14 +178,11 @@ section '.text' code readable executable
     @@:              add  [update_frame_stats@frame],1
                      add  rsp,8
                      ret
-    align 8
-    .k_1_0 dq 1.0
-    .k_1000000_0 dq 1000000.0
 ;========================================================================
   align 16
   update:
                      sub  rsp,8
-              iaca_begin
+              ;iaca_begin
             vbroadcastss  ymm0,[eye_position]           ; ymm0 = eye x pos
             vbroadcastss  ymm3,[eye_focus]
             vbroadcastss  ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -218,7 +235,7 @@ section '.text' code readable executable
                  vmovaps  [eye_yaxis],ymm9
                  vmovaps  [eye_yaxis+32],ymm10
                  vmovaps  [eye_yaxis+64],ymm11
-                iaca_end
+                ;iaca_end
                      xor  eax,eax
                lock xchg  [tileidx],eax
                     call  generate_fractal
@@ -378,6 +395,8 @@ section '.data' data readable writeable
   update_frame_stats@prev_time dq 0
   update_frame_stats@prev_update_time dq 0
   update_frame_stats@frame dd 0,0
+  update_frame_stats@k_1000000_0 dq 1000000.0
+  update_frame_stats@k_1_0 dq 1.0
 
   displayptr dq 0
   tileidx dd 0,0
@@ -389,6 +408,17 @@ section '.data' data readable writeable
   eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
   eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
   eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
+
+  align 32
+  generate_fractal@k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
+  generate_fractal@k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
+  generate_fractal@k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
+  generate_fractal@k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
+  generate_fractal@k_rd_z: dd 8 dup -1.732
+
+  align 32
+  k_1_0: dd 8 dup 1.0
+  k_255_0: dd 8 dup 255.0
 ;========================================================================
 section '.idata' import data readable writeable
 
