@@ -43,7 +43,8 @@ section '.text' code readable executable
     .distance: rd 8
     .k_stack_size = $-$$
     end virtual
-                     sub  rsp,.k_stack_size+24
+                    push  rsi
+                     sub  rsp,.k_stack_size+16
                  vmovaps  ymm6,[k_1_0]
                  vmovaps  [.rayo],ymm0
                  vmovaps  [.rayo+32],ymm1
@@ -52,8 +53,23 @@ section '.text' code readable executable
                  vmovaps  [.rayd],ymm3
                  vmovaps  [.rayd+32],ymm4
                  vmovaps  [.rayd+64],ymm5
+                     mov  esi,64
+    align 32
+    .march:
+             vfmadd231ps  ymm0,ymm6,ymm3
+             vfmadd231ps  ymm1,ymm6,ymm4
+             vfmadd231ps  ymm2,ymm6,ymm5
                     call  nearest_distance
-                     add  rsp,.k_stack_size+24
+                 vmovaps  ymm0,[.rayo]
+                 vmovaps  ymm1,[.rayo+32]
+                 vmovaps  ymm2,[.rayo+64]
+                 vmovaps  ymm3,[.rayd]
+                 vmovaps  ymm4,[.rayd+32]
+                 vmovaps  ymm5,[.rayd+64]
+                     sub  esi,1
+                     jnz  .march
+                     add  rsp,.k_stack_size+16
+                     pop  rsi
                      ret
 ;========================================================================
   align 16
@@ -68,14 +84,14 @@ section '.text' code readable executable
                      xor  edx,edx
                      mov  ecx,k_tile_x_count
                      div  ecx                                     ; eax = (k_tile_count / k_tile_x_count), edx = (k_tile_count % k_tile_x_count)
-                     mov  r12d,k_tile_width
-                     mov  r13d,k_tile_height
-                    imul  edx,r12d                                ; edx = (k_tile_count % k_tile_x_count) * k_tile_width
-                    imul  eax,r13d                                ; eax = (k_tile_count / k_tile_x_count) * k_tile_height
-                     mov  r10d,edx                                ; r10d = x0
-                     mov  r11d,eax                                ; r11d = y0
-                     add  r12d,r10d                               ; r12d = x1 = x0 + k_tile_width
-                     add  r13d,r11d                               ; r13d = y1 = y0 + k_tile_height
+                     mov  r14d,k_tile_width
+                     mov  r15d,k_tile_height
+                    imul  edx,r14d                                ; edx = (k_tile_count % k_tile_x_count) * k_tile_width
+                    imul  eax,r15d                                ; eax = (k_tile_count / k_tile_x_count) * k_tile_height
+                     mov  r12d,edx                                ; r12d = x0
+                     mov  r13d,eax                                ; r13d = y0
+                     add  r14d,r12d                               ; r14d = x1 = x0 + k_tile_width
+                     add  r15d,r13d                               ; r15d = y1 = y0 + k_tile_height
                     imul  eax,k_win_width
                      add  eax,edx
                      shl  eax,2
@@ -85,19 +101,19 @@ section '.text' code readable executable
     .for_each_4x2:
                   vxorps  xmm0,xmm0,xmm0
                   vxorps  xmm1,xmm1,xmm1
-                     mov  eax,r10d
-                     mov  edx,r11d
+                     mov  eax,r12d
+                     mov  edx,r13d
                      sub  eax,k_win_width/2
                      sub  edx,k_win_height/2
                vcvtsi2ss  xmm0,xmm0,eax                           ; (0, 0, 0, xf = (float)(x - k_win_width / 2))
                vcvtsi2ss  xmm1,xmm1,edx                           ; (0, 0, 0, yf = (float)(y - k_win_height / 2))
             vbroadcastss  ymm0,xmm0                               ; ymm0 = (xf ... xf)
             vbroadcastss  ymm1,xmm1                               ; ymm1 = (yf ... yf)
-                  vaddps  ymm0,ymm0,[generate_fractal@k_x_offset]
-                  vaddps  ymm1,ymm1,[generate_fractal@k_y_offset]
-                 vmovaps  ymm2,[generate_fractal@k_rd_z]
-                  vmulps  ymm0,ymm0,[generate_fractal@k_win_width_rcp]
-                  vmulps  ymm1,ymm1,[generate_fractal@k_win_height_rcp]
+                  vaddps  ymm0,ymm0,[@generate_fractal.k_x_offset]
+                  vaddps  ymm1,ymm1,[@generate_fractal.k_y_offset]
+                 vmovaps  ymm2,[@generate_fractal.k_rd_z]
+                  vmulps  ymm0,ymm0,[@generate_fractal.k_win_width_rcp]
+                  vmulps  ymm1,ymm1,[@generate_fractal.k_win_height_rcp]
                   vmulps  ymm3,ymm0,[eye_xaxis]
                   vmulps  ymm4,ymm0,[eye_yaxis]
                   vmulps  ymm5,ymm0,[eye_zaxis]
@@ -142,13 +158,13 @@ section '.text' code readable executable
                  vmovdqa  [rbx],xmm0
             vextracti128  [rbx+k_win_width*4],ymm0,1
                      add  rbx,16
-                     add  r10d,4
-                     cmp  r10d,r12d
+                     add  r12d,4
+                     cmp  r12d,r14d
                       jb  .for_each_4x2
                      add  rbx,2*(k_win_width*4)-k_tile_width*4
-                     sub  r10d,k_tile_width
-                     add  r11d,2
-                     cmp  r11d,r13d
+                     sub  r12d,k_tile_width
+                     add  r13d,2
+                     cmp  r13d,r15d
                       jb  .for_each_4x2
                      jmp  .for_each_tile
     .return:
@@ -162,15 +178,15 @@ section '.text' code readable executable
     .perf_counter dq ?
     end virtual
                      sub  rsp,24
-                     mov  rax,[get_time@perf_freq]
+                     mov  rax,[@get_time.perf_freq]
                     test  eax,eax
                      jnz  @f
-                     mov  rcx,get_time@perf_freq
+                     mov  rcx,@get_time.perf_freq
                   invoke  QueryPerformanceFrequency
     @@:              lea  rcx,[.perf_counter]
                   invoke  QueryPerformanceCounter
                      mov  rcx,[.perf_counter]
-                     mov  rdx,[get_time@perf_freq]
+                     mov  rdx,[@get_time.perf_freq]
                   vxorps  xmm0,xmm0,xmm0
                vcvtsi2sd  xmm1,xmm0,rcx
                vcvtsi2sd  xmm2,xmm0,rdx
@@ -181,37 +197,37 @@ section '.text' code readable executable
   align 16
   update_frame_stats:
                      sub  rsp,24
-                     mov  rax,[update_frame_stats@prev_time]
+                     mov  rax,[@update_frame_stats.prev_time]
                     test  rax,rax
                      jnz  @f
                     call  get_time
-                  vmovsd  [update_frame_stats@prev_time],xmm0
-                  vmovsd  [update_frame_stats@prev_update_time],xmm0
+                  vmovsd  [@update_frame_stats.prev_time],xmm0
+                  vmovsd  [@update_frame_stats.prev_update_time],xmm0
     @@:             call  get_time                                        ; xmm0 = (0, time)
                   vmovsd  [time],xmm0
-                  vsubsd  xmm1,xmm0,[update_frame_stats@prev_time]        ; xmm1 = (0, time_delta)
-                  vmovsd  [update_frame_stats@prev_time],xmm0
+                  vsubsd  xmm1,xmm0,[@update_frame_stats.prev_time]       ; xmm1 = (0, time_delta)
+                  vmovsd  [@update_frame_stats.prev_time],xmm0
                   vxorps  xmm2,xmm2,xmm2
                vcvtsd2ss  xmm1,xmm2,xmm1                                  ; xmm1 = (0, 0, 0, time_delta)
                   vmovss  [time_delta],xmm1
-                  vmovsd  xmm1,[update_frame_stats@prev_update_time]      ; xmm1 = (0, prev_update_time)
+                  vmovsd  xmm1,[@update_frame_stats.prev_update_time]     ; xmm1 = (0, prev_update_time)
                   vsubsd  xmm2,xmm0,xmm1                                  ; xmm2 = (0, time - prev_update_time)
-                  vmovsd  xmm3,[update_frame_stats@k_1_0]                 ; xmm3 = (0, 1.0)
+                  vmovsd  xmm3,[@update_frame_stats.k_1_0]                ; xmm3 = (0, 1.0)
                  vcomisd  xmm2,xmm3
                       jb  @f
-                  vmovsd  [update_frame_stats@prev_update_time],xmm0
-                     mov  eax,[update_frame_stats@frame]
+                  vmovsd  [@update_frame_stats.prev_update_time],xmm0
+                     mov  eax,[@update_frame_stats.frame]
                   vxorpd  xmm1,xmm1,xmm1
                vcvtsi2sd  xmm1,xmm1,eax                                   ; xmm1 = (0, frame)
                   vdivsd  xmm0,xmm1,xmm2                                  ; xmm0 = (0, frame / (time - prev_update_time))
                   vdivsd  xmm1,xmm2,xmm1
-                  vmulsd  xmm1,xmm1,[update_frame_stats@k_1000000_0]
+                  vmulsd  xmm1,xmm1,[@update_frame_stats.k_1000000_0]
                vcvtsd2si  r10,xmm0
                vcvtsd2si  r11,xmm1
-                     mov  [update_frame_stats@frame],0
+                     mov  [@update_frame_stats.frame],0
                  cinvoke  wsprintf,win_title,win_title_fmt,r10,r11
                   invoke  SetWindowText,[win_handle],win_title
-    @@:              add  [update_frame_stats@frame],1
+    @@:              add  [@update_frame_stats.frame],1
                      add  rsp,24
                      ret
 ;========================================================================
@@ -426,13 +442,15 @@ section '.data' data readable writeable
   time dq 0
   time_delta dd 0,0
 
-  get_time@perf_freq dq 0
+  @get_time:
+  .perf_freq dq 0
 
-  update_frame_stats@prev_time dq 0
-  update_frame_stats@prev_update_time dq 0
-  update_frame_stats@frame dd 0,0
-  update_frame_stats@k_1000000_0 dq 1000000.0
-  update_frame_stats@k_1_0 dq 1.0
+  @update_frame_stats:
+  .prev_time dq 0
+  .prev_update_time dq 0
+  .frame dd 0,0
+  .k_1000000_0 dq 1000000.0
+  .k_1_0 dq 1.0
 
   displayptr dq 0
   tileidx dd 0,0
@@ -446,11 +464,12 @@ section '.data' data readable writeable
   eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 
   align 32
-  generate_fractal@k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-  generate_fractal@k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-  generate_fractal@k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
-  generate_fractal@k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
-  generate_fractal@k_rd_z: dd 8 dup -1.732
+  @generate_fractal:
+  .k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
+  .k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
+  .k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
+  .k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
+  .k_rd_z: dd 8 dup -1.732
 
   align 32
   k_1_0: dd 8 dup 1.0
