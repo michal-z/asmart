@@ -53,21 +53,33 @@ section '.text' code readable executable
                  vmovaps  [.rayd],ymm3
                  vmovaps  [.rayd+32],ymm4
                  vmovaps  [.rayd+64],ymm5
-                     mov  esi,64
+                     mov  esi,128
     align 32
     .march:
              vfmadd231ps  ymm0,ymm6,ymm3
              vfmadd231ps  ymm1,ymm6,ymm4
              vfmadd231ps  ymm2,ymm6,ymm5
                     call  nearest_distance
+                 vmovaps  ymm6,[.distance]
+                vcmpltps  ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
+                vcmpgtps  ymm8,ymm6,[k_view_distance]                   ; .distance > k_view_distance
+                   vorps  ymm7,ymm7,ymm8
+               vmovmskps  eax,ymm7
+                     cmp  eax,0xff
+                      je  .march_end
+                 vandnps  ymm0,ymm7,ymm0
+                  vaddps  ymm6,ymm6,ymm0
                  vmovaps  ymm0,[.rayo]
                  vmovaps  ymm1,[.rayo+32]
                  vmovaps  ymm2,[.rayo+64]
                  vmovaps  ymm3,[.rayd]
                  vmovaps  ymm4,[.rayd+32]
                  vmovaps  ymm5,[.rayd+64]
+                 vmovaps  [.distance],ymm6
                      sub  esi,1
                      jnz  .march
+    .march_end:
+                 vmovaps  ymm0,[.distance]
                      add  rsp,.k_stack_size+16
                      pop  rsi
                      ret
@@ -141,20 +153,32 @@ section '.text' code readable executable
                   vmulps  ymm4,ymm6,ymm10
                   vmulps  ymm5,ymm9,ymm10
                     call  raymarch_distance
-                  vxorps  ymm4,ymm4,ymm4                          ; ymm4 = (0 ... 0)
-                 vmovaps  ymm3,[k_1_0]                            ; ymm3 = (1.0 ... 1.0)
-                 vmovaps  ymm2,[k_255_0]                          ; ymm2 = (255.0 ... 255.0)
-                  vmaxps  ymm0,ymm0,ymm4
-                  vmaxps  ymm1,ymm1,ymm4
-                  vminps  ymm0,ymm0,ymm3
-                  vminps  ymm1,ymm1,ymm3
-                  vmulps  ymm0,ymm0,ymm2
-                  vmulps  ymm1,ymm1,ymm2
+                vcmpltps  ymm6,ymm0,[k_view_distance]             ; ymm6 = hit mask
+                  vxorps  ymm5,ymm5,ymm5                          ; ymm5 = (0 ... 0)
+                 vmovaps  ymm4,[k_1_0]                            ; ymm4 = (1.0 ... 1.0)
+                 vmovaps  ymm3,[k_255_0]                          ; ymm3 = (255.0 ... 255.0)
+               vblendvps  ymm0,ymm5,ymm4,ymm6
+               vblendvps  ymm1,ymm5,ymm4,ymm6
+               vblendvps  ymm2,ymm5,ymm4,ymm6
+                 vmovaps  ymm0,ymm0
+                 vmovaps  ymm1,ymm0
+                 vmovaps  ymm2,ymm0
+                  vmaxps  ymm0,ymm0,ymm5
+                  vmaxps  ymm1,ymm1,ymm5
+                  vmaxps  ymm2,ymm2,ymm5
+                  vminps  ymm0,ymm0,ymm4
+                  vminps  ymm1,ymm1,ymm4
+                  vminps  ymm2,ymm2,ymm4
+                  vmulps  ymm0,ymm0,ymm3
+                  vmulps  ymm1,ymm1,ymm3
+                  vmulps  ymm2,ymm2,ymm3
               vcvttps2dq  ymm0,ymm0
               vcvttps2dq  ymm1,ymm1
+              vcvttps2dq  ymm2,ymm2
                   vpslld  ymm0,ymm0,16
                   vpslld  ymm1,ymm1,8
                     vpor  ymm0,ymm0,ymm1
+                    vpor  ymm0,ymm0,ymm2
                  vmovdqa  [rbx],xmm0
             vextracti128  [rbx+k_win_width*4],ymm0,1
                      add  rbx,16
@@ -474,6 +498,8 @@ section '.data' data readable writeable
   align 32
   k_1_0: dd 8 dup 1.0
   k_255_0: dd 8 dup 255.0
+  k_hit_distance: dd 8 dup 0.0001
+  k_view_distance: dd 8 dup 25.0
 
   align 32
   scene:
