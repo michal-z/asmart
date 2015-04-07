@@ -18,6 +18,45 @@ section '.text' code readable executable
   }
 ;========================================================================
   align 16
+  nearest_distance: ; (ymm0,ymm1,ymm2) position
+                 vmovaps  ymm3,[scene.param_x]
+                 vmovaps  ymm4,[scene.param_y]
+                 vmovaps  ymm5,[scene.param_z]
+                 vmovaps  ymm6,[scene.param_w]
+                  vsubps  ymm0,ymm0,ymm3
+                  vsubps  ymm1,ymm1,ymm4
+                  vsubps  ymm2,ymm2,ymm5
+                  vmulps  ymm0,ymm0,ymm0
+                  vmulps  ymm1,ymm1,ymm1
+                  vmulps  ymm2,ymm2,ymm2
+                  vaddps  ymm0,ymm0,ymm1
+                  vaddps  ymm0,ymm0,ymm2
+                vrsqrtps  ymm0,ymm0
+                  vrcpps  ymm0,ymm0
+                     ret
+;========================================================================
+  align 16
+  raymarch_distance: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
+    virtual at rsp
+    .rayo: rd 3*8
+    .rayd: rd 3*8
+    .distance: rd 8
+    .k_stack_size = $-$$
+    end virtual
+                     sub  rsp,.k_stack_size+24
+                 vmovaps  ymm6,[k_1_0]
+                 vmovaps  [.rayo],ymm0
+                 vmovaps  [.rayo+32],ymm1
+                 vmovaps  [.rayo+64],ymm2
+                 vmovaps  [.distance],ymm6
+                 vmovaps  [.rayd],ymm3
+                 vmovaps  [.rayd+32],ymm4
+                 vmovaps  [.rayd+64],ymm5
+                    call  nearest_distance
+                     add  rsp,.k_stack_size+24
+                     ret
+;========================================================================
+  align 16
   generate_fractal:
                     push  rsi rdi rbx rbp r12 r13 r14 r15
                      sub  rsp,24
@@ -85,9 +124,7 @@ section '.text' code readable executable
                   vmulps  ymm3,ymm3,ymm10
                   vmulps  ymm4,ymm6,ymm10
                   vmulps  ymm5,ymm9,ymm10
-                    ;call  raymarch_distance
-                  ;vmulps  ymm0,ymm0,ymm0
-                  ;vmulps  ymm1,ymm1,ymm1
+                    call  raymarch_distance
                   vxorps  ymm4,ymm4,ymm4                          ; ymm4 = (0 ... 0)
                  vmovaps  ymm3,[k_1_0]                            ; ymm3 = (1.0 ... 1.0)
                  vmovaps  ymm2,[k_255_0]                          ; ymm2 = (255.0 ... 255.0)
@@ -123,9 +160,8 @@ section '.text' code readable executable
   get_time:
     virtual at rsp
     .perf_counter dq ?
-    .k_stack_size = $-$$
     end virtual
-                     sub  rsp,.k_stack_size
+                     sub  rsp,24
                      mov  rax,[get_time@perf_freq]
                     test  eax,eax
                      jnz  @f
@@ -139,12 +175,12 @@ section '.text' code readable executable
                vcvtsi2sd  xmm1,xmm0,rcx
                vcvtsi2sd  xmm2,xmm0,rdx
                   vdivsd  xmm0,xmm1,xmm2
-                     add  rsp,.k_stack_size
+                     add  rsp,24
                      ret
 ;========================================================================
   align 16
   update_frame_stats:
-                     sub  rsp,8
+                     sub  rsp,24
                      mov  rax,[update_frame_stats@prev_time]
                     test  rax,rax
                      jnz  @f
@@ -176,12 +212,12 @@ section '.text' code readable executable
                  cinvoke  wsprintf,win_title,win_title_fmt,r10,r11
                   invoke  SetWindowText,[win_handle],win_title
     @@:              add  [update_frame_stats@frame],1
-                     add  rsp,8
+                     add  rsp,24
                      ret
 ;========================================================================
   align 16
   update:
-                     sub  rsp,8
+                     sub  rsp,24
               ;iaca_begin
             vbroadcastss  ymm0,[eye_position]           ; ymm0 = eye x pos
             vbroadcastss  ymm3,[eye_focus]
@@ -239,12 +275,12 @@ section '.text' code readable executable
                      xor  eax,eax
                lock xchg  [tileidx],eax
                     call  generate_fractal
-                     add  rsp,8
+                     add  rsp,24
                      ret
 ;========================================================================
   align 16
   init:
-                     sub  rsp,8
+                     sub  rsp,24
                   invoke  GetModuleHandle,0
                      mov  [win_class.hInstance],rax
                   invoke  LoadIcon,0,IDI_APPLICATION
@@ -287,15 +323,15 @@ section '.text' code readable executable
                     test  eax,eax
                       jz  .error
                      mov  eax,1
-                     add  rsp,8
+                     add  rsp,24
                      ret
     .error:          xor  eax,eax
-                     add  rsp,8
+                     add  rsp,24
                      ret
 ;========================================================================
   align 16
   deinit:
-                     sub  rsp,8
+                     sub  rsp,24
                      mov  rcx,[bmp_hdc]
                     test  rcx,rcx
                       jz  @f
@@ -308,12 +344,12 @@ section '.text' code readable executable
                     test  rcx,rcx
                       jz  @f
                   invoke  ReleaseDC,rcx
-    @@:              add  rsp,8
+    @@:              add  rsp,24
                      ret
 ;========================================================================
   align 16
   start:
-                     sub  rsp,8
+                     and  rsp,-32
                     call  init
                     test  eax,eax
                       jz  .quit
@@ -419,6 +455,23 @@ section '.data' data readable writeable
   align 32
   k_1_0: dd 8 dup 1.0
   k_255_0: dd 8 dup 255.0
+
+  align 32
+  scene:
+  .param_x:
+  dd 8 dup 0.0
+  .param_y:
+  dd 8 dup 0.0
+  .param_z:
+  dd 8 dup 0.0
+  .param_w:
+  dd 8 dup 0.0
+  .red:
+  dd 8 dup 1.0
+  .green:
+  dd 8 dup 0.0
+  .blue:
+  dd 8 dup 0.0
 ;========================================================================
 section '.idata' import data readable writeable
 
