@@ -3,6 +3,7 @@ entry start
 include 'win64a.inc'
 
 DIB_RGB_COLORS = 0
+INFINITE = -1
 
 section '.text' code readable executable
 ;========================================================================
@@ -84,6 +85,12 @@ section '.text' code readable executable
                      add  rsp,.k_stack_size+16
                      pop  rsi
                      ret
+;========================================================================
+  align 16
+  generate_fractal_thread:
+                     and  rsp,-32
+                    call  generate_fractal
+                  invoke  ExitThread,0
 ;========================================================================
   align 16
   generate_fractal:
@@ -313,13 +320,18 @@ section '.text' code readable executable
                 ;iaca_end
                      xor  eax,eax
                lock xchg  [tileidx],eax
-                    call  generate_fractal
+                  invoke  CreateThread,NULL,0,generate_fractal_thread,NULL,0,NULL
+                     mov  [thrd_handle],rax
+                  invoke  WaitForSingleObject,rax,INFINITE
+                  invoke  CloseHandle,[thrd_handle]
+                    ;call  generate_fractal
                      add  rsp,24
                      ret
 ;========================================================================
   align 16
   init:
-                     sub  rsp,24
+                    push  rsi
+                     sub  rsp,16
                   invoke  GetModuleHandle,0
                      mov  [win_class.hInstance],rax
                   invoke  LoadIcon,0,IDI_APPLICATION
@@ -361,11 +373,28 @@ section '.text' code readable executable
                   invoke  SelectObject,[bmp_hdc],[bmp_handle]
                     test  eax,eax
                       jz  .error
+                     xor  esi,esi
+    @@:           invoke  CreateSemaphore,NULL,0,k_thrd_count,NULL
+                     mov  [thrd_semaphore+rsi*8],rax
+                    test  rax,rax
+                      jz  .error
+                     add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  @b
+                     xor  esi,esi
+    @@:           invoke  CreateThread,NULL,0,generate_fractal_thread,esi,0,NULL
+                     mov  [thrd_handle+rsi*8],rax
+                    test  rax,rax
+                      jz  .error
+                     add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  @b
                      mov  eax,1
                      add  rsp,24
                      ret
     .error:          xor  eax,eax
-                     add  rsp,24
+                     add  rsp,16
+                     pop  rsi
                      ret
 ;========================================================================
   align 16
@@ -446,6 +475,8 @@ section '.data' data readable writeable
   k_tile_y_count = k_win_height / k_tile_height
   k_tile_count = k_tile_x_count * k_tile_y_count
 
+  k_thrd_count = 8
+
   align 8
   bmp_handle dq 0
   bmp_hdc dq 0
@@ -480,6 +511,11 @@ section '.data' data readable writeable
 
   eye_position dd 0.0,0.0,7.0
   eye_focus dd 0.0,0.0,0.0
+
+  align 8
+  main_thrd_semaphore dq 0
+  thrd_handle dq k_thrd_count dup 0
+  thrd_semaphore dq k_thrd_count dup 0
 
   align 32
   eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
