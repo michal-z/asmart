@@ -33,6 +33,7 @@ section '.text' code readable executable
                   vaddps  ymm0,ymm0,ymm2
                 vrsqrtps  ymm0,ymm0
                   vrcpps  ymm0,ymm0
+                  vsubps  ymm0,ymm0,ymm6
                      ret
 ;========================================================================
   align 16
@@ -142,13 +143,14 @@ section '.text' code readable executable
                   vaddps  ymm6,ymm6,ymm8
                   vaddps  ymm9,ymm9,ymm11
             vbroadcastss  ymm0,[eye_position]
-            vbroadcastss  ymm1,[eye_position+32]
-            vbroadcastss  ymm2,[eye_position+64]
+            vbroadcastss  ymm1,[eye_position+4]
+            vbroadcastss  ymm2,[eye_position+8]
                   vmulps  ymm10,ymm3,ymm3
                   vmulps  ymm11,ymm6,ymm6
                   vmulps  ymm12,ymm9,ymm9
                   vaddps  ymm10,ymm10,ymm11
                   vaddps  ymm10,ymm10,ymm12
+                vrsqrtps  ymm10,ymm10
                   vmulps  ymm3,ymm3,ymm10
                   vmulps  ymm4,ymm6,ymm10
                   vmulps  ymm5,ymm9,ymm10
@@ -160,9 +162,6 @@ section '.text' code readable executable
                vblendvps  ymm0,ymm5,ymm4,ymm6
                vblendvps  ymm1,ymm5,ymm4,ymm6
                vblendvps  ymm2,ymm5,ymm4,ymm6
-                 vmovaps  ymm0,ymm0
-                 vmovaps  ymm1,ymm0
-                 vmovaps  ymm2,ymm0
                   vmaxps  ymm0,ymm0,ymm5
                   vmaxps  ymm1,ymm1,ymm5
                   vmaxps  ymm2,ymm2,ymm5
@@ -510,7 +509,7 @@ section '.data' data readable writeable
   .param_z:
   dd 8 dup 0.0
   .param_w:
-  dd 8 dup 0.0
+  dd 8 dup 2.0
   .red:
   dd 8 dup 1.0
   .green:
