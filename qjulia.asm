@@ -20,10 +20,10 @@ section '.text' code readable executable
 ;========================================================================
   align 16
   nearest_distance: ; (ymm0,ymm1,ymm2) position
-                 vmovaps  ymm6,[scene.param_w]
                   vsubps  ymm0,ymm0,[scene.param_x]
                   vsubps  ymm1,ymm1,[scene.param_y]
                   vsubps  ymm2,ymm2,[scene.param_z]
+                 vmovaps  ymm6,[scene.param_w]
                   vmulps  ymm0,ymm0,ymm0
                   vmulps  ymm1,ymm1,ymm1
                   vmulps  ymm2,ymm2,ymm2
@@ -324,8 +324,7 @@ section '.text' code readable executable
                  vmovaps  [eye_yaxis+32],ymm10
                  vmovaps  [eye_yaxis+64],ymm11
                 ;iaca_end
-                     xor  eax,eax
-               lock xchg  [tileidx],eax
+                     mov  [tileidx],0
                   invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
                   invoke  WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
                      add  rsp,24
