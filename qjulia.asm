@@ -3,6 +3,7 @@ entry start
 include 'win64a.inc'
 
 DIB_RGB_COLORS = 0
+INFINITE = -1
 
 section '.text' code readable executable
 ;========================================================================
@@ -19,13 +20,10 @@ section '.text' code readable executable
 ;========================================================================
   align 16
   nearest_distance: ; (ymm0,ymm1,ymm2) position
-                 vmovaps  ymm3,[scene.param_x]
-                 vmovaps  ymm4,[scene.param_y]
-                 vmovaps  ymm5,[scene.param_z]
                  vmovaps  ymm6,[scene.param_w]
-                  vsubps  ymm0,ymm0,ymm3
-                  vsubps  ymm1,ymm1,ymm4
-                  vsubps  ymm2,ymm2,ymm5
+                  vsubps  ymm0,ymm0,[scene.param_x]
+                  vsubps  ymm1,ymm1,[scene.param_y]
+                  vsubps  ymm2,ymm2,[scene.param_z]
                   vmulps  ymm0,ymm0,ymm0
                   vmulps  ymm1,ymm1,ymm1
                   vmulps  ymm2,ymm2,ymm2
@@ -84,6 +82,21 @@ section '.text' code readable executable
                      add  rsp,.k_stack_size+16
                      pop  rsi
                      ret
+;========================================================================
+  align 16
+  generate_fractal_thread:
+                     and  rsp,-32
+                     mov  esi,ecx       ; thread id
+    .run:
+                  invoke  WaitForSingleObject,[main_thrd_semaphore],INFINITE
+                     mov  eax,[quit]
+                    test  eax,eax
+                     jnz  .return
+                    call  generate_fractal
+                  invoke  ReleaseSemaphore,[thrd_semaphore+rsi*8],1,NULL
+                     jmp  .run
+    .return:
+                  invoke  ExitThread,0
 ;========================================================================
   align 16
   generate_fractal:
@@ -313,13 +326,15 @@ section '.text' code readable executable
                 ;iaca_end
                      xor  eax,eax
                lock xchg  [tileidx],eax
-                    call  generate_fractal
+                  invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
+                  invoke  WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
                      add  rsp,24
                      ret
 ;========================================================================
   align 16
   init:
-                     sub  rsp,24
+                    push  rsi
+                     sub  rsp,16
                   invoke  GetModuleHandle,0
                      mov  [win_class.hInstance],rax
                   invoke  LoadIcon,0,IDI_APPLICATION
@@ -361,16 +376,63 @@ section '.text' code readable executable
                   invoke  SelectObject,[bmp_hdc],[bmp_handle]
                     test  eax,eax
                       jz  .error
+                  invoke  CreateSemaphore,NULL,0,k_thrd_count,NULL
+                     mov  [main_thrd_semaphore],rax
+                    test  rax,rax
+                      jz  .error
+                     xor  esi,esi
+    @@:           invoke  CreateSemaphore,NULL,0,1,NULL
+                     mov  [thrd_semaphore+rsi*8],rax
+                    test  rax,rax
+                      jz  .error
+                     add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  @b
+                     xor  esi,esi
+    @@:           invoke  CreateThread,NULL,0,generate_fractal_thread,esi,0,NULL
+                     mov  [thrd_handle+rsi*8],rax
+                    test  rax,rax
+                      jz  .error
+                     add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  @b
                      mov  eax,1
                      add  rsp,24
                      ret
     .error:          xor  eax,eax
-                     add  rsp,24
+                     add  rsp,16
+                     pop  rsi
                      ret
 ;========================================================================
   align 16
   deinit:
-                     sub  rsp,24
+                    push  rsi rdi
+                     sub  rsp,8
+                     mov  [quit],1
+                  invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
+                     xor  esi,esi
+    .for_each_thrd:
+                     mov  rdi,[thrd_handle+rsi*8]
+                    test  rdi,rdi
+                      jz  @f
+                  invoke  WaitForSingleObject,rdi,INFINITE
+                  invoke  CloseHandle,rdi
+    @@:              add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  .for_each_thrd
+                     mov  rcx,[main_thrd_semaphore]
+                    test  rcx,rcx
+                      jz  @f
+                  invoke  CloseHandle,rcx
+    @@:              xor  esi,esi
+    .for_each_sem:
+                     mov  rcx,[thrd_semaphore+rsi*8]
+                    test  rcx,rcx
+                      jz  @f
+                  invoke  CloseHandle,rcx
+    @@:              add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  .for_each_sem
                      mov  rcx,[bmp_hdc]
                     test  rcx,rcx
                       jz  @f
@@ -383,7 +445,8 @@ section '.text' code readable executable
                     test  rcx,rcx
                       jz  @f
                   invoke  ReleaseDC,rcx
-    @@:              add  rsp,24
+    @@:              add  rsp,8
+                     pop  rdi rsi
                      ret
 ;========================================================================
   align 16
@@ -446,6 +509,8 @@ section '.data' data readable writeable
   k_tile_y_count = k_win_height / k_tile_height
   k_tile_count = k_tile_x_count * k_tile_y_count
 
+  k_thrd_count = 8
+
   align 8
   bmp_handle dq 0
   bmp_hdc dq 0
@@ -463,7 +528,8 @@ section '.data' data readable writeable
 
   align 8
   time dq 0
-  time_delta dd 0,0
+  time_delta dd 0
+  quit dd 0
 
   @get_time:
   .perf_freq dq 0
@@ -480,6 +546,11 @@ section '.data' data readable writeable
 
   eye_position dd 0.0,0.0,7.0
   eye_focus dd 0.0,0.0,0.0
+
+  align 8
+  main_thrd_semaphore dq 0
+  thrd_handle dq k_thrd_count dup 0
+  thrd_semaphore dq k_thrd_count dup 0
 
   align 32
   eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
