@@ -20,13 +20,10 @@ section '.text' code readable executable
 ;========================================================================
   align 16
   nearest_distance: ; (ymm0,ymm1,ymm2) position
-                 vmovaps  ymm3,[scene.param_x]
-                 vmovaps  ymm4,[scene.param_y]
-                 vmovaps  ymm5,[scene.param_z]
                  vmovaps  ymm6,[scene.param_w]
-                  vsubps  ymm0,ymm0,ymm3
-                  vsubps  ymm1,ymm1,ymm4
-                  vsubps  ymm2,ymm2,ymm5
+                  vsubps  ymm0,ymm0,[scene.param_x]
+                  vsubps  ymm1,ymm1,[scene.param_y]
+                  vsubps  ymm2,ymm2,[scene.param_z]
                   vmulps  ymm0,ymm0,ymm0
                   vmulps  ymm1,ymm1,ymm1
                   vmulps  ymm2,ymm2,ymm2
