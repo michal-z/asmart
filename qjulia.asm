@@ -89,7 +89,16 @@ section '.text' code readable executable
   align 16
   generate_fractal_thread:
                      and  rsp,-32
+                     mov  esi,ecx       ; thread id
+    .run:
+                  invoke  WaitForSingleObject,[main_thrd_semaphore],INFINITE
+                     mov  eax,[quit]
+                    test  eax,eax
+                     jnz  .return
                     call  generate_fractal
+                  invoke  ReleaseSemaphore,[thrd_semaphore+rsi*8],1,NULL
+                     jmp  .run
+    .return:
                   invoke  ExitThread,0
 ;========================================================================
   align 16
@@ -320,11 +329,8 @@ section '.text' code readable executable
                 ;iaca_end
                      xor  eax,eax
                lock xchg  [tileidx],eax
-                  invoke  CreateThread,NULL,0,generate_fractal_thread,NULL,0,NULL
-                     mov  [thrd_handle],rax
-                  invoke  WaitForSingleObject,rax,INFINITE
-                  invoke  CloseHandle,[thrd_handle]
-                    ;call  generate_fractal
+                  invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
+                  invoke  WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
                      add  rsp,24
                      ret
 ;========================================================================
@@ -373,8 +379,12 @@ section '.text' code readable executable
                   invoke  SelectObject,[bmp_hdc],[bmp_handle]
                     test  eax,eax
                       jz  .error
+                  invoke  CreateSemaphore,NULL,0,k_thrd_count,NULL
+                     mov  [main_thrd_semaphore],rax
+                    test  rax,rax
+                      jz  .error
                      xor  esi,esi
-    @@:           invoke  CreateSemaphore,NULL,0,k_thrd_count,NULL
+    @@:           invoke  CreateSemaphore,NULL,0,1,NULL
                      mov  [thrd_semaphore+rsi*8],rax
                     test  rax,rax
                       jz  .error
@@ -399,7 +409,33 @@ section '.text' code readable executable
 ;========================================================================
   align 16
   deinit:
-                     sub  rsp,24
+                    push  rsi rdi
+                     sub  rsp,8
+                     mov  [quit],1
+                  invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
+                     xor  esi,esi
+    .for_each_thrd:
+                     mov  rdi,[thrd_handle+rsi*8]
+                    test  rdi,rdi
+                      jz  @f
+                  invoke  WaitForSingleObject,rdi,INFINITE
+                  invoke  CloseHandle,rdi
+    @@:              add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  .for_each_thrd
+                     mov  rcx,[main_thrd_semaphore]
+                    test  rcx,rcx
+                      jz  @f
+                  invoke  CloseHandle,rcx
+    @@:              xor  esi,esi
+    .for_each_sem:
+                     mov  rcx,[thrd_semaphore+rsi*8]
+                    test  rcx,rcx
+                      jz  @f
+                  invoke  CloseHandle,rcx
+    @@:              add  esi,1
+                     cmp  esi,k_thrd_count
+                      jb  .for_each_sem
                      mov  rcx,[bmp_hdc]
                     test  rcx,rcx
                       jz  @f
@@ -412,7 +448,8 @@ section '.text' code readable executable
                     test  rcx,rcx
                       jz  @f
                   invoke  ReleaseDC,rcx
-    @@:              add  rsp,24
+    @@:              add  rsp,8
+                     pop  rdi rsi
                      ret
 ;========================================================================
   align 16
@@ -494,7 +531,8 @@ section '.data' data readable writeable
 
   align 8
   time dq 0
-  time_delta dd 0,0
+  time_delta dd 0
+  quit dd 0
 
   @get_time:
   .perf_freq dq 0
