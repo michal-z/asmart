@@ -45,16 +45,16 @@ section '.text' code readable executable
                 vrsqrtps  ymm3,ymm3
                 vrsqrtps  ymm7,ymm7
                 vrsqrtps  ymm11,ymm11
-                  vaddps  ymm5,ymm1,ymm5
+                  vaddps  ymm0,ymm1,ymm5
                   vrcpps  ymm3,ymm3
                   vrcpps  ymm7,ymm7
                   vrcpps  ymm11,ymm11
                   vsubps  ymm3,ymm3,ymm6
                   vsubps  ymm7,ymm7,ymm10
                   vsubps  ymm11,ymm11,ymm4
-                  vminps  ymm0,ymm3,ymm7
+                  vminps  ymm0,ymm0,ymm3
+                  vminps  ymm0,ymm0,ymm7
                   vminps  ymm0,ymm0,ymm11
-                  vminps  ymm0,ymm0,ymm5
                      ret
 ;========================================================================
   align 16
@@ -78,9 +78,9 @@ section '.text' code readable executable
                      mov  esi,128
     align 32
     .march:
-             vfmadd231ps  ymm0,ymm6,[.rayd]
-             vfmadd231ps  ymm1,ymm6,[.rayd+32]
-             vfmadd231ps  ymm2,ymm6,[.rayd+64]
+             vfmadd231ps  ymm0,ymm6,ymm3
+             vfmadd231ps  ymm1,ymm6,ymm4
+             vfmadd231ps  ymm2,ymm6,ymm5
                     call  nearest_distance
                  vmovaps  ymm6,[.distance]
                 vcmpltps  ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
@@ -94,11 +94,14 @@ section '.text' code readable executable
                  vmovaps  ymm0,[.rayo]
                  vmovaps  ymm1,[.rayo+32]
                  vmovaps  ymm2,[.rayo+64]
+                 vmovaps  ymm3,[.rayd]
+                 vmovaps  ymm4,[.rayd+32]
+                 vmovaps  ymm5,[.rayd+64]
                  vmovaps  [.distance],ymm6
                      sub  esi,1
                      jnz  .march
     .march_end:
-                 vmovaps  ymm0,[.distance]
+                 vmovaps  ymm0,ymm6
                      add  rsp,.k_stack_size+16
                      pop  rsi
                      ret
