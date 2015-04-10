@@ -191,22 +191,29 @@ section '.text' code readable executable
                   vmulps  ymm4,ymm6,ymm10
                   vmulps  ymm5,ymm9,ymm10
                     call  raymarch_distance
-                vcmpltps  ymm6,ymm0,[k_view_distance]             ; ymm6 = hit mask
-                  vxorps  ymm5,ymm5,ymm5                          ; ymm5 = (0 ... 0)
-                 vmovaps  ymm4,[k_1_0]                            ; ymm4 = (1.0 ... 1.0)
-                 vmovaps  ymm3,[k_255_0]                          ; ymm3 = (255.0 ... 255.0)
-               vblendvps  ymm0,ymm5,ymm4,ymm6
-               vblendvps  ymm1,ymm5,ymm4,ymm6
-               vblendvps  ymm2,ymm5,ymm4,ymm6
-                  vmaxps  ymm0,ymm0,ymm5
-                  vmaxps  ymm1,ymm1,ymm5
-                  vmaxps  ymm2,ymm2,ymm5
-                  vminps  ymm0,ymm0,ymm4
-                  vminps  ymm1,ymm1,ymm4
-                  vminps  ymm2,ymm2,ymm4
-                  vmulps  ymm0,ymm0,ymm3
-                  vmulps  ymm1,ymm1,ymm3
-                  vmulps  ymm2,ymm2,ymm3
+                 vmovaps  ymm3,[k_view_distance]
+            vbroadcastss  ymm4,[k_background_color]
+            vbroadcastss  ymm5,[k_background_color+4]
+            vbroadcastss  ymm6,[k_background_color+8]
+                  vxorps  ymm7,ymm7,ymm7                          ; ymm7 = (0 ... 0)
+                 vmovaps  ymm8,[k_1_0]                            ; ymm8 = (1.0 ... 1.0)
+                 vmovaps  ymm9,[k_255_0]                          ; ymm9 = (255.0 ... 255.0)
+                  vrcpps  ymm10,ymm3
+                  vmulps  ymm10,ymm0,ymm10
+                  vsubps  ymm10,ymm8,ymm10
+                vcmpltps  ymm11,ymm0,ymm3                         ; ymm11 = hit mask
+               vblendvps  ymm0,ymm4,ymm10,ymm11
+               vblendvps  ymm1,ymm5,ymm10,ymm11
+               vblendvps  ymm2,ymm6,ymm10,ymm11
+                  vmaxps  ymm0,ymm0,ymm7
+                  vmaxps  ymm1,ymm1,ymm7
+                  vmaxps  ymm2,ymm2,ymm7
+                  vminps  ymm0,ymm0,ymm8
+                  vminps  ymm1,ymm1,ymm8
+                  vminps  ymm2,ymm2,ymm8
+                  vmulps  ymm0,ymm0,ymm9
+                  vmulps  ymm1,ymm1,ymm9
+                  vmulps  ymm2,ymm2,ymm9
               vcvttps2dq  ymm0,ymm0
               vcvttps2dq  ymm1,ymm1
               vcvttps2dq  ymm2,ymm2
@@ -568,6 +575,7 @@ section '.data' data readable writeable
 
   eye_position dd 0.0,0.0,7.0
   eye_focus dd 0.0,0.0,0.0
+  k_background_color dd 0.1,0.3,0.6
 
   align 8
   main_thrd_semaphore dq 0
@@ -596,13 +604,13 @@ section '.data' data readable writeable
   align 32
   scene:
   .param_x:
-  dd 8 dup 0.0
+  dd 8 dup -1.0
   dd 8 dup 0.0
   dd 8 dup 0.0
   dd 8 dup 0.0
   .param_y:
   dd 8 dup 0.0
-  dd 8 dup 0.0
+  dd 8 dup 1.0
   dd 8 dup 0.0
   dd 8 dup 1.0
   .param_z:
