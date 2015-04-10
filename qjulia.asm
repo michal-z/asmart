@@ -20,18 +20,41 @@ section '.text' code readable executable
 ;========================================================================
   align 16
   nearest_distance: ; (ymm0,ymm1,ymm2) position
-                  vsubps  ymm0,ymm0,[scene.param_x]
-                  vsubps  ymm1,ymm1,[scene.param_y]
-                  vsubps  ymm2,ymm2,[scene.param_z]
+                  vsubps  ymm3,ymm0,[scene.param_x]
+                  vsubps  ymm4,ymm1,[scene.param_y]
+                  vsubps  ymm5,ymm2,[scene.param_z]
+                  vsubps  ymm7,ymm0,[scene.param_x+32]
+                  vsubps  ymm8,ymm1,[scene.param_y+32]
+                  vsubps  ymm9,ymm2,[scene.param_z+32]
+                  vsubps  ymm11,ymm0,[scene.param_x+64]
+                  vmulps  ymm3,ymm3,ymm3
+                  vmulps  ymm7,ymm7,ymm7
+                  vsubps  ymm12,ymm1,[scene.param_y+64]
+                  vsubps  ymm13,ymm2,[scene.param_z+64]
                  vmovaps  ymm6,[scene.param_w]
-                  vmulps  ymm0,ymm0,ymm0
-                  vmulps  ymm1,ymm1,ymm1
-                  vmulps  ymm2,ymm2,ymm2
-                  vaddps  ymm0,ymm0,ymm1
-                  vaddps  ymm0,ymm0,ymm2
-                vrsqrtps  ymm0,ymm0
-                  vrcpps  ymm0,ymm0
-                  vsubps  ymm0,ymm0,ymm6
+                 vmovaps  ymm10,[scene.param_w+32]
+                  vmulps  ymm11,ymm11,ymm11
+             vfmadd231ps  ymm3,ymm4,ymm4
+                 vmovaps  ymm4,[scene.param_w+64]
+             vfmadd231ps  ymm7,ymm8,ymm8
+             vfmadd231ps  ymm11,ymm12,ymm12
+             vfmadd231ps  ymm3,ymm5,ymm5
+                 vmovaps  ymm5,[scene.param_w+96]
+             vfmadd231ps  ymm7,ymm9,ymm9
+             vfmadd231ps  ymm11,ymm13,ymm13
+                vrsqrtps  ymm3,ymm3
+                vrsqrtps  ymm7,ymm7
+                vrsqrtps  ymm11,ymm11
+                  vaddps  ymm5,ymm1,ymm5
+                  vrcpps  ymm3,ymm3
+                  vrcpps  ymm7,ymm7
+                  vrcpps  ymm11,ymm11
+                  vsubps  ymm3,ymm3,ymm6
+                  vsubps  ymm7,ymm7,ymm10
+                  vsubps  ymm11,ymm11,ymm4
+                  vminps  ymm0,ymm3,ymm7
+                  vminps  ymm0,ymm0,ymm11
+                  vminps  ymm0,ymm0,ymm5
                      ret
 ;========================================================================
   align 16
@@ -55,9 +78,9 @@ section '.text' code readable executable
                      mov  esi,128
     align 32
     .march:
-             vfmadd231ps  ymm0,ymm6,ymm3
-             vfmadd231ps  ymm1,ymm6,ymm4
-             vfmadd231ps  ymm2,ymm6,ymm5
+             vfmadd231ps  ymm0,ymm6,[.rayd]
+             vfmadd231ps  ymm1,ymm6,[.rayd+32]
+             vfmadd231ps  ymm2,ymm6,[.rayd+64]
                     call  nearest_distance
                  vmovaps  ymm6,[.distance]
                 vcmpltps  ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
@@ -71,9 +94,6 @@ section '.text' code readable executable
                  vmovaps  ymm0,[.rayo]
                  vmovaps  ymm1,[.rayo+32]
                  vmovaps  ymm2,[.rayo+64]
-                 vmovaps  ymm3,[.rayd]
-                 vmovaps  ymm4,[.rayd+32]
-                 vmovaps  ymm5,[.rayd+64]
                  vmovaps  [.distance],ymm6
                      sub  esi,1
                      jnz  .march
@@ -574,18 +594,39 @@ section '.data' data readable writeable
   scene:
   .param_x:
   dd 8 dup 0.0
+  dd 8 dup 0.0
+  dd 8 dup 0.0
+  dd 8 dup 0.0
   .param_y:
   dd 8 dup 0.0
+  dd 8 dup 0.0
+  dd 8 dup 0.0
+  dd 8 dup 1.0
   .param_z:
+  dd 8 dup 0.0
+  dd 8 dup 3.0
+  dd 8 dup 4.0
   dd 8 dup 0.0
   .param_w:
   dd 8 dup 2.0
+  dd 8 dup 0.5
+  dd 8 dup 0.25
+  dd 8 dup 2.0
   .red:
+  dd 8 dup 1.0
+  dd 8 dup 0.0
+  dd 8 dup 0.0
   dd 8 dup 1.0
   .green:
   dd 8 dup 0.0
+  dd 8 dup 1.0
+  dd 8 dup 0.0
+  dd 8 dup 0.8
   .blue:
   dd 8 dup 0.0
+  dd 8 dup 0.0
+  dd 8 dup 1.0
+  dd 8 dup 0.1
 ;========================================================================
 section '.idata' import data readable writeable
 
