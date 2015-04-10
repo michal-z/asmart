@@ -20,18 +20,41 @@ section '.text' code readable executable
 ;========================================================================
   align 16
   nearest_distance: ; (ymm0,ymm1,ymm2) position
-                  vsubps  ymm0,ymm0,[scene.param_x]
-                  vsubps  ymm1,ymm1,[scene.param_y]
-                  vsubps  ymm2,ymm2,[scene.param_z]
+                  vsubps  ymm3,ymm0,[scene.param_x]
+                  vsubps  ymm4,ymm1,[scene.param_y]
+                  vsubps  ymm5,ymm2,[scene.param_z]
+                  vsubps  ymm7,ymm0,[scene.param_x+32]
+                  vsubps  ymm8,ymm1,[scene.param_y+32]
+                  vsubps  ymm9,ymm2,[scene.param_z+32]
+                  vsubps  ymm11,ymm0,[scene.param_x+64]
+                  vmulps  ymm3,ymm3,ymm3
+                  vmulps  ymm7,ymm7,ymm7
+                  vsubps  ymm12,ymm1,[scene.param_y+64]
+                  vsubps  ymm13,ymm2,[scene.param_z+64]
                  vmovaps  ymm6,[scene.param_w]
-                  vmulps  ymm0,ymm0,ymm0
-                  vmulps  ymm1,ymm1,ymm1
-                  vmulps  ymm2,ymm2,ymm2
-                  vaddps  ymm0,ymm0,ymm1
-                  vaddps  ymm0,ymm0,ymm2
-                vrsqrtps  ymm0,ymm0
-                  vrcpps  ymm0,ymm0
-                  vsubps  ymm0,ymm0,ymm6
+                 vmovaps  ymm10,[scene.param_w+32]
+                  vmulps  ymm11,ymm11,ymm11
+             vfmadd231ps  ymm3,ymm4,ymm4
+                 vmovaps  ymm4,[scene.param_w+64]
+             vfmadd231ps  ymm7,ymm8,ymm8
+             vfmadd231ps  ymm11,ymm12,ymm12
+             vfmadd231ps  ymm3,ymm5,ymm5
+                 vmovaps  ymm5,[scene.param_w+96]
+             vfmadd231ps  ymm7,ymm9,ymm9
+             vfmadd231ps  ymm11,ymm13,ymm13
+                vrsqrtps  ymm3,ymm3
+                vrsqrtps  ymm7,ymm7
+                vrsqrtps  ymm11,ymm11
+                  vaddps  ymm0,ymm1,ymm5
+                  vrcpps  ymm3,ymm3
+                  vrcpps  ymm7,ymm7
+                  vrcpps  ymm11,ymm11
+                  vsubps  ymm3,ymm3,ymm6
+                  vsubps  ymm7,ymm7,ymm10
+                  vsubps  ymm11,ymm11,ymm4
+                  vminps  ymm0,ymm0,ymm3
+                  vminps  ymm0,ymm0,ymm7
+                  vminps  ymm0,ymm0,ymm11
                      ret
 ;========================================================================
   align 16
@@ -78,7 +101,7 @@ section '.text' code readable executable
                      sub  esi,1
                      jnz  .march
     .march_end:
-                 vmovaps  ymm0,[.distance]
+                 vmovaps  ymm0,ymm6
                      add  rsp,.k_stack_size+16
                      pop  rsi
                      ret
@@ -168,22 +191,29 @@ section '.text' code readable executable
                   vmulps  ymm4,ymm6,ymm10
                   vmulps  ymm5,ymm9,ymm10
                     call  raymarch_distance
-                vcmpltps  ymm6,ymm0,[k_view_distance]             ; ymm6 = hit mask
-                  vxorps  ymm5,ymm5,ymm5                          ; ymm5 = (0 ... 0)
-                 vmovaps  ymm4,[k_1_0]                            ; ymm4 = (1.0 ... 1.0)
-                 vmovaps  ymm3,[k_255_0]                          ; ymm3 = (255.0 ... 255.0)
-               vblendvps  ymm0,ymm5,ymm4,ymm6
-               vblendvps  ymm1,ymm5,ymm4,ymm6
-               vblendvps  ymm2,ymm5,ymm4,ymm6
-                  vmaxps  ymm0,ymm0,ymm5
-                  vmaxps  ymm1,ymm1,ymm5
-                  vmaxps  ymm2,ymm2,ymm5
-                  vminps  ymm0,ymm0,ymm4
-                  vminps  ymm1,ymm1,ymm4
-                  vminps  ymm2,ymm2,ymm4
-                  vmulps  ymm0,ymm0,ymm3
-                  vmulps  ymm1,ymm1,ymm3
-                  vmulps  ymm2,ymm2,ymm3
+                 vmovaps  ymm3,[k_view_distance]
+            vbroadcastss  ymm4,[k_background_color]
+            vbroadcastss  ymm5,[k_background_color+4]
+            vbroadcastss  ymm6,[k_background_color+8]
+                  vxorps  ymm7,ymm7,ymm7                          ; ymm7 = (0 ... 0)
+                 vmovaps  ymm8,[k_1_0]                            ; ymm8 = (1.0 ... 1.0)
+                 vmovaps  ymm9,[k_255_0]                          ; ymm9 = (255.0 ... 255.0)
+                  vrcpps  ymm10,ymm3
+                  vmulps  ymm10,ymm0,ymm10
+                  vsubps  ymm10,ymm8,ymm10
+                vcmpltps  ymm11,ymm0,ymm3                         ; ymm11 = hit mask
+               vblendvps  ymm0,ymm4,ymm10,ymm11
+               vblendvps  ymm1,ymm5,ymm10,ymm11
+               vblendvps  ymm2,ymm6,ymm10,ymm11
+                  vmaxps  ymm0,ymm0,ymm7
+                  vmaxps  ymm1,ymm1,ymm7
+                  vmaxps  ymm2,ymm2,ymm7
+                  vminps  ymm0,ymm0,ymm8
+                  vminps  ymm1,ymm1,ymm8
+                  vminps  ymm2,ymm2,ymm8
+                  vmulps  ymm0,ymm0,ymm9
+                  vmulps  ymm1,ymm1,ymm9
+                  vmulps  ymm2,ymm2,ymm9
               vcvttps2dq  ymm0,ymm0
               vcvttps2dq  ymm1,ymm1
               vcvttps2dq  ymm2,ymm2
@@ -545,6 +575,7 @@ section '.data' data readable writeable
 
   eye_position dd 0.0,0.0,7.0
   eye_focus dd 0.0,0.0,0.0
+  k_background_color dd 0.1,0.3,0.6
 
   align 8
   main_thrd_semaphore dq 0
@@ -573,19 +604,40 @@ section '.data' data readable writeable
   align 32
   scene:
   .param_x:
+  dd 8 dup -1.0
+  dd 8 dup 0.0
+  dd 8 dup 0.0
   dd 8 dup 0.0
   .param_y:
   dd 8 dup 0.0
+  dd 8 dup 1.0
+  dd 8 dup 0.0
+  dd 8 dup 1.0
   .param_z:
+  dd 8 dup 0.0
+  dd 8 dup 3.0
+  dd 8 dup 4.0
   dd 8 dup 0.0
   .param_w:
   dd 8 dup 2.0
+  dd 8 dup 0.5
+  dd 8 dup 0.25
+  dd 8 dup 2.0
   .red:
+  dd 8 dup 1.0
+  dd 8 dup 0.0
+  dd 8 dup 0.0
   dd 8 dup 1.0
   .green:
   dd 8 dup 0.0
+  dd 8 dup 1.0
+  dd 8 dup 0.0
+  dd 8 dup 0.8
   .blue:
   dd 8 dup 0.0
+  dd 8 dup 0.0
+  dd 8 dup 1.0
+  dd 8 dup 0.1
 ;========================================================================
 section '.idata' import data readable writeable
 
