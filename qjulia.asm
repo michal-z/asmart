@@ -19,6 +19,66 @@ section '.text' code readable executable
   }
 ;========================================================================
   align 16
+  sincos:
+                 vmovaps  ymm7,ymm0
+                  vandps  ymm0,ymm0,[@sincos.k_inv_sign_mask]
+                  vandps  ymm7,ymm7,[@sincos.k_sign_mask]
+                  vmulps  ymm0,ymm0,[@sincos.k_2_div_pi]
+                   vpxor  ymm3,ymm3,ymm3
+                 vmovdqa  ymm5,[k_1]
+                 vmovaps  ymm4,[k_1_0]
+              vcvttps2dq  ymm2,ymm0
+                   vpand  ymm5,ymm5,ymm2
+                vpcmpeqd  ymm5,ymm5,ymm3
+                 vmovdqa  ymm3,[k_1]
+                 vmovdqa  ymm1,[k_2]
+               vcvtdq2ps  ymm6,ymm2
+                  vpaddd  ymm3,ymm3,ymm2
+                   vpand  ymm2,ymm2,ymm1
+                   vpand  ymm3,ymm3,ymm1
+                  vsubps  ymm0,ymm0,ymm6
+                  vpslld  ymm2,ymm2,30
+                  vminps  ymm0,ymm0,ymm4
+                  vsubps  ymm4,ymm4,ymm0
+                  vpslld  ymm3,ymm3,30
+                 vmovaps  ymm6,ymm4
+                  vxorps  ymm2,ymm2,ymm7
+                 vmovaps  ymm7,ymm5
+                  vandps  ymm6,ymm6,ymm7
+                 vandnps  ymm7,ymm7,ymm0
+                  vandps  ymm0,ymm0,ymm5
+                 vandnps  ymm5,ymm5,ymm4
+                 vmovaps  ymm4,[@sincos.k_p3]
+                   vorps  ymm6,ymm6,ymm7
+                   vorps  ymm0,ymm0,ymm5
+                 vmovaps  ymm5,[@sincos.k_p2]
+                 vmovaps  ymm1,ymm0
+                 vmovaps  ymm7,ymm6
+                  vmulps  ymm0,ymm0,ymm0
+                  vmulps  ymm6,ymm6,ymm6
+                   vorps  ymm1,ymm1,ymm2
+                   vorps  ymm7,ymm7,ymm3
+                 vmovaps  ymm2,ymm0
+                 vmovaps  ymm3,ymm6
+                  vmulps  ymm0,ymm0,ymm4
+                  vmulps  ymm6,ymm6,ymm4
+                 vmovaps  ymm4,[@sincos.k_p1]
+                  vaddps  ymm0,ymm0,ymm5
+                  vaddps  ymm6,ymm6,ymm5
+                 vmovaps  ymm5,[@sincos.k_p0]
+                  vmulps  ymm0,ymm0,ymm2
+                  vmulps  ymm6,ymm6,ymm3
+                  vaddps  ymm0,ymm0,ymm4
+                  vaddps  ymm6,ymm6,ymm4
+                  vmulps  ymm0,ymm0,ymm2
+                  vmulps  ymm6,ymm6,ymm3
+                  vaddps  ymm0,ymm0,ymm5
+                  vaddps  ymm6,ymm6,ymm5
+                  vmulps  ymm0,ymm0,ymm1
+                  vmulps  ymm1,ymm6,ymm7
+                     ret
+;========================================================================
+  align 16
   nearest_distance: ; (ymm0,ymm1,ymm2) position
                   vsubps  ymm3,ymm0,[scene.param_x]
                   vsubps  ymm4,ymm1,[scene.param_y]
@@ -300,7 +360,6 @@ section '.text' code readable executable
   align 16
   update:
                      sub  rsp,24
-              ;iaca_begin
             vbroadcastss  ymm0,[eye_position]           ; ymm0 = eye x pos
             vbroadcastss  ymm3,[eye_focus]
             vbroadcastss  ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -353,7 +412,6 @@ section '.text' code readable executable
                  vmovaps  [eye_yaxis],ymm9
                  vmovaps  [eye_yaxis+32],ymm10
                  vmovaps  [eye_yaxis+64],ymm11
-                ;iaca_end
                      mov  [tileidx],0
                   invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
                   invoke  WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
@@ -440,8 +498,7 @@ section '.text' code readable executable
                      mov  [quit],1
                   invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
                      xor  esi,esi
-    .for_each_thrd:
-                     mov  rdi,[thrd_handle+rsi*8]
+    .for_each_thrd:  mov  rdi,[thrd_handle+rsi*8]
                     test  rdi,rdi
                       jz  @f
                   invoke  WaitForSingleObject,rdi,INFINITE
@@ -454,8 +511,7 @@ section '.text' code readable executable
                       jz  @f
                   invoke  CloseHandle,rcx
     @@:              xor  esi,esi
-    .for_each_sem:
-                     mov  rcx,[thrd_semaphore+rsi*8]
+    .for_each_sem:   mov  rcx,[thrd_semaphore+rsi*8]
                     test  rcx,rcx
                       jz  @f
                   invoke  CloseHandle,rcx
@@ -484,25 +540,23 @@ section '.text' code readable executable
                     call  init
                     test  eax,eax
                       jz  .quit
-    .main_loop:
-                  invoke  PeekMessage,win_msg,NULL,0,0,PM_REMOVE
+    .main_loop:   invoke  PeekMessage,win_msg,NULL,0,0,PM_REMOVE
                     test  eax,eax
-                      jz  @f
+                      jz  .update
                   invoke  DispatchMessage,win_msg
                      cmp  [win_msg.message],WM_QUIT
                       je  .quit
                      jmp  .main_loop
-    @@:
-                    call  update_frame_stats
+    .update:        call  update_frame_stats
                     call  update
                   invoke  BitBlt,[win_hdc],0,0,k_win_width,k_win_height,[bmp_hdc],0,0,SRCCOPY
                      jmp  .main_loop
-    .quit:
-                    call  deinit
+    .quit:          call  deinit
                   invoke  ExitProcess,0
 ;========================================================================
   align 16
   proc winproc hwnd,msg,wparam,lparam
+
                      mov  [hwnd],rcx
                      mov  [msg],rdx
                      mov  [wparam],r8
@@ -513,17 +567,15 @@ section '.text' code readable executable
                       je  .destroy
                   invoke  DefWindowProc,rcx,rdx,r8,r9
                      jmp  .return
-    .keydown:
-                     cmp  [wparam],VK_ESCAPE
+    .keydown:        cmp  [wparam],VK_ESCAPE
                      jne  .return
                   invoke  PostQuitMessage,0
                      xor  eax,eax
                      jmp  .return
-    .destroy:
-                  invoke  PostQuitMessage,0
+    .destroy:     invoke  PostQuitMessage,0
                      xor  eax,eax
-    .return:
-                     ret
+    .return:         ret
+
   endp
 ;========================================================================
 section '.data' data readable writeable
@@ -596,6 +648,18 @@ section '.data' data readable writeable
   .k_rd_z: dd 8 dup -1.732
 
   align 32
+  @sincos:
+  .k_inv_sign_mask: dd 8 dup not 0x80000000
+  .k_sign_mask: dd 8 dup 0x80000000
+  .k_2_div_pi: dd 8 dup 0.636619772
+  .k_p0: dd 8 dup 0.15707963267948963959e1
+  .k_p1: dd 8 dup -0.64596409750621907082e0
+  .k_p2: dd 8 dup 0.7969262624561800806e-1
+  .k_p3: dd 8 dup -0.468175413106023168e-2
+
+  align 32
+  k_1: dd 8 dup 1
+  k_2: dd 8 dup 2
   k_1_0: dd 8 dup 1.0
   k_255_0: dd 8 dup 255.0
   k_hit_distance: dd 8 dup 0.0001
