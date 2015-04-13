@@ -224,20 +224,14 @@ generate_fractal:
                   vmulps  ymm0,ymm0,[@generate_fractal.k_win_width_rcp]
                   vmulps  ymm1,ymm1,[@generate_fractal.k_win_height_rcp]
                   vmulps  ymm3,ymm0,[eye_xaxis]
-                  vmulps  ymm4,ymm1,[eye_yaxis]
-                  vmulps  ymm5,ymm2,[eye_zaxis]
                   vmulps  ymm6,ymm0,[eye_xaxis+32]
-                  vmulps  ymm7,ymm1,[eye_yaxis+32]
-                  vmulps  ymm8,ymm2,[eye_zaxis+32]
                   vmulps  ymm9,ymm0,[eye_xaxis+64]
-                  vmulps  ymm10,ymm1,[eye_yaxis+64]
-                  vmulps  ymm11,ymm2,[eye_zaxis+64]
-                  vaddps  ymm3,ymm3,ymm4
-                  vaddps  ymm6,ymm6,ymm7
-                  vaddps  ymm9,ymm9,ymm10
-                  vaddps  ymm3,ymm3,ymm5
-                  vaddps  ymm6,ymm6,ymm8
-                  vaddps  ymm9,ymm9,ymm11
+             vfmadd231ps  ymm3,ymm1,[eye_yaxis]
+             vfmadd231ps  ymm6,ymm1,[eye_yaxis+32]
+             vfmadd231ps  ymm9,ymm1,[eye_yaxis+64]
+             vfmadd231ps  ymm3,ymm2,[eye_zaxis]
+             vfmadd231ps  ymm6,ymm2,[eye_zaxis+32]
+             vfmadd231ps  ymm9,ymm2,[eye_zaxis+64]
             vbroadcastss  ymm0,[eye_position]
             vbroadcastss  ymm1,[eye_position+4]
             vbroadcastss  ymm2,[eye_position+8]
