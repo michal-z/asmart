@@ -224,13 +224,13 @@ generate_fractal:
                   vmulps  ymm0,ymm0,[@generate_fractal.k_win_width_rcp]
                   vmulps  ymm1,ymm1,[@generate_fractal.k_win_height_rcp]
                   vmulps  ymm3,ymm0,[eye_xaxis]
-                  vmulps  ymm4,ymm0,[eye_yaxis]
-                  vmulps  ymm5,ymm0,[eye_zaxis]
-                  vmulps  ymm6,ymm1,[eye_xaxis+32]
+                  vmulps  ymm4,ymm1,[eye_yaxis]
+                  vmulps  ymm5,ymm2,[eye_zaxis]
+                  vmulps  ymm6,ymm0,[eye_xaxis+32]
                   vmulps  ymm7,ymm1,[eye_yaxis+32]
-                  vmulps  ymm8,ymm1,[eye_zaxis+32]
-                  vmulps  ymm9,ymm2,[eye_xaxis+64]
-                  vmulps  ymm10,ymm2,[eye_yaxis+64]
+                  vmulps  ymm8,ymm2,[eye_zaxis+32]
+                  vmulps  ymm9,ymm0,[eye_xaxis+64]
+                  vmulps  ymm10,ymm1,[eye_yaxis+64]
                   vmulps  ymm11,ymm2,[eye_zaxis+64]
                   vaddps  ymm3,ymm3,ymm4
                   vaddps  ymm6,ymm6,ymm7
@@ -305,13 +305,16 @@ get_time:
   end virtual
                      sub  rsp,24
                      mov  rax,[@get_time.perf_freq]
-                    test  eax,eax
+                    test  rax,rax
                      jnz  @f
                      mov  rcx,@get_time.perf_freq
-                  invoke  QueryPerformanceFrequency
+                  invoke  QueryPerformanceFrequency,rcx
+                     mov  rcx,@get_time.first_perf_counter
+                  invoke  QueryPerformanceCounter,rcx
   @@:                lea  rcx,[.perf_counter]
-                  invoke  QueryPerformanceCounter
+                  invoke  QueryPerformanceCounter,rcx
                      mov  rcx,[.perf_counter]
+                     sub  rcx,[@get_time.first_perf_counter]
                      mov  rdx,[@get_time.perf_freq]
                   vxorps  xmm0,xmm0,xmm0
                vcvtsi2sd  xmm1,xmm0,rcx
@@ -360,6 +363,15 @@ update_frame_stats:
 align 16
 update:
                      sub  rsp,24
+                  vxorps  xmm0,xmm0,xmm0
+               vcvtsd2ss  xmm0,xmm0,[time]
+            vbroadcastss  ymm0,xmm0
+                    call  sincos
+                 vmovaps  ymm2,[k_7_0]
+                  vmulps  ymm0,ymm0,ymm2
+                  vmulps  ymm1,ymm1,ymm2
+                  vmovss  [eye_position],xmm0
+                  vmovss  [eye_position+8],xmm1
             vbroadcastss  ymm0,[eye_position]           ; ymm0 = eye x pos
             vbroadcastss  ymm3,[eye_focus]
             vbroadcastss  ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -612,6 +624,7 @@ quit dd 0
 
 @get_time:
 .perf_freq dq 0
+.first_perf_counter dq 0
 
 @update_frame_stats:
 .prev_time dq 0
@@ -623,7 +636,7 @@ quit dd 0
 displayptr dq 0
 tileidx dd 0,0
 
-eye_position dd 0.0,0.0,7.0
+eye_position dd 0.0,3.0,7.0
 eye_focus dd 0.0,0.0,0.0
 k_background_color dd 0.1,0.3,0.6
 
@@ -659,6 +672,7 @@ align 32
 k_1: dd 8 dup 1
 k_2: dd 8 dup 2
 k_1_0: dd 8 dup 1.0
+k_7_0: dd 8 dup 7.0
 k_255_0: dd 8 dup 255.0
 k_hit_distance: dd 8 dup 0.0001
 k_view_distance: dd 8 dup 25.0
