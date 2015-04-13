@@ -7,19 +7,19 @@ INFINITE = -1
 
 section '.text' code readable executable
 ;========================================================================
-  macro iaca_begin
-  {
+macro iaca_begin
+{
                      mov  ebx,111
                       db  0x64,0x67,0x90
-  }
-  macro iaca_end
-  {
+}
+macro iaca_end
+{
                      mov  ebx,222
                       db  0x64,0x67,0x90
-  }
+}
 ;========================================================================
-  align 16
-  sincos:
+align 16
+sincos:
                  vmovaps  ymm7,ymm0
                   vandps  ymm0,ymm0,[@sincos.k_inv_sign_mask]
                   vandps  ymm7,ymm7,[@sincos.k_sign_mask]
@@ -78,8 +78,8 @@ section '.text' code readable executable
                   vmulps  ymm1,ymm6,ymm7
                      ret
 ;========================================================================
-  align 16
-  nearest_distance: ; (ymm0,ymm1,ymm2) position
+align 16
+nearest_distance: ; (ymm0,ymm1,ymm2) position
                   vsubps  ymm3,ymm0,[scene.param_x]
                   vsubps  ymm4,ymm1,[scene.param_y]
                   vsubps  ymm5,ymm2,[scene.param_z]
@@ -117,14 +117,14 @@ section '.text' code readable executable
                   vminps  ymm0,ymm0,ymm11
                      ret
 ;========================================================================
-  align 16
-  raymarch_distance: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
-    virtual at rsp
-    .rayo: rd 3*8
-    .rayd: rd 3*8
-    .distance: rd 8
-    .k_stack_size = $-$$
-    end virtual
+align 16
+raymarch_distance: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
+  virtual at rsp
+  .rayo: rd 3*8
+  .rayd: rd 3*8
+  .distance: rd 8
+  .k_stack_size = $-$$
+  end virtual
                     push  rsi
                      sub  rsp,.k_stack_size+16
                  vmovaps  ymm6,[k_1_0]
@@ -136,8 +136,8 @@ section '.text' code readable executable
                  vmovaps  [.rayd+32],ymm4
                  vmovaps  [.rayd+64],ymm5
                      mov  esi,128
-    align 32
-    .march:
+  align 32
+  .march:
              vfmadd231ps  ymm0,ymm6,ymm3
              vfmadd231ps  ymm1,ymm6,ymm4
              vfmadd231ps  ymm2,ymm6,ymm5
@@ -160,17 +160,17 @@ section '.text' code readable executable
                  vmovaps  [.distance],ymm6
                      sub  esi,1
                      jnz  .march
-    .march_end:
+  .march_end:
                  vmovaps  ymm0,ymm6
                      add  rsp,.k_stack_size+16
                      pop  rsi
                      ret
 ;========================================================================
-  align 16
-  generate_fractal_thread:
+align 16
+generate_fractal_thread:
                      and  rsp,-32
                      mov  esi,ecx       ; thread id
-    .run:
+  .run:
                   invoke  WaitForSingleObject,[main_thrd_semaphore],INFINITE
                      mov  eax,[quit]
                     test  eax,eax
@@ -178,14 +178,14 @@ section '.text' code readable executable
                     call  generate_fractal
                   invoke  ReleaseSemaphore,[thrd_semaphore+rsi*8],1,NULL
                      jmp  .run
-    .return:
+  .return:
                   invoke  ExitThread,0
 ;========================================================================
-  align 16
-  generate_fractal:
+align 16
+generate_fractal:
                     push  rsi rdi rbx rbp r12 r13 r14 r15
                      sub  rsp,24
-    .for_each_tile:
+  .for_each_tile:
                      mov  eax,1
                lock xadd  [tileidx],eax
                      cmp  eax,k_tile_count
@@ -206,8 +206,8 @@ section '.text' code readable executable
                      shl  eax,2
                      mov  rbx,[displayptr]
                      add  rbx,rax
-    align 32
-    .for_each_4x2:
+  align 32
+  .for_each_4x2:
                   vxorps  xmm0,xmm0,xmm0
                   vxorps  xmm1,xmm1,xmm1
                      mov  eax,r12d
@@ -293,23 +293,23 @@ section '.text' code readable executable
                      cmp  r13d,r15d
                       jb  .for_each_4x2
                      jmp  .for_each_tile
-    .return:
+  .return:
                      add  rsp,24
                      pop  r15 r14 r13 r12 rbp rbx rdi rsi
                      ret
 ;========================================================================
-  align 16
-  get_time:
-    virtual at rsp
-    .perf_counter dq ?
-    end virtual
+align 16
+get_time:
+  virtual at rsp
+  .perf_counter dq ?
+  end virtual
                      sub  rsp,24
                      mov  rax,[@get_time.perf_freq]
                     test  eax,eax
                      jnz  @f
                      mov  rcx,@get_time.perf_freq
                   invoke  QueryPerformanceFrequency
-    @@:              lea  rcx,[.perf_counter]
+  @@:                lea  rcx,[.perf_counter]
                   invoke  QueryPerformanceCounter
                      mov  rcx,[.perf_counter]
                      mov  rdx,[@get_time.perf_freq]
@@ -320,8 +320,8 @@ section '.text' code readable executable
                      add  rsp,24
                      ret
 ;========================================================================
-  align 16
-  update_frame_stats:
+align 16
+update_frame_stats:
                      sub  rsp,24
                      mov  rax,[@update_frame_stats.prev_time]
                     test  rax,rax
@@ -329,7 +329,7 @@ section '.text' code readable executable
                     call  get_time
                   vmovsd  [@update_frame_stats.prev_time],xmm0
                   vmovsd  [@update_frame_stats.prev_update_time],xmm0
-    @@:             call  get_time                                        ; xmm0 = (0, time)
+  @@:               call  get_time                                        ; xmm0 = (0, time)
                   vmovsd  [time],xmm0
                   vsubsd  xmm1,xmm0,[@update_frame_stats.prev_time]       ; xmm1 = (0, time_delta)
                   vmovsd  [@update_frame_stats.prev_time],xmm0
@@ -353,12 +353,12 @@ section '.text' code readable executable
                      mov  [@update_frame_stats.frame],0
                  cinvoke  wsprintf,win_title,win_title_fmt,r10,r11
                   invoke  SetWindowText,[win_handle],win_title
-    @@:              add  [@update_frame_stats.frame],1
+  @@:                add  [@update_frame_stats.frame],1
                      add  rsp,24
                      ret
 ;========================================================================
-  align 16
-  update:
+align 16
+update:
                      sub  rsp,24
             vbroadcastss  ymm0,[eye_position]           ; ymm0 = eye x pos
             vbroadcastss  ymm3,[eye_focus]
@@ -418,8 +418,8 @@ section '.text' code readable executable
                      add  rsp,24
                      ret
 ;========================================================================
-  align 16
-  init:
+align 16
+init:
                     push  rsi
                      sub  rsp,16
                   invoke  GetModuleHandle,0
@@ -468,7 +468,7 @@ section '.text' code readable executable
                     test  rax,rax
                       jz  .error
                      xor  esi,esi
-    @@:           invoke  CreateSemaphore,NULL,0,1,NULL
+  @@:             invoke  CreateSemaphore,NULL,0,1,NULL
                      mov  [thrd_semaphore+rsi*8],rax
                     test  rax,rax
                       jz  .error
@@ -476,7 +476,7 @@ section '.text' code readable executable
                      cmp  esi,k_thrd_count
                       jb  @b
                      xor  esi,esi
-    @@:           invoke  CreateThread,NULL,0,generate_fractal_thread,esi,0,NULL
+  @@:             invoke  CreateThread,NULL,0,generate_fractal_thread,esi,0,NULL
                      mov  [thrd_handle+rsi*8],rax
                     test  rax,rax
                       jz  .error
@@ -486,77 +486,76 @@ section '.text' code readable executable
                      mov  eax,1
                      add  rsp,24
                      ret
-    .error:          xor  eax,eax
+  .error:            xor  eax,eax
                      add  rsp,16
                      pop  rsi
                      ret
 ;========================================================================
-  align 16
-  deinit:
+align 16
+deinit:
                     push  rsi rdi
                      sub  rsp,8
                      mov  [quit],1
                   invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
                      xor  esi,esi
-    .for_each_thrd:  mov  rdi,[thrd_handle+rsi*8]
+  .for_each_thrd:    mov  rdi,[thrd_handle+rsi*8]
                     test  rdi,rdi
                       jz  @f
                   invoke  WaitForSingleObject,rdi,INFINITE
                   invoke  CloseHandle,rdi
-    @@:              add  esi,1
+  @@:                add  esi,1
                      cmp  esi,k_thrd_count
                       jb  .for_each_thrd
                      mov  rcx,[main_thrd_semaphore]
                     test  rcx,rcx
                       jz  @f
                   invoke  CloseHandle,rcx
-    @@:              xor  esi,esi
-    .for_each_sem:   mov  rcx,[thrd_semaphore+rsi*8]
+  @@:                xor  esi,esi
+  .for_each_sem:     mov  rcx,[thrd_semaphore+rsi*8]
                     test  rcx,rcx
                       jz  @f
                   invoke  CloseHandle,rcx
-    @@:              add  esi,1
+  @@:                add  esi,1
                      cmp  esi,k_thrd_count
                       jb  .for_each_sem
                      mov  rcx,[bmp_hdc]
                     test  rcx,rcx
                       jz  @f
                   invoke  DeleteDC,rcx
-    @@:              mov  rcx,[bmp_handle]
+  @@:                mov  rcx,[bmp_handle]
                     test  rcx,rcx
                       jz  @f
                   invoke  DeleteObject,rcx
-    @@:              mov  rcx,[win_hdc]
+  @@:                mov  rcx,[win_hdc]
                     test  rcx,rcx
                       jz  @f
                   invoke  ReleaseDC,rcx
-    @@:              add  rsp,8
+  @@:                add  rsp,8
                      pop  rdi rsi
                      ret
 ;========================================================================
-  align 16
-  start:
+align 16
+start:
                      and  rsp,-32
                     call  init
                     test  eax,eax
                       jz  .quit
-    .main_loop:   invoke  PeekMessage,win_msg,NULL,0,0,PM_REMOVE
+  .main_loop:     invoke  PeekMessage,win_msg,NULL,0,0,PM_REMOVE
                     test  eax,eax
                       jz  .update
                   invoke  DispatchMessage,win_msg
                      cmp  [win_msg.message],WM_QUIT
                       je  .quit
                      jmp  .main_loop
-    .update:        call  update_frame_stats
+  .update:          call  update_frame_stats
                     call  update
                   invoke  BitBlt,[win_hdc],0,0,k_win_width,k_win_height,[bmp_hdc],0,0,SRCCOPY
                      jmp  .main_loop
-    .quit:          call  deinit
+  .quit:            call  deinit
                   invoke  ExitProcess,0
 ;========================================================================
-  align 16
-  proc winproc hwnd,msg,wparam,lparam
-
+align 16
+proc winproc hwnd,msg,wparam,lparam
                      mov  [hwnd],rcx
                      mov  [msg],rdx
                      mov  [wparam],r8
@@ -567,146 +566,145 @@ section '.text' code readable executable
                       je  .destroy
                   invoke  DefWindowProc,rcx,rdx,r8,r9
                      jmp  .return
-    .keydown:        cmp  [wparam],VK_ESCAPE
+  .keydown:          cmp  [wparam],VK_ESCAPE
                      jne  .return
                   invoke  PostQuitMessage,0
                      xor  eax,eax
                      jmp  .return
-    .destroy:     invoke  PostQuitMessage,0
+  .destroy:       invoke  PostQuitMessage,0
                      xor  eax,eax
-    .return:         ret
-
-  endp
+  .return:           ret
+endp
 ;========================================================================
 section '.data' data readable writeable
 
-  k_win_width = 1280
-  k_win_height = 720
-  k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+k_win_width = 1280
+k_win_height = 720
+k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
-  k_tile_width = 80
-  k_tile_height = 80
-  k_tile_x_count = k_win_width / k_tile_width
-  k_tile_y_count = k_win_height / k_tile_height
-  k_tile_count = k_tile_x_count * k_tile_y_count
+k_tile_width = 80
+k_tile_height = 80
+k_tile_x_count = k_win_width / k_tile_width
+k_tile_y_count = k_win_height / k_tile_height
+k_tile_count = k_tile_x_count * k_tile_y_count
 
-  k_thrd_count = 8
+k_thrd_count = 8
 
-  align 8
-  bmp_handle dq 0
-  bmp_hdc dq 0
-  win_handle dq 0
-  win_hdc dq 0
-  win_title db 'Fractal', 64 dup 0
-  win_title_fmt db '[%d fps  %d us] Fractal',0
-  win_msg MSG
-  win_class WNDCLASSEX sizeof.WNDCLASSEX,0,winproc,0,0,NULL,NULL,NULL,COLOR_BTNFACE+1,NULL,win_title,NULL
-  win_rect RECT
+align 8
+bmp_handle dq 0
+bmp_hdc dq 0
+win_handle dq 0
+win_hdc dq 0
+win_title db 'Fractal', 64 dup 0
+win_title_fmt db '[%d fps  %d us] Fractal',0
+win_msg MSG
+win_class WNDCLASSEX sizeof.WNDCLASSEX,0,winproc,0,0,NULL,NULL,NULL,COLOR_BTNFACE+1,NULL,win_title,NULL
+win_rect RECT
 
-  align 8
-  bmp_info BITMAPINFOHEADER sizeof.BITMAPINFOHEADER,k_win_width,k_win_height,1,32,BI_RGB,k_win_width*k_win_height,0,0,0,0
-  dq 0,0,0,0
+align 8
+bmp_info BITMAPINFOHEADER sizeof.BITMAPINFOHEADER,k_win_width,k_win_height,1,32,BI_RGB,k_win_width*k_win_height,0,0,0,0
+dq 0,0,0,0
 
-  align 8
-  time dq 0
-  time_delta dd 0
-  quit dd 0
+align 8
+time dq 0
+time_delta dd 0
+quit dd 0
 
-  @get_time:
-  .perf_freq dq 0
+@get_time:
+.perf_freq dq 0
 
-  @update_frame_stats:
-  .prev_time dq 0
-  .prev_update_time dq 0
-  .frame dd 0,0
-  .k_1000000_0 dq 1000000.0
-  .k_1_0 dq 1.0
+@update_frame_stats:
+.prev_time dq 0
+.prev_update_time dq 0
+.frame dd 0,0
+.k_1000000_0 dq 1000000.0
+.k_1_0 dq 1.0
 
-  displayptr dq 0
-  tileidx dd 0,0
+displayptr dq 0
+tileidx dd 0,0
 
-  eye_position dd 0.0,0.0,7.0
-  eye_focus dd 0.0,0.0,0.0
-  k_background_color dd 0.1,0.3,0.6
+eye_position dd 0.0,0.0,7.0
+eye_focus dd 0.0,0.0,0.0
+k_background_color dd 0.1,0.3,0.6
 
-  align 8
-  main_thrd_semaphore dq 0
-  thrd_handle dq k_thrd_count dup 0
-  thrd_semaphore dq k_thrd_count dup 0
+align 8
+main_thrd_semaphore dq 0
+thrd_handle dq k_thrd_count dup 0
+thrd_semaphore dq k_thrd_count dup 0
 
-  align 32
-  eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
-  eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
-  eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
+align 32
+eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
+eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
+eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 
-  align 32
-  @generate_fractal:
-  .k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-  .k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-  .k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
-  .k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
-  .k_rd_z: dd 8 dup -1.732
+align 32
+@generate_fractal:
+.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
+.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
+.k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
+.k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
+.k_rd_z: dd 8 dup -1.732
 
-  align 32
-  @sincos:
-  .k_inv_sign_mask: dd 8 dup not 0x80000000
-  .k_sign_mask: dd 8 dup 0x80000000
-  .k_2_div_pi: dd 8 dup 0.636619772
-  .k_p0: dd 8 dup 0.15707963267948963959e1
-  .k_p1: dd 8 dup -0.64596409750621907082e0
-  .k_p2: dd 8 dup 0.7969262624561800806e-1
-  .k_p3: dd 8 dup -0.468175413106023168e-2
+align 32
+@sincos:
+.k_inv_sign_mask: dd 8 dup not 0x80000000
+.k_sign_mask: dd 8 dup 0x80000000
+.k_2_div_pi: dd 8 dup 0.636619772
+.k_p0: dd 8 dup 0.15707963267948963959e1
+.k_p1: dd 8 dup -0.64596409750621907082e0
+.k_p2: dd 8 dup 0.7969262624561800806e-1
+.k_p3: dd 8 dup -0.468175413106023168e-2
 
-  align 32
-  k_1: dd 8 dup 1
-  k_2: dd 8 dup 2
-  k_1_0: dd 8 dup 1.0
-  k_255_0: dd 8 dup 255.0
-  k_hit_distance: dd 8 dup 0.0001
-  k_view_distance: dd 8 dup 25.0
+align 32
+k_1: dd 8 dup 1
+k_2: dd 8 dup 2
+k_1_0: dd 8 dup 1.0
+k_255_0: dd 8 dup 255.0
+k_hit_distance: dd 8 dup 0.0001
+k_view_distance: dd 8 dup 25.0
 
-  align 32
-  scene:
-  .param_x:
-  dd 8 dup -1.0
-  dd 8 dup 0.0
-  dd 8 dup 0.0
-  dd 8 dup 0.0
-  .param_y:
-  dd 8 dup 0.0
-  dd 8 dup 1.0
-  dd 8 dup 0.0
-  dd 8 dup 1.0
-  .param_z:
-  dd 8 dup 0.0
-  dd 8 dup 3.0
-  dd 8 dup 4.0
-  dd 8 dup 0.0
-  .param_w:
-  dd 8 dup 2.0
-  dd 8 dup 0.5
-  dd 8 dup 0.25
-  dd 8 dup 2.0
-  .red:
-  dd 8 dup 1.0
-  dd 8 dup 0.0
-  dd 8 dup 0.0
-  dd 8 dup 1.0
-  .green:
-  dd 8 dup 0.0
-  dd 8 dup 1.0
-  dd 8 dup 0.0
-  dd 8 dup 0.8
-  .blue:
-  dd 8 dup 0.0
-  dd 8 dup 0.0
-  dd 8 dup 1.0
-  dd 8 dup 0.1
+align 32
+scene:
+.param_x:
+dd 8 dup -1.0
+dd 8 dup 0.0
+dd 8 dup 0.0
+dd 8 dup 0.0
+.param_y:
+dd 8 dup 0.0
+dd 8 dup 1.0
+dd 8 dup 0.0
+dd 8 dup 1.0
+.param_z:
+dd 8 dup 0.0
+dd 8 dup 3.0
+dd 8 dup 4.0
+dd 8 dup 0.0
+.param_w:
+dd 8 dup 2.0
+dd 8 dup 0.5
+dd 8 dup 0.25
+dd 8 dup 2.0
+.red:
+dd 8 dup 1.0
+dd 8 dup 0.0
+dd 8 dup 0.0
+dd 8 dup 1.0
+.green:
+dd 8 dup 0.0
+dd 8 dup 1.0
+dd 8 dup 0.0
+dd 8 dup 0.8
+.blue:
+dd 8 dup 0.0
+dd 8 dup 0.0
+dd 8 dup 1.0
+dd 8 dup 0.1
 ;========================================================================
 section '.idata' import data readable writeable
 
-  library kernel32,'KERNEL32.DLL',user32,'USER32.DLL',gdi32,'GDI32.DLL'
-  include 'api\kernel32.inc'
-  include 'api\user32.inc'
-  include 'api\gdi32.inc'
+library kernel32,'KERNEL32.DLL',user32,'USER32.DLL',gdi32,'GDI32.DLL'
+include 'api\kernel32.inc'
+include 'api\user32.inc'
+include 'api\gdi32.inc'
 ;========================================================================
