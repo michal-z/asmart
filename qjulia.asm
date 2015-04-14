@@ -20,20 +20,18 @@ macro iaca_end
 ;========================================================================
 align 16
 sincos:
-                 vmovaps  ymm7,ymm0
                   vandps  ymm0,ymm0,[@sincos.k_inv_sign_mask]
-                  vandps  ymm7,ymm7,[@sincos.k_sign_mask]
+                  vandps  ymm7,ymm0,[@sincos.k_sign_mask]
                   vmulps  ymm0,ymm0,[@sincos.k_2_div_pi]
                    vpxor  ymm3,ymm3,ymm3
-                 vmovdqa  ymm5,[k_1]
+                 vmovdqa  ymm8,[k_1]
                  vmovaps  ymm4,[k_1_0]
               vcvttps2dq  ymm2,ymm0
-                   vpand  ymm5,ymm5,ymm2
+                   vpand  ymm5,ymm8,ymm2
                 vpcmpeqd  ymm5,ymm5,ymm3
-                 vmovdqa  ymm3,[k_1]
                  vmovdqa  ymm1,[k_2]
                vcvtdq2ps  ymm6,ymm2
-                  vpaddd  ymm3,ymm3,ymm2
+                  vpaddd  ymm3,ymm8,ymm2
                    vpand  ymm2,ymm2,ymm1
                    vpand  ymm3,ymm3,ymm1
                   vsubps  ymm0,ymm0,ymm6
@@ -41,39 +39,27 @@ sincos:
                   vminps  ymm0,ymm0,ymm4
                   vsubps  ymm4,ymm4,ymm0
                   vpslld  ymm3,ymm3,30
-                 vmovaps  ymm6,ymm4
                   vxorps  ymm2,ymm2,ymm7
-                 vmovaps  ymm7,ymm5
-                  vandps  ymm6,ymm6,ymm7
-                 vandnps  ymm7,ymm7,ymm0
+                  vandps  ymm6,ymm4,ymm5
+                 vandnps  ymm7,ymm5,ymm0
                   vandps  ymm0,ymm0,ymm5
                  vandnps  ymm5,ymm5,ymm4
-                 vmovaps  ymm4,[@sincos.k_p3]
+                 vmovaps  ymm8,[@sincos.k_p3]
+                 vmovaps  ymm9,[@sincos.k_p2]
+                 vmovaps  ymm10,[@sincos.k_p1]
+                 vmovaps  ymm11,[@sincos.k_p0]
                    vorps  ymm6,ymm6,ymm7
                    vorps  ymm0,ymm0,ymm5
-                 vmovaps  ymm5,[@sincos.k_p2]
-                 vmovaps  ymm1,ymm0
-                 vmovaps  ymm7,ymm6
-                  vmulps  ymm0,ymm0,ymm0
-                  vmulps  ymm6,ymm6,ymm6
-                   vorps  ymm1,ymm1,ymm2
-                   vorps  ymm7,ymm7,ymm3
-                 vmovaps  ymm2,ymm0
-                 vmovaps  ymm3,ymm6
-                  vmulps  ymm0,ymm0,ymm4
-                  vmulps  ymm6,ymm6,ymm4
-                 vmovaps  ymm4,[@sincos.k_p1]
-                  vaddps  ymm0,ymm0,ymm5
-                  vaddps  ymm6,ymm6,ymm5
-                 vmovaps  ymm5,[@sincos.k_p0]
-                  vmulps  ymm0,ymm0,ymm2
-                  vmulps  ymm6,ymm6,ymm3
-                  vaddps  ymm0,ymm0,ymm4
-                  vaddps  ymm6,ymm6,ymm4
-                  vmulps  ymm0,ymm0,ymm2
-                  vmulps  ymm6,ymm6,ymm3
-                  vaddps  ymm0,ymm0,ymm5
-                  vaddps  ymm6,ymm6,ymm5
+                   vorps  ymm1,ymm0,ymm2
+                   vorps  ymm7,ymm6,ymm3
+                  vmulps  ymm2,ymm0,ymm0
+                  vmulps  ymm3,ymm6,ymm6
+             vfmadd132ps  ymm0,ymm9,ymm8
+             vfmadd132ps  ymm6,ymm9,ymm8
+             vfmadd132ps  ymm0,ymm10,ymm2
+             vfmadd132ps  ymm6,ymm10,ymm3
+             vfmadd132ps  ymm0,ymm11,ymm2
+             vfmadd132ps  ymm6,ymm11,ymm3
                   vmulps  ymm0,ymm0,ymm1
                   vmulps  ymm1,ymm6,ymm7
                      ret
