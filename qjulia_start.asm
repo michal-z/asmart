@@ -304,10 +304,6 @@ quit dd 0
 displayptr dq 0
 tileidx dd 0,0
 
-eye_position dd 0.0,3.0,7.0
-eye_focus dd 0.0,0.0,0.0
-k_background_color dd 0.1,0.3,0.6
-
 align 8
 main_thrd_semaphore dq 0
 thrd_handle dq k_thrd_count dup 0

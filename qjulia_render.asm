@@ -317,6 +317,11 @@ update:
 ;========================================================================
 else if qjulia_section = 'data'
 
+align 4
+eye_position dd 0.0,3.0,7.0
+eye_focus dd 0.0,0.0,0.0
+k_background_color dd 0.1,0.3,0.6
+
 align 32
 eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
 eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
