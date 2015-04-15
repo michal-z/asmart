@@ -215,6 +215,18 @@ deinit:
                      ret
 ;========================================================================
 align 16
+update:
+                     sub  rsp,24
+                    call  update_frame_stats
+                    call  update_state
+                    mov  [tileidx],0
+                  invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
+                  invoke  WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
+                  invoke  BitBlt,[win_hdc],0,0,k_win_width,k_win_height,[bmp_hdc],0,0,SRCCOPY
+                     add  rsp,24
+                     ret
+;========================================================================
+align 16
 start:
                      and  rsp,-32
                     call  init
@@ -227,9 +239,7 @@ start:
                      cmp  [win_msg.message],WM_QUIT
                       je  .quit
                      jmp  .main_loop
-  .update:          call  update_frame_stats
-                    call  update
-                  invoke  BitBlt,[win_hdc],0,0,k_win_width,k_win_height,[bmp_hdc],0,0,SRCCOPY
+  .update:          call  update
                      jmp  .main_loop
   .quit:            call  deinit
                   invoke  ExitProcess,0

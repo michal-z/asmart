@@ -246,7 +246,7 @@ generate_fractal:
                      ret
 ;========================================================================
 align 16
-update:
+update_state:
                      sub  rsp,24
                   vxorps  xmm0,xmm0,xmm0
                vcvtsd2ss  xmm0,xmm0,[time]
@@ -309,9 +309,6 @@ update:
                  vmovaps  [eye_yaxis],ymm9
                  vmovaps  [eye_yaxis+32],ymm10
                  vmovaps  [eye_yaxis+64],ymm11
-                     mov  [tileidx],0
-                  invoke  ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
-                  invoke  WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
                      add  rsp,24
                      ret
 ;========================================================================
