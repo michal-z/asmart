@@ -86,6 +86,43 @@ nearest_distance: ; (ymm0,ymm1,ymm2) position
         ret
 ;========================================================================
 align 16
+nearest_object:
+        iaca_begin
+        vsubps          ymm3,ymm0,[scene.param_x]
+        vsubps          ymm6,ymm0,[scene.param_x+32]
+        vsubps          ymm9,ymm0,[scene.param_x+64]
+        vsubps          ymm4,ymm1,[scene.param_y]
+        vsubps          ymm7,ymm1,[scene.param_y+32]
+        vsubps          ymm10,ymm1,[scene.param_y+64]
+        vsubps          ymm5,ymm2,[scene.param_z]
+        vsubps          ymm8,ymm2,[scene.param_z+32]
+        vsubps          ymm11,ymm2,[scene.param_z+64]
+if 0
+        vmulps          ymm3,ymm3,ymm3
+        vmulps          ymm6,ymm6,ymm6
+        vmulps          ymm4,ymm4,ymm4
+        vmulps          ymm7,ymm7,ymm7
+        vmulps          ymm5,ymm5,ymm5
+        vmulps          ymm8,ymm8,ymm8
+        vaddps          ymm3,ymm3,ymm4
+        vaddps          ymm6,ymm6,ymm7
+        vaddps          ymm3,ymm3,ymm5
+        vaddps          ymm6,ymm6,ymm8
+else
+        vmulps          ymm3,ymm3,ymm3
+        vmulps          ymm6,ymm6,ymm6
+        vmulps          ymm9,ymm9,ymm9
+        vfmadd231ps     ymm3,ymm4,ymm4
+        vfmadd231ps     ymm6,ymm7,ymm7
+        vfmadd231ps     ymm9,ymm10,ymm10
+        vfmadd231ps     ymm3,ymm5,ymm5
+        vfmadd231ps     ymm6,ymm8,ymm8
+        vfmadd231ps     ymm9,ymm11,ymm11
+end if
+        iaca_end
+        ret
+;========================================================================
+align 16
 raymarch_distance: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
     virtual at rsp
     .rayo: rd 3*8
@@ -249,7 +286,7 @@ align 16
 update_state:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
-        vcvtsd2ss       xmm0,xmm0,[time]
+        ;vcvtsd2ss       xmm0,xmm0,[time]
         vbroadcastss    ymm0,xmm0
         call            sincos
         vmovaps         ymm2,[k_7_0]
