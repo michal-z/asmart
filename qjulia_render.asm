@@ -48,67 +48,15 @@ sincos:
 ;========================================================================
 align 16
 nearest_distance: ; (ymm0,ymm1,ymm2) position
-        vsubps          ymm3,ymm0,[scene.param_x]
-        vsubps          ymm4,ymm1,[scene.param_y]
-        vsubps          ymm5,ymm2,[scene.param_z]
-        vsubps          ymm7,ymm0,[scene.param_x+32]
-        vsubps          ymm8,ymm1,[scene.param_y+32]
-        vsubps          ymm9,ymm2,[scene.param_z+32]
-        vsubps          ymm11,ymm0,[scene.param_x+64]
-        vmulps          ymm3,ymm3,ymm3
-        vmulps          ymm7,ymm7,ymm7
-        vsubps          ymm12,ymm1,[scene.param_y+64]
-        vsubps          ymm13,ymm2,[scene.param_z+64]
-        vmovaps         ymm6,[scene.param_w]
-        vmovaps         ymm10,[scene.param_w+32]
-        vmulps          ymm11,ymm11,ymm11
-        vfmadd231ps     ymm3,ymm4,ymm4
-        vmovaps         ymm4,[scene.param_w+64]
-        vfmadd231ps     ymm7,ymm8,ymm8
-        vfmadd231ps     ymm11,ymm12,ymm12
-        vfmadd231ps     ymm3,ymm5,ymm5
-        vmovaps         ymm5,[scene.param_w+96]
-        vfmadd231ps     ymm7,ymm9,ymm9
-        vfmadd231ps     ymm11,ymm13,ymm13
-        vrsqrtps        ymm3,ymm3
-        vrsqrtps        ymm7,ymm7
-        vrsqrtps        ymm11,ymm11
-        vaddps          ymm0,ymm1,ymm5
-        vrcpps          ymm3,ymm3
-        vrcpps          ymm7,ymm7
-        vrcpps          ymm11,ymm11
-        vsubps          ymm3,ymm3,ymm6
-        vsubps          ymm7,ymm7,ymm10
-        vsubps          ymm11,ymm11,ymm4
-        vminps          ymm0,ymm0,ymm3
-        vminps          ymm0,ymm0,ymm7
-        vminps          ymm0,ymm0,ymm11
-        ret
-;========================================================================
-align 16
-nearest_object:
-        iaca_begin
-        vsubps          ymm3,ymm0,[scene.param_x]
-        vsubps          ymm6,ymm0,[scene.param_x+32]
-        vsubps          ymm9,ymm0,[scene.param_x+64]
-        vsubps          ymm4,ymm1,[scene.param_y]
-        vsubps          ymm7,ymm1,[scene.param_y+32]
-        vsubps          ymm10,ymm1,[scene.param_y+64]
-        vsubps          ymm5,ymm2,[scene.param_z]
-        vsubps          ymm8,ymm2,[scene.param_z+32]
-        vsubps          ymm11,ymm2,[scene.param_z+64]
-if 0
-        vmulps          ymm3,ymm3,ymm3
-        vmulps          ymm6,ymm6,ymm6
-        vmulps          ymm4,ymm4,ymm4
-        vmulps          ymm7,ymm7,ymm7
-        vmulps          ymm5,ymm5,ymm5
-        vmulps          ymm8,ymm8,ymm8
-        vaddps          ymm3,ymm3,ymm4
-        vaddps          ymm6,ymm6,ymm7
-        vaddps          ymm3,ymm3,ymm5
-        vaddps          ymm6,ymm6,ymm8
-else
+        vsubps          ymm3,ymm0,[object.param_x+0*32]
+        vsubps          ymm6,ymm0,[object.param_x+1*32]
+        vsubps          ymm9,ymm0,[object.param_x+2*32]
+        vsubps          ymm4,ymm1,[object.param_y+0*32]
+        vsubps          ymm7,ymm1,[object.param_y+1*32]
+        vsubps          ymm10,ymm1,[object.param_y+2*32]
+        vsubps          ymm5,ymm2,[object.param_z+0*32]
+        vsubps          ymm8,ymm2,[object.param_z+1*32]
+        vsubps          ymm11,ymm2,[object.param_z+2*32]
         vmulps          ymm3,ymm3,ymm3
         vmulps          ymm6,ymm6,ymm6
         vmulps          ymm9,ymm9,ymm9
@@ -118,8 +66,73 @@ else
         vfmadd231ps     ymm3,ymm5,ymm5
         vfmadd231ps     ymm6,ymm8,ymm8
         vfmadd231ps     ymm9,ymm11,ymm11
-end if
-        iaca_end
+        vaddps          ymm5,ymm1,[object.param_w+3*32]
+        vrsqrtps        ymm3,ymm3
+        vrsqrtps        ymm6,ymm6
+        vrsqrtps        ymm9,ymm9
+        vmovaps         ymm10,[object.param_w+0*32]
+        vmovaps         ymm11,[object.param_w+1*32]
+        vmovaps         ymm12,[object.param_w+2*32]
+        vrcpps          ymm3,ymm3
+        vrcpps          ymm6,ymm6
+        vrcpps          ymm9,ymm9
+        vsubps          ymm3,ymm3,ymm10
+        vsubps          ymm6,ymm6,ymm11
+        vsubps          ymm9,ymm9,ymm12
+        vminps          ymm0,ymm5,ymm3
+        vminps          ymm0,ymm0,ymm6
+        vminps          ymm0,ymm0,ymm9
+        ret
+;========================================================================
+align 16
+;nearest_distance:
+nearest_object:
+        ;iaca_begin
+        vsubps          ymm3,ymm0,[object.param_x+0*32]
+        vsubps          ymm6,ymm0,[object.param_x+1*32]
+        vsubps          ymm9,ymm0,[object.param_x+2*32]
+        vsubps          ymm4,ymm1,[object.param_y+0*32]
+        vsubps          ymm7,ymm1,[object.param_y+1*32]
+        vsubps          ymm10,ymm1,[object.param_y+2*32]
+        vsubps          ymm5,ymm2,[object.param_z+0*32]
+        vsubps          ymm8,ymm2,[object.param_z+1*32]
+        vsubps          ymm11,ymm2,[object.param_z+2*32]
+        vmulps          ymm3,ymm3,ymm3
+        vmulps          ymm6,ymm6,ymm6
+        vmulps          ymm9,ymm9,ymm9
+        vfmadd231ps     ymm3,ymm4,ymm4
+        vfmadd231ps     ymm6,ymm7,ymm7
+        vfmadd231ps     ymm9,ymm10,ymm10
+        vfmadd231ps     ymm3,ymm5,ymm5
+        vfmadd231ps     ymm6,ymm8,ymm8
+        vfmadd231ps     ymm9,ymm11,ymm11
+        vaddps          ymm5,ymm1,[object.param_w+3*32]         ; ymm5 = object[3] distance
+        vrsqrtps        ymm2,ymm3
+        vrsqrtps        ymm3,ymm6
+        vrsqrtps        ymm4,ymm9
+        vmovaps         ymm10,[object.param_w+0*32]
+        vmovaps         ymm11,[object.param_w+1*32]
+        vmovaps         ymm12,[object.param_w+2*32]
+        vmovaps         ymm6,[object.id+0*32]
+        vmovaps         ymm7,[object.id+1*32]
+        vmovaps         ymm8,[object.id+2*32]
+        vmovaps         ymm9,[object.id+3*32]
+        vrcpps          ymm2,ymm2
+        vrcpps          ymm3,ymm3
+        vrcpps          ymm4,ymm4
+        vsubps          ymm2,ymm2,ymm10                         ; ymm2 = object[0] distance
+        vsubps          ymm3,ymm3,ymm11                         ; ymm3 = object[1] distance
+        vsubps          ymm4,ymm4,ymm12                         ; ymm4 = object[2] distance
+
+
+        vcmpltps        ymm10,ymm5,ymm2
+        vminps          ymm0,ymm5,ymm2
+        vblendvps       ymm1,ymm6,ymm9,ymm10
+
+        vminps          ymm0,ymm0,ymm3
+        vminps          ymm0,ymm0,ymm4
+
+        ;iaca_end
         ret
 ;========================================================================
 align 16
@@ -378,7 +391,12 @@ k_hit_distance: dd 8 dup 0.0001
 k_view_distance: dd 8 dup 25.0
 
 align 32
-scene:
+object:
+.id:
+dd 8 dup 0
+dd 8 dup 8
+dd 8 dup 16
+dd 8 dup 24
 .param_x:
 dd 8 dup -1.0
 dd 8 dup 0.0
