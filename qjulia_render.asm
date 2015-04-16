@@ -2,9 +2,9 @@ if qjulia_section = 'code'
 ;========================================================================
 align 16
 sincos:
-        vandps          ymm0,ymm0,[sincos$k_inv_sign_mask]
-        vandps          ymm7,ymm0,[sincos$k_sign_mask]
-        vmulps          ymm0,ymm0,[sincos$k_2_div_pi]
+        vandps          ymm0,ymm0,[.k_inv_sign_mask]
+        vandps          ymm7,ymm0,[.k_sign_mask]
+        vmulps          ymm0,ymm0,[.k_2_div_pi]
         vpxor           ymm3,ymm3,ymm3
         vmovdqa         ymm8,[k_1]
         vmovaps         ymm4,[k_1_0]
@@ -26,10 +26,10 @@ sincos:
         vandnps         ymm7,ymm5,ymm0
         vandps          ymm0,ymm0,ymm5
         vandnps         ymm5,ymm5,ymm4
-        vmovaps         ymm8,[sincos$k_p3]
-        vmovaps         ymm9,[sincos$k_p2]
-        vmovaps         ymm10,[sincos$k_p1]
-        vmovaps         ymm11,[sincos$k_p0]
+        vmovaps         ymm8,[.k_p3]
+        vmovaps         ymm9,[.k_p2]
+        vmovaps         ymm10,[.k_p1]
+        vmovaps         ymm11,[.k_p0]
         vorps           ymm6,ymm6,ymm7
         vorps           ymm0,ymm0,ymm5
         vorps           ymm1,ymm0,ymm2
@@ -171,11 +171,11 @@ generate_fractal:
         vcvtsi2ss       xmm1,xmm1,edx                           ; (0, 0, 0, yf = (float)(y - k_win_height / 2))
         vbroadcastss    ymm0,xmm0                               ; ymm0 = (xf ... xf)
         vbroadcastss    ymm1,xmm1                               ; ymm1 = (yf ... yf)
-        vaddps          ymm0,ymm0,[generate_fractal$k_x_offset]
-        vaddps          ymm1,ymm1,[generate_fractal$k_y_offset]
-        vmovaps         ymm2,[generate_fractal$k_rd_z]
-        vmulps          ymm0,ymm0,[generate_fractal$k_win_width_rcp]
-        vmulps          ymm1,ymm1,[generate_fractal$k_win_height_rcp]
+        vaddps          ymm0,ymm0,[.k_x_offset]
+        vaddps          ymm1,ymm1,[.k_y_offset]
+        vmovaps         ymm2,[.k_rd_z]
+        vmulps          ymm0,ymm0,[.k_win_width_rcp]
+        vmulps          ymm1,ymm1,[.k_win_height_rcp]
         vmulps          ymm3,ymm0,[eye_xaxis]
         vmulps          ymm6,ymm0,[eye_xaxis+32]
         vmulps          ymm9,ymm0,[eye_xaxis+64]
@@ -325,11 +325,11 @@ eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
 eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 
 align 32
-generate_fractal$k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-generate_fractal$k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-generate_fractal$k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
-generate_fractal$k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
-generate_fractal$k_rd_z: dd 8 dup -1.732
+generate_fractal.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
+generate_fractal.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
+generate_fractal.k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
+generate_fractal.k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
+generate_fractal.k_rd_z: dd 8 dup -1.732
 
 align 32
 k_1: dd 8 dup 1
@@ -379,13 +379,13 @@ dd 8 dup 1.0
 dd 8 dup 0.1
 
 align 32
-sincos$k_inv_sign_mask: dd 8 dup not 0x80000000
-sincos$k_sign_mask: dd 8 dup 0x80000000
-sincos$k_2_div_pi: dd 8 dup 0.636619772
-sincos$k_p0: dd 8 dup 0.15707963267948963959e1
-sincos$k_p1: dd 8 dup -0.64596409750621907082e0
-sincos$k_p2: dd 8 dup 0.7969262624561800806e-1
-sincos$k_p3: dd 8 dup -0.468175413106023168e-2
+sincos.k_inv_sign_mask: dd 8 dup not 0x80000000
+sincos.k_sign_mask: dd 8 dup 0x80000000
+sincos.k_2_div_pi: dd 8 dup 0.636619772
+sincos.k_p0: dd 8 dup 0.15707963267948963959e1
+sincos.k_p1: dd 8 dup -0.64596409750621907082e0
+sincos.k_p2: dd 8 dup 0.7969262624561800806e-1
+sincos.k_p3: dd 8 dup -0.468175413106023168e-2
 
 end if
 ;========================================================================

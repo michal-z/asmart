@@ -42,18 +42,16 @@ get_time:
     .perf_counter dq ?
     end virtual
         sub             rsp,24
-        mov             rax,[get_time$perf_freq]
+        mov             rax,[.perf_freq]
         test            rax,rax
         jnz             @f
-        mov             rcx,get_time$perf_freq
-        invoke          QueryPerformanceFrequency,rcx
-        mov             rcx,get_time$first_perf_counter
-        invoke          QueryPerformanceCounter,rcx
+        invoke          QueryPerformanceFrequency,.perf_freq
+        invoke          QueryPerformanceCounter,.first_perf_counter
     @@: lea             rcx,[.perf_counter]
         invoke          QueryPerformanceCounter,rcx
         mov             rcx,[.perf_counter]
-        sub             rcx,[get_time$first_perf_counter]
-        mov             rdx,[get_time$perf_freq]
+        sub             rcx,[.first_perf_counter]
+        mov             rdx,[.perf_freq]
         vxorps          xmm0,xmm0,xmm0
         vcvtsi2sd       xmm1,xmm0,rcx
         vcvtsi2sd       xmm2,xmm0,rdx
@@ -64,37 +62,37 @@ get_time:
 align 16
 update_frame_stats:
         sub             rsp,24
-        mov             rax,[update_frame_stats$prev_time]
+        mov             rax,[.prev_time]
         test            rax,rax
         jnz             @f
         call            get_time
-        vmovsd          [update_frame_stats$prev_time],xmm0
-        vmovsd          [update_frame_stats$prev_update_time],xmm0
-    @@: call            get_time                                        ; xmm0 = (0, time)
+        vmovsd          [.prev_time],xmm0
+        vmovsd          [.prev_update_time],xmm0
+    @@: call            get_time                                ; xmm0 = (0, time)
         vmovsd          [time],xmm0
-        vsubsd          xmm1,xmm0,[update_frame_stats$prev_time]        ; xmm1 = (0, time_delta)
-        vmovsd          [update_frame_stats$prev_time],xmm0
+        vsubsd          xmm1,xmm0,[.prev_time]                  ; xmm1 = (0, time_delta)
+        vmovsd          [.prev_time],xmm0
         vxorps          xmm2,xmm2,xmm2
-        vcvtsd2ss       xmm1,xmm2,xmm1                                  ; xmm1 = (0, 0, 0, time_delta)
+        vcvtsd2ss       xmm1,xmm2,xmm1                          ; xmm1 = (0, 0, 0, time_delta)
         vmovss          [time_delta],xmm1
-        vmovsd          xmm1,[update_frame_stats$prev_update_time]      ; xmm1 = (0, prev_update_time)
-        vsubsd          xmm2,xmm0,xmm1                                  ; xmm2 = (0, time - prev_update_time)
-        vmovsd          xmm3,[update_frame_stats$k_1_0]                 ; xmm3 = (0, 1.0)
+        vmovsd          xmm1,[.prev_update_time]                ; xmm1 = (0, prev_update_time)
+        vsubsd          xmm2,xmm0,xmm1                          ; xmm2 = (0, time - prev_update_time)
+        vmovsd          xmm3,[.k_1_0]                           ; xmm3 = (0, 1.0)
         vcomisd         xmm2,xmm3
         jb              @f
-        vmovsd          [update_frame_stats$prev_update_time],xmm0
-        mov             eax,[update_frame_stats$frame]
+        vmovsd          [.prev_update_time],xmm0
+        mov             eax,[.frame]
         vxorpd          xmm1,xmm1,xmm1
-        vcvtsi2sd       xmm1,xmm1,eax                                   ; xmm1 = (0, frame)
-        vdivsd          xmm0,xmm1,xmm2                                  ; xmm0 = (0, frame / (time - prev_update_time))
+        vcvtsi2sd       xmm1,xmm1,eax                           ; xmm1 = (0, frame)
+        vdivsd          xmm0,xmm1,xmm2                          ; xmm0 = (0, frame / (time - prev_update_time))
         vdivsd          xmm1,xmm2,xmm1
-        vmulsd          xmm1,xmm1,[update_frame_stats$k_1000000_0]
+        vmulsd          xmm1,xmm1,[.k_1000000_0]
         vcvtsd2si       r10,xmm0
         vcvtsd2si       r11,xmm1
-        mov             [update_frame_stats$frame],0
+        mov             [.frame],0
         cinvoke         wsprintf,win_title,win_title_fmt,r10,r11
         invoke          SetWindowText,[win_handle],win_title
-    @@: add             [update_frame_stats$frame],1
+    @@: add             [.frame],1
         add             rsp,24
         ret
 ;========================================================================
@@ -309,14 +307,14 @@ time dq 0
 time_delta dd 0
 quit dd 0
 
-get_time$perf_freq dq 0
-get_time$first_perf_counter dq 0
+get_time.perf_freq dq 0
+get_time.first_perf_counter dq 0
 
-update_frame_stats$prev_time dq 0
-update_frame_stats$prev_update_time dq 0
-update_frame_stats$frame dd 0,0
-update_frame_stats$k_1000000_0 dq 1000000.0
-update_frame_stats$k_1_0 dq 1.0
+update_frame_stats.prev_time dq 0
+update_frame_stats.prev_update_time dq 0
+update_frame_stats.frame dd 0,0
+update_frame_stats.k_1000000_0 dq 1000000.0
+update_frame_stats.k_1_0 dq 1.0
 
 displayptr dq 0
 tileidx dd 0,0
