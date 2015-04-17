@@ -85,9 +85,7 @@ nearest_distance: ; (ymm0,ymm1,ymm2) position
         ret
 ;========================================================================
 align 16
-;nearest_distance:
 nearest_object:
-        ;iaca_begin
         vsubps          ymm3,ymm0,[object.param_x+0*32]
         vsubps          ymm6,ymm0,[object.param_x+1*32]
         vsubps          ymm9,ymm0,[object.param_x+2*32]
@@ -123,20 +121,18 @@ nearest_object:
         vsubps          ymm2,ymm2,ymm10                         ; ymm2 = object[0] distance
         vsubps          ymm3,ymm3,ymm11                         ; ymm3 = object[1] distance
         vsubps          ymm4,ymm4,ymm12                         ; ymm4 = object[2] distance
-
-
-        vcmpltps        ymm10,ymm5,ymm2
+        vcmpltps        ymm15,ymm5,ymm2
         vminps          ymm0,ymm5,ymm2
-        vblendvps       ymm1,ymm6,ymm9,ymm10
-
+        vblendvps       ymm1,ymm6,ymm9,ymm15
+        vcmpltps        ymm10,ymm0,ymm3
         vminps          ymm0,ymm0,ymm3
-        vminps          ymm0,ymm0,ymm4
-
-        ;iaca_end
+        vblendvps       ymm1,ymm7,ymm1,ymm10
+        vcmpltps        ymm10,ymm0,ymm4
+        vblendvps       ymm0,ymm8,ymm1,ymm10
         ret
 ;========================================================================
 align 16
-raymarch_distance: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
+raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
     virtual at rsp
     .rayo: rd 3*8
     .rayd: rd 3*8
@@ -179,7 +175,15 @@ raymarch_distance: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
         sub             esi,1
         jnz             .march
     .march_end:
-        vmovaps         ymm0,ymm6
+        vmovaps         ymm0,[.rayo]
+        vmovaps         ymm1,[.rayo+32]
+        vmovaps         ymm2,[.rayo+64]
+        vfmadd231ps     ymm0,ymm6,[.rayd]
+        vfmadd231ps     ymm1,ymm6,[.rayd+32]
+        vfmadd231ps     ymm2,ymm6,[.rayd+64]
+        call            nearest_object
+        vmovaps         ymm1,ymm0
+        vmovaps         ymm0,[.distance]
         add             rsp,.k_stack_size+16
         pop             rsi
         ret
@@ -188,6 +192,7 @@ align 16
 generate_fractal:
         push            rsi rdi rbx rbp r12 r13 r14 r15
         sub             rsp,24
+        lea             rdi,[object]
     .for_each_tile:
         mov             eax,1
         lock xadd       [tileidx],eax
@@ -247,21 +252,24 @@ generate_fractal:
         vmulps          ymm3,ymm3,ymm10
         vmulps          ymm4,ymm6,ymm10
         vmulps          ymm5,ymm9,ymm10
-        call            raymarch_distance
-        vmovaps         ymm3,[k_view_distance]
-        vbroadcastss    ymm4,[k_background_color]
-        vbroadcastss    ymm5,[k_background_color+4]
-        vbroadcastss    ymm6,[k_background_color+8]
+        call            raymarch
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm3,[rdi+ymm1*4+(object.red-object)],ymm2
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm4,[rdi+ymm1*4+(object.green-object)],ymm2
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm5,[rdi+ymm1*4+(object.blue-object)],ymm2
+        vmovaps         ymm6,[k_view_distance]
+        vbroadcastss    ymm7,[k_background_color]
+        vbroadcastss    ymm8,[k_background_color+4]
+        vbroadcastss    ymm9,[k_background_color+8]
+        vcmpltps        ymm11,ymm0,ymm6                         ; ymm11 = hit mask
+        vblendvps       ymm0,ymm7,ymm3,ymm11
+        vblendvps       ymm1,ymm8,ymm4,ymm11
+        vblendvps       ymm2,ymm9,ymm5,ymm11
         vxorps          ymm7,ymm7,ymm7                          ; ymm7 = (0 ... 0)
         vmovaps         ymm8,[k_1_0]                            ; ymm8 = (1.0 ... 1.0)
         vmovaps         ymm9,[k_255_0]                          ; ymm9 = (255.0 ... 255.0)
-        vrcpps          ymm10,ymm3
-        vmulps          ymm10,ymm0,ymm10
-        vsubps          ymm10,ymm8,ymm10
-        vcmpltps        ymm11,ymm0,ymm3                         ; ymm11 = hit mask
-        vblendvps       ymm0,ymm4,ymm10,ymm11
-        vblendvps       ymm1,ymm5,ymm10,ymm11
-        vblendvps       ymm2,ymm6,ymm10,ymm11
         vmaxps          ymm0,ymm0,ymm7
         vmaxps          ymm1,ymm1,ymm7
         vmaxps          ymm2,ymm2,ymm7
@@ -299,7 +307,7 @@ align 16
 update_state:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
-        ;vcvtsd2ss       xmm0,xmm0,[time]
+        vcvtsd2ss       xmm0,xmm0,[time]
         vbroadcastss    ymm0,xmm0
         call            sincos
         vmovaps         ymm2,[k_7_0]
