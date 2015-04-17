@@ -121,9 +121,9 @@ nearest_object:
         vsubps          ymm2,ymm2,ymm10                         ; ymm2 = object[0] distance
         vsubps          ymm3,ymm3,ymm11                         ; ymm3 = object[1] distance
         vsubps          ymm4,ymm4,ymm12                         ; ymm4 = object[2] distance
-        vcmpltps        ymm15,ymm5,ymm2
+        vcmpltps        ymm10,ymm5,ymm2
         vminps          ymm0,ymm5,ymm2
-        vblendvps       ymm1,ymm6,ymm9,ymm15
+        vblendvps       ymm1,ymm6,ymm9,ymm10
         vcmpltps        ymm10,ymm0,ymm3
         vminps          ymm0,ymm0,ymm3
         vblendvps       ymm1,ymm7,ymm1,ymm10
