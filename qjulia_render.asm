@@ -131,8 +131,10 @@ nearest_object:
         vblendvps       ymm0,ymm8,ymm1,ymm10
         ret
 ;========================================================================
+; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; out: <ymm0> distance to the nearest object, <ymm1> object id
 align 16
-raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
+raymarch:
     virtual at rsp
     .rayo: rd 3*8
     .rayd: rd 3*8
@@ -183,10 +185,19 @@ raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
         vmovaps         ymm1,[.pos+32]
         vmovaps         ymm2,[.pos+64]
         call            nearest_object
+        vmovaps         ymm2,[.pos]
+        vmovaps         ymm3,[.pos+32]
+        vmovaps         ymm4,[.pos+64]
         vmovaps         ymm1,ymm0
         vmovaps         ymm0,[.distance]
         add             rsp,.k_stack_size
         pop             rsi
+        ret
+;========================================================================
+; in: <ymm0,ymm1,ymm2> ray hit position
+; out: <ymm0,ymm1,ymm2> normal vector at input position
+align 16
+compute_normal:
         ret
 ;========================================================================
 align 16
