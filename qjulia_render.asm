@@ -133,6 +133,7 @@ nearest_object:
 ;========================================================================
 ; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
 ; out: <ymm0> distance to the nearest object, <ymm1> object id
+;      <ymm2,ymm3,ymm4> ray hit position
 align 16
 raymarch:
     virtual at rsp
@@ -201,10 +202,38 @@ compute_normal:
         ret
 ;========================================================================
 align 16
+compute_color:
+        push            rdi
+        sub             rsp,16
+        lea             rdi,[object]
+        call            raymarch
+        vcmpltps        ymm11,ymm0,[k_view_distance]                         ; ymm11 = hit mask
+        vbroadcastss    ymm7,[k_background_color]
+        vbroadcastss    ymm8,[k_background_color+4]
+        vbroadcastss    ymm9,[k_background_color+8]
+        vmovmskps       eax,ymm11
+        test            eax,eax
+        jz              .store_color
+
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm3,[rdi+ymm1*4+(object.red-object)],ymm2
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm4,[rdi+ymm1*4+(object.green-object)],ymm2
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm5,[rdi+ymm1*4+(object.blue-object)],ymm2
+
+    .store_color:
+        vblendvps       ymm0,ymm7,ymm3,ymm11
+        vblendvps       ymm1,ymm8,ymm4,ymm11
+        vblendvps       ymm2,ymm9,ymm5,ymm11
+        add             rsp,16
+        pop             rdi
+        ret
+;========================================================================
+align 16
 generate_fractal:
         push            rsi rdi rbx rbp r12 r13 r14 r15
         sub             rsp,24
-        lea             rdi,[object]
     .for_each_tile:
         mov             eax,1
         lock xadd       [tileidx],eax
@@ -264,21 +293,7 @@ generate_fractal:
         vmulps          ymm3,ymm3,ymm10
         vmulps          ymm4,ymm6,ymm10
         vmulps          ymm5,ymm9,ymm10
-        call            raymarch
-        vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm3,[rdi+ymm1*4+(object.red-object)],ymm2
-        vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm4,[rdi+ymm1*4+(object.green-object)],ymm2
-        vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm5,[rdi+ymm1*4+(object.blue-object)],ymm2
-        vmovaps         ymm6,[k_view_distance]
-        vbroadcastss    ymm7,[k_background_color]
-        vbroadcastss    ymm8,[k_background_color+4]
-        vbroadcastss    ymm9,[k_background_color+8]
-        vcmpltps        ymm11,ymm0,ymm6                         ; ymm11 = hit mask
-        vblendvps       ymm0,ymm7,ymm3,ymm11
-        vblendvps       ymm1,ymm8,ymm4,ymm11
-        vblendvps       ymm2,ymm9,ymm5,ymm11
+        call            compute_color
         vxorps          ymm7,ymm7,ymm7                          ; ymm7 = (0 ... 0)
         vmovaps         ymm8,[k_1_0]                            ; ymm8 = (1.0 ... 1.0)
         vmovaps         ymm9,[k_255_0]                          ; ymm9 = (255.0 ... 255.0)
