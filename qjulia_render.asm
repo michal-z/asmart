@@ -137,10 +137,11 @@ raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
     .rayo: rd 3*8
     .rayd: rd 3*8
     .distance: rd 8
-    .k_stack_size = $-$$
+    .pos: rd 3*8
+    .k_stack_size = $-$$+16
     end virtual
         push            rsi
-        sub             rsp,.k_stack_size+16
+        sub             rsp,.k_stack_size
         vmovaps         ymm6,[k_1_0]
         vmovaps         [.rayo],ymm0
         vmovaps         [.rayo+32],ymm1
@@ -155,6 +156,9 @@ raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
         vfmadd231ps     ymm0,ymm6,ymm3
         vfmadd231ps     ymm1,ymm6,ymm4
         vfmadd231ps     ymm2,ymm6,ymm5
+        vmovaps         [.pos],ymm0
+        vmovaps         [.pos+32],ymm1
+        vmovaps         [.pos+64],ymm2
         call            nearest_distance
         vmovaps         ymm6,[.distance]                              ; ymm6 = [.distance]
         vcmpltps        ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
@@ -175,16 +179,13 @@ raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
         sub             esi,1
         jnz             .march
     .march_end:
-        vmovaps         ymm0,[.rayo]
-        vmovaps         ymm1,[.rayo+32]
-        vmovaps         ymm2,[.rayo+64]
-        vfmadd231ps     ymm0,ymm6,[.rayd]
-        vfmadd231ps     ymm1,ymm6,[.rayd+32]
-        vfmadd231ps     ymm2,ymm6,[.rayd+64]
+        vmovaps         ymm0,[.pos]
+        vmovaps         ymm1,[.pos+32]
+        vmovaps         ymm2,[.pos+64]
         call            nearest_object
         vmovaps         ymm1,ymm0
         vmovaps         ymm0,[.distance]
-        add             rsp,.k_stack_size+16
+        add             rsp,.k_stack_size
         pop             rsi
         ret
 ;========================================================================
@@ -307,7 +308,7 @@ align 16
 update_state:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
-        vcvtsd2ss       xmm0,xmm0,[time]
+        ;vcvtsd2ss       xmm0,xmm0,[time]
         vbroadcastss    ymm0,xmm0
         call            sincos
         vmovaps         ymm2,[k_7_0]
