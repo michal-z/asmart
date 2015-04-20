@@ -219,7 +219,7 @@ align 16
 update:
         sub             rsp,24
         call            update_frame_stats
-        call            update_state
+        call            update_eye
         mov             [tileidx],0
         invoke          ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
         invoke          WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE

@@ -207,7 +207,7 @@ raymarch:
 ;========================================================================
 ; in: <ymm0,ymm1,ymm2> ray hit position
 ; out: <ymm0,ymm1,ymm2> normal vector at input position
-;;-----------------------------------------------------------------------
+;------------------------------------------------------------------------
 align 16
 compute_normal:
         ret
@@ -349,10 +349,10 @@ generate_fractal:
         pop             r15 r14 r13 r12 rbp rbx rdi rsi
         ret
 ;========================================================================
-; Update global fractal state in main thread
+; Update eye position. Runs in the main thread.
 ;------------------------------------------------------------------------
 align 16
-update_state:
+update_eye:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
         ;vcvtsd2ss       xmm0,xmm0,[time]
