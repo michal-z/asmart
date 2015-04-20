@@ -1,5 +1,8 @@
 if qjulia_section = 'code'
 ;========================================================================
+; in:  <ymm0> angle in radians
+; out: <ymm0> sin(ymm0), <ymm1> cos(ymm0)
+;------------------------------------------------------------------------
 align 16
 sincos:
         vandps          ymm0,ymm0,[.k_inv_sign_mask]
@@ -46,8 +49,11 @@ sincos:
         vmulps          ymm1,ymm6,ymm7
         ret
 ;========================================================================
+; in:  <ymm0,ymm1,ymm2> position
+; out: <ymm0> distance to the nearest object
+;------------------------------------------------------------------------
 align 16
-nearest_distance: ; (ymm0,ymm1,ymm2) position
+nearest_distance:
         vsubps          ymm3,ymm0,[object.param_x+0*32]
         vsubps          ymm6,ymm0,[object.param_x+1*32]
         vsubps          ymm9,ymm0,[object.param_x+2*32]
@@ -84,6 +90,9 @@ nearest_distance: ; (ymm0,ymm1,ymm2) position
         vminps          ymm0,ymm0,ymm9
         ret
 ;========================================================================
+; in:  <ymm0,ymm1,ymm2> position
+; out: <ymm0> id of the nearest object
+;------------------------------------------------------------------------
 align 16
 nearest_object:
         vsubps          ymm3,ymm0,[object.param_x+0*32]
@@ -131,9 +140,10 @@ nearest_object:
         vblendvps       ymm0,ymm8,ymm1,ymm10
         ret
 ;========================================================================
-; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
-; out: <ymm0> distance to the nearest object, <ymm1> object id
-;      <ymm2,ymm3,ymm4> ray hit position
+; in:  <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; out: <ymm0> distance to the nearest object,
+;      <ymm1> id of the nearest object, <ymm2,ymm3,ymm4> ray hit position
+;------------------------------------------------------------------------
 align 16
 raymarch:
     virtual at rsp
@@ -195,12 +205,16 @@ raymarch:
         pop             rsi
         ret
 ;========================================================================
-; in: <ymm0,ymm1,ymm2> ray hit position
+; in:  <ymm0,ymm1,ymm2> ray hit position
 ; out: <ymm0,ymm1,ymm2> normal vector at input position
+;;-----------------------------------------------------------------------
 align 16
 compute_normal:
         ret
 ;========================================================================
+; in:  <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; out: <ymm0,ymm1,ymm2> rgb color
+;------------------------------------------------------------------------
 align 16
 compute_color:
         push            rdi
