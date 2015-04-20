@@ -1,6 +1,6 @@
 if qjulia_section = 'code'
 ;========================================================================
-; in:  <ymm0> angle in radians
+; in: <ymm0> angle in radians
 ; out: <ymm0> sin(ymm0), <ymm1> cos(ymm0)
 ;------------------------------------------------------------------------
 align 16
@@ -49,7 +49,7 @@ sincos:
         vmulps          ymm1,ymm6,ymm7
         ret
 ;========================================================================
-; in:  <ymm0,ymm1,ymm2> position
+; in: <ymm0,ymm1,ymm2> position
 ; out: <ymm0> distance to the nearest object
 ;------------------------------------------------------------------------
 align 16
@@ -90,7 +90,7 @@ nearest_distance:
         vminps          ymm0,ymm0,ymm9
         ret
 ;========================================================================
-; in:  <ymm0,ymm1,ymm2> position
+; in: <ymm0,ymm1,ymm2> position
 ; out: <ymm0> id of the nearest object
 ;------------------------------------------------------------------------
 align 16
@@ -140,7 +140,7 @@ nearest_object:
         vblendvps       ymm0,ymm8,ymm1,ymm10
         ret
 ;========================================================================
-; in:  <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
 ; out: <ymm0> distance to the nearest object,
 ;      <ymm1> id of the nearest object, <ymm2,ymm3,ymm4> ray hit position
 ;------------------------------------------------------------------------
@@ -205,14 +205,14 @@ raymarch:
         pop             rsi
         ret
 ;========================================================================
-; in:  <ymm0,ymm1,ymm2> ray hit position
+; in: <ymm0,ymm1,ymm2> ray hit position
 ; out: <ymm0,ymm1,ymm2> normal vector at input position
 ;;-----------------------------------------------------------------------
 align 16
 compute_normal:
         ret
 ;========================================================================
-; in:  <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
 ; out: <ymm0,ymm1,ymm2> rgb color
 ;------------------------------------------------------------------------
 align 16
@@ -244,6 +244,11 @@ compute_color:
         pop             rdi
         ret
 ;========================================================================
+; Generate fractal tile by tile. Take one tile from the pool, compute
+; it's color and then take next tile, and so on. Finish when all tiles
+; are computed. This function is dispatched from all worker threads in
+; parallel.
+;------------------------------------------------------------------------
 align 16
 generate_fractal:
         push            rsi rdi rbx rbp r12 r13 r14 r15
@@ -344,6 +349,8 @@ generate_fractal:
         pop             r15 r14 r13 r12 rbp rbx rdi rsi
         ret
 ;========================================================================
+; Update global fractal state in main thread
+;------------------------------------------------------------------------
 align 16
 update_state:
         sub             rsp,24
