@@ -3,7 +3,7 @@ if qjulia_section = 'code'
 ; in: <ymm0> angle in radians
 ; out: <ymm0> sin(ymm0), <ymm1> cos(ymm0)
 ;------------------------------------------------------------------------
-align 16
+align 32
 sincos:
         vandps          ymm0,ymm0,[.k_inv_sign_mask]
         vandps          ymm7,ymm0,[.k_sign_mask]
@@ -52,7 +52,7 @@ sincos:
 ; in: <ymm0,ymm1,ymm2> position
 ; out: <ymm0> distance to the nearest object
 ;------------------------------------------------------------------------
-align 16
+align 32
 nearest_distance:
         vsubps          ymm3,ymm0,[object.param_x+0*32]
         vsubps          ymm6,ymm0,[object.param_x+1*32]
@@ -93,7 +93,7 @@ nearest_distance:
 ; in: <ymm0,ymm1,ymm2> position
 ; out: <ymm0> id of the nearest object
 ;------------------------------------------------------------------------
-align 16
+align 32
 nearest_object:
         vsubps          ymm3,ymm0,[object.param_x+0*32]
         vsubps          ymm6,ymm0,[object.param_x+1*32]
@@ -144,7 +144,7 @@ nearest_object:
 ; out: <ymm0> distance to the nearest object,
 ;      <ymm1> id of the nearest object, <ymm2,ymm3,ymm4> ray hit position
 ;------------------------------------------------------------------------
-align 16
+align 32
 raymarch:
     virtual at rsp
     .rayo: rd 3*8
@@ -189,7 +189,7 @@ raymarch:
         vmovaps         ymm4,[.rayd+32]
         vmovaps         ymm5,[.rayd+64]
         vmovaps         [.distance],ymm6
-        sub             esi,1
+        dec             esi
         jnz             .march
     .march_end:
         vmovaps         ymm0,[.pos]
@@ -208,14 +208,14 @@ raymarch:
 ; in: <ymm0,ymm1,ymm2> ray hit position
 ; out: <ymm0,ymm1,ymm2> normal vector at input position
 ;------------------------------------------------------------------------
-align 16
+align 32
 compute_normal:
         ret
 ;========================================================================
 ; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
 ; out: <ymm0,ymm1,ymm2> rgb color
 ;------------------------------------------------------------------------
-align 16
+align 32
 compute_color:
         push            rdi
         sub             rsp,16
@@ -249,7 +249,7 @@ compute_color:
 ; are computed. This function is dispatched from all worker threads in
 ; parallel.
 ;------------------------------------------------------------------------
-align 16
+align 32
 generate_fractal:
         push            rsi rdi rbx rbp r12 r13 r14 r15
         sub             rsp,24
@@ -351,7 +351,7 @@ generate_fractal:
 ;========================================================================
 ; Update eye position. Runs in the main thread.
 ;------------------------------------------------------------------------
-align 16
+align 32
 update_eye:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
