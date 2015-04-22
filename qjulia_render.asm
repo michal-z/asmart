@@ -215,6 +215,7 @@ compute_color:
     .hit_id: rd 8
     .hit_pos: rd 3*8
     .hit_dpos: rd 5*8
+    .hit_dpos_dist: rd 5*8
     .k_stack_size = $-$$+24
     end virtual
         sub             rsp,.k_stack_size
@@ -239,6 +240,33 @@ compute_color:
         vmovaps         [.hit_dpos+64],ymm8
         vmovaps         [.hit_dpos+96],ymm9
         vmovaps         [.hit_dpos+128],ymm10
+        call            nearest_distance                        ; nearest_distance(x-eps,y,z)
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         [.hit_dpos_dist],ymm0
+        vmovaps         ymm0,[.hit_dpos]
+        call            nearest_distance                        ; nearest_distance(x+eps,y,z)
+        vmovaps         ymm1,[.hit_dpos+32]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         [.hit_dpos_dist+32],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y-eps,z)
+        vmovaps         ymm1,[.hit_dpos+64]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         [.hit_dpos_dist+64],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y+eps,z)
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_dpos+96]
+        vmovaps         [.hit_dpos_dist+96],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y,z-eps)
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_dpos+128]
+        vmovaps         [.hit_dpos_dist+128],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y,z+eps)
+
 
         vbroadcastss    ymm7,[k_background_color]
         vbroadcastss    ymm8,[k_background_color+4]
@@ -250,6 +278,7 @@ compute_color:
         lea             rax,[object]
         vmovdqa         ymm1,[.hit_id]
         vpcmpeqd        ymm2,ymm2,ymm2
+        vmovaps         ymm11,[.hit_mask]
         vgatherdps      ymm3,[rax+ymm1*4+(object.red-object)],ymm2
         vpcmpeqd        ymm2,ymm2,ymm2
         vgatherdps      ymm4,[rax+ymm1*4+(object.green-object)],ymm2
