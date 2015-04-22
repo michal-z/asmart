@@ -205,43 +205,62 @@ raymarch:
         pop             rsi
         ret
 ;========================================================================
-; in: <ymm0,ymm1,ymm2> ray hit position
-; out: <ymm0,ymm1,ymm2> normal vector at input position
-;------------------------------------------------------------------------
-align 32
-compute_normal:
-        ret
-;========================================================================
 ; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
 ; out: <ymm0,ymm1,ymm2> rgb color
 ;------------------------------------------------------------------------
 align 32
 compute_color:
-        push            rdi
-        sub             rsp,16
-        lea             rdi,[object]
+    virtual at rsp
+    .hit_mask: rd 8
+    .hit_id: rd 8
+    .hit_pos: rd 3*8
+    .hit_dpos: rd 5*8
+    .k_stack_size = $-$$+24
+    end virtual
+        sub             rsp,.k_stack_size
         call            raymarch
-        vcmpltps        ymm11,ymm0,[k_view_distance]                         ; ymm11 = hit mask
+        vcmpltps        ymm11,ymm0,[k_view_distance]            ; ymm11 = hit mask
+        vmovaps         ymm5,[k_normal_eps]
+        vmovaps         [.hit_id],ymm1
+        vmovaps         [.hit_pos],ymm2
+        vmovaps         [.hit_pos+32],ymm3
+        vmovaps         [.hit_pos+64],ymm4
+        vmovaps         [.hit_mask],ymm11
+        vsubps          ymm0,ymm2,ymm5                          ; ymm0 = hit_pos.x-k_normal_pos
+        vmovaps         ymm1,ymm3                               ; ymm1 = hit_pos.y
+        vmovaps         ymm2,ymm4                               ; ymm2 = hit_pos.z
+        vaddps          ymm6,ymm2,ymm5                          ; ymm6 = hit_pos.x+k_normal_eps
+        vsubps          ymm7,ymm3,ymm5                          ; ymm7 = hit_pos.y-k_normal_eps
+        vaddps          ymm8,ymm3,ymm5                          ; ymm8 = hit_pos.y+k_normal_eps
+        vsubps          ymm9,ymm4,ymm5                          ; ymm9 = hit_pos.z-k_normal_eps
+        vaddps          ymm10,ymm4,ymm5                         ; ymm10 = hit_pos.z+k_normal_eps
+        vmovaps         [.hit_dpos],ymm6
+        vmovaps         [.hit_dpos+32],ymm7
+        vmovaps         [.hit_dpos+64],ymm8
+        vmovaps         [.hit_dpos+96],ymm9
+        vmovaps         [.hit_dpos+128],ymm10
+
         vbroadcastss    ymm7,[k_background_color]
         vbroadcastss    ymm8,[k_background_color+4]
         vbroadcastss    ymm9,[k_background_color+8]
-        vmovmskps       eax,ymm11
-        test            eax,eax
-        jz              .store_color
+        ;vmovmskps       eax,ymm11
+        ;test            eax,eax
+        ;jz              .store_color
 
+        lea             rax,[object]
+        vmovdqa         ymm1,[.hit_id]
         vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm3,[rdi+ymm1*4+(object.red-object)],ymm2
+        vgatherdps      ymm3,[rax+ymm1*4+(object.red-object)],ymm2
         vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm4,[rdi+ymm1*4+(object.green-object)],ymm2
+        vgatherdps      ymm4,[rax+ymm1*4+(object.green-object)],ymm2
         vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm5,[rdi+ymm1*4+(object.blue-object)],ymm2
+        vgatherdps      ymm5,[rax+ymm1*4+(object.blue-object)],ymm2
 
     .store_color:
         vblendvps       ymm0,ymm7,ymm3,ymm11
         vblendvps       ymm1,ymm8,ymm4,ymm11
         vblendvps       ymm2,ymm9,ymm5,ymm11
-        add             rsp,16
-        pop             rdi
+        add             rsp,.k_stack_size
         ret
 ;========================================================================
 ; Generate fractal tile by tile. Take one tile from the pool, compute
@@ -421,7 +440,7 @@ update_eye:
 else if qjulia_section = 'data'
 
 align 4
-eye_position dd 0.0,3.0,7.0
+eye_position dd 0.0,0.0,7.0
 eye_focus dd 0.0,0.0,0.0
 k_background_color dd 0.1,0.3,0.6
 
@@ -445,6 +464,7 @@ k_7_0: dd 8 dup 7.0
 k_255_0: dd 8 dup 255.0
 k_hit_distance: dd 8 dup 0.0001
 k_view_distance: dd 8 dup 25.0
+k_normal_eps: dd 8 dup 0.0001
 
 align 32
 object:
@@ -454,13 +474,13 @@ dd 8 dup 8
 dd 8 dup 16
 dd 8 dup 24
 .param_x:
-dd 8 dup -1.0
+dd 8 dup 0.0
 dd 8 dup 0.0
 dd 8 dup 0.0
 dd 8 dup 0.0
 .param_y:
 dd 8 dup 0.0
-dd 8 dup 1.0
+dd 8 dup 0.0
 dd 8 dup 0.0
 dd 8 dup 1.0
 .param_z:
