@@ -266,11 +266,27 @@ compute_color:
         vmovaps         [.hit_dpos_dist+128],ymm0
         vmovaps         ymm0,[.hit_pos]
         call            nearest_distance                        ; nearest_distance(x,y,z+eps)
+        vsubps          ymm2,ymm0,[.hit_dpos_dist+128]
+        vmovaps         ymm0,[.hit_dpos_dist+32]
+        vmovaps         ymm1,[.hit_dpos_dist+96]
+        vsubps          ymm0,ymm0,[.hit_dpos_dist]
+        vsubps          ymm1,ymm1,[.hit_dpos_dist+64]
+        vmulps          ymm3,ymm0,ymm0
+        vmulps          ymm4,ymm1,ymm1
+        vmulps          ymm5,ymm2,ymm2
+        vaddps          ymm3,ymm3,ymm4
+        vaddps          ymm3,ymm3,ymm5
+        vrsqrtps        ymm3,ymm3
+        vmulps          ymm0,ymm0,ymm3
+        vmulps          ymm1,ymm1,ymm3
+        vmulps          ymm2,ymm2,ymm3
 
 
         vbroadcastss    ymm7,[k_background_color]
         vbroadcastss    ymm8,[k_background_color+4]
         vbroadcastss    ymm9,[k_background_color+8]
+        vmovaps         ymm11,[.hit_mask]
+        ;jmp             .store_color
         ;vmovmskps       eax,ymm11
         ;test            eax,eax
         ;jz              .store_color
@@ -278,7 +294,7 @@ compute_color:
         lea             rax,[object]
         vmovdqa         ymm1,[.hit_id]
         vpcmpeqd        ymm2,ymm2,ymm2
-        vmovaps         ymm11,[.hit_mask]
+
         vgatherdps      ymm3,[rax+ymm1*4+(object.red-object)],ymm2
         vpcmpeqd        ymm2,ymm2,ymm2
         vgatherdps      ymm4,[rax+ymm1*4+(object.green-object)],ymm2
@@ -493,7 +509,7 @@ k_7_0: dd 8 dup 7.0
 k_255_0: dd 8 dup 255.0
 k_hit_distance: dd 8 dup 0.0001
 k_view_distance: dd 8 dup 25.0
-k_normal_eps: dd 8 dup 0.0001
+k_normal_eps: dd 8 dup 0.001
 
 align 32
 object:
