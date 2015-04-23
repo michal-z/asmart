@@ -73,9 +73,9 @@ nearest_distance:
         vfmadd231ps     ymm6,ymm8,ymm8
         vfmadd231ps     ymm9,ymm11,ymm11
         vaddps          ymm5,ymm1,[object.param_w+3*32]
-        vsqrtps        ymm3,ymm3
-        vsqrtps        ymm6,ymm6
-        vsqrtps        ymm9,ymm9
+        vsqrtps         ymm3,ymm3
+        vsqrtps         ymm6,ymm6
+        vsqrtps         ymm9,ymm9
         vmovaps         ymm10,[object.param_w+0*32]
         vmovaps         ymm11,[object.param_w+1*32]
         vmovaps         ymm12,[object.param_w+2*32]
@@ -111,9 +111,9 @@ nearest_object:
         vfmadd231ps     ymm6,ymm8,ymm8
         vfmadd231ps     ymm9,ymm11,ymm11
         vaddps          ymm5,ymm1,[object.param_w+3*32]         ; ymm5 = object[3] distance
-        vsqrtps        ymm2,ymm3
-        vsqrtps        ymm3,ymm6
-        vsqrtps        ymm4,ymm9
+        vsqrtps         ymm2,ymm3
+        vsqrtps         ymm3,ymm6
+        vsqrtps         ymm4,ymm9
         vmovaps         ymm10,[object.param_w+0*32]
         vmovaps         ymm11,[object.param_w+1*32]
         vmovaps         ymm12,[object.param_w+2*32]
