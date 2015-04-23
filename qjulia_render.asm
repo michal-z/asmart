@@ -1,6 +1,9 @@
 if qjulia_section = 'code'
 ;========================================================================
-align 16
+; in: <ymm0> angle in radians
+; out: <ymm0> sin(ymm0), <ymm1> cos(ymm0)
+;------------------------------------------------------------------------
+align 32
 sincos:
         vandps          ymm0,ymm0,[.k_inv_sign_mask]
         vandps          ymm7,ymm0,[.k_sign_mask]
@@ -46,8 +49,11 @@ sincos:
         vmulps          ymm1,ymm6,ymm7
         ret
 ;========================================================================
-align 16
-nearest_distance: ; (ymm0,ymm1,ymm2) position
+; in: <ymm0,ymm1,ymm2> position
+; out: <ymm0> distance to the nearest object
+;------------------------------------------------------------------------
+align 32
+nearest_distance:
         vsubps          ymm3,ymm0,[object.param_x+0*32]
         vsubps          ymm6,ymm0,[object.param_x+1*32]
         vsubps          ymm9,ymm0,[object.param_x+2*32]
@@ -67,15 +73,12 @@ nearest_distance: ; (ymm0,ymm1,ymm2) position
         vfmadd231ps     ymm6,ymm8,ymm8
         vfmadd231ps     ymm9,ymm11,ymm11
         vaddps          ymm5,ymm1,[object.param_w+3*32]
-        vrsqrtps        ymm3,ymm3
-        vrsqrtps        ymm6,ymm6
-        vrsqrtps        ymm9,ymm9
+        vsqrtps         ymm3,ymm3
+        vsqrtps         ymm6,ymm6
+        vsqrtps         ymm9,ymm9
         vmovaps         ymm10,[object.param_w+0*32]
         vmovaps         ymm11,[object.param_w+1*32]
         vmovaps         ymm12,[object.param_w+2*32]
-        vrcpps          ymm3,ymm3
-        vrcpps          ymm6,ymm6
-        vrcpps          ymm9,ymm9
         vsubps          ymm3,ymm3,ymm10
         vsubps          ymm6,ymm6,ymm11
         vsubps          ymm9,ymm9,ymm12
@@ -84,7 +87,10 @@ nearest_distance: ; (ymm0,ymm1,ymm2) position
         vminps          ymm0,ymm0,ymm9
         ret
 ;========================================================================
-align 16
+; in: <ymm0,ymm1,ymm2> position
+; out: <ymm0> id of the nearest object
+;------------------------------------------------------------------------
+align 32
 nearest_object:
         vsubps          ymm3,ymm0,[object.param_x+0*32]
         vsubps          ymm6,ymm0,[object.param_x+1*32]
@@ -105,9 +111,9 @@ nearest_object:
         vfmadd231ps     ymm6,ymm8,ymm8
         vfmadd231ps     ymm9,ymm11,ymm11
         vaddps          ymm5,ymm1,[object.param_w+3*32]         ; ymm5 = object[3] distance
-        vrsqrtps        ymm2,ymm3
-        vrsqrtps        ymm3,ymm6
-        vrsqrtps        ymm4,ymm9
+        vsqrtps         ymm2,ymm3
+        vsqrtps         ymm3,ymm6
+        vsqrtps         ymm4,ymm9
         vmovaps         ymm10,[object.param_w+0*32]
         vmovaps         ymm11,[object.param_w+1*32]
         vmovaps         ymm12,[object.param_w+2*32]
@@ -115,9 +121,6 @@ nearest_object:
         vmovaps         ymm7,[object.id+1*32]
         vmovaps         ymm8,[object.id+2*32]
         vmovaps         ymm9,[object.id+3*32]
-        vrcpps          ymm2,ymm2
-        vrcpps          ymm3,ymm3
-        vrcpps          ymm4,ymm4
         vsubps          ymm2,ymm2,ymm10                         ; ymm2 = object[0] distance
         vsubps          ymm3,ymm3,ymm11                         ; ymm3 = object[1] distance
         vsubps          ymm4,ymm4,ymm12                         ; ymm4 = object[2] distance
@@ -131,8 +134,12 @@ nearest_object:
         vblendvps       ymm0,ymm8,ymm1,ymm10
         ret
 ;========================================================================
-align 16
-raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
+; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; out: <ymm0> distance to the nearest object,
+;      <ymm1> id of the nearest object, <ymm2,ymm3,ymm4> ray hit position
+;------------------------------------------------------------------------
+align 32
+raymarch:
     virtual at rsp
     .rayo: rd 3*8
     .rayd: rd 3*8
@@ -176,24 +183,147 @@ raymarch: ; (ymm0,ymm1,ymm2) ray origin, (ymm3,ymm4,ymm5) ray direction
         vmovaps         ymm4,[.rayd+32]
         vmovaps         ymm5,[.rayd+64]
         vmovaps         [.distance],ymm6
-        sub             esi,1
+        dec             esi
         jnz             .march
     .march_end:
         vmovaps         ymm0,[.pos]
         vmovaps         ymm1,[.pos+32]
         vmovaps         ymm2,[.pos+64]
         call            nearest_object
+        vmovaps         ymm2,[.pos]
+        vmovaps         ymm3,[.pos+32]
+        vmovaps         ymm4,[.pos+64]
         vmovaps         ymm1,ymm0
         vmovaps         ymm0,[.distance]
         add             rsp,.k_stack_size
         pop             rsi
         ret
 ;========================================================================
-align 16
+; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; out: <ymm0,ymm1,ymm2> rgb color
+;------------------------------------------------------------------------
+align 32
+compute_color:
+    virtual at rsp
+    .hit_mask: rd 8
+    .hit_id: rd 8
+    .hit_pos: rd 3*8
+    .hit_dpos: rd 5*8
+    .hit_dpos_dist: rd 5*8
+    .k_stack_size = $-$$+24
+    end virtual
+        sub             rsp,.k_stack_size
+        call            raymarch
+        vcmpltps        ymm11,ymm0,[k_view_distance]            ; ymm11 = hit mask
+        vmovaps         ymm5,[k_normal_eps]
+        vmovaps         [.hit_id],ymm1
+        vmovaps         [.hit_pos],ymm2
+        vmovaps         [.hit_pos+32],ymm3
+        vmovaps         [.hit_pos+64],ymm4
+        vmovaps         [.hit_mask],ymm11
+        vsubps          ymm0,ymm2,ymm5                          ; ymm0 = hit_pos.x-k_normal_pos
+        vaddps          ymm6,ymm2,ymm5                          ; ymm6 = hit_pos.x+k_normal_eps
+        vsubps          ymm7,ymm3,ymm5                          ; ymm7 = hit_pos.y-k_normal_eps
+        vaddps          ymm8,ymm3,ymm5                          ; ymm8 = hit_pos.y+k_normal_eps
+        vsubps          ymm9,ymm4,ymm5                          ; ymm9 = hit_pos.z-k_normal_eps
+        vaddps          ymm10,ymm4,ymm5                         ; ymm10 = hit_pos.z+k_normal_eps
+        vmovaps         ymm1,ymm3                               ; ymm1 = hit_pos.y
+        vmovaps         ymm2,ymm4                               ; ymm2 = hit_pos.z
+        vmovaps         [.hit_dpos],ymm6
+        vmovaps         [.hit_dpos+32],ymm7
+        vmovaps         [.hit_dpos+64],ymm8
+        vmovaps         [.hit_dpos+96],ymm9
+        vmovaps         [.hit_dpos+128],ymm10
+        call            nearest_distance                        ; nearest_distance(x-eps,y,z)
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         [.hit_dpos_dist],ymm0
+        vmovaps         ymm0,[.hit_dpos]
+        call            nearest_distance                        ; nearest_distance(x+eps,y,z)
+        vmovaps         ymm1,[.hit_dpos+32]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         [.hit_dpos_dist+32],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y-eps,z)
+        vmovaps         ymm1,[.hit_dpos+64]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         [.hit_dpos_dist+64],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y+eps,z)
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_dpos+96]
+        vmovaps         [.hit_dpos_dist+96],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y,z-eps)
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_dpos+128]
+        vmovaps         [.hit_dpos_dist+128],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        call            nearest_distance                        ; nearest_distance(x,y,z+eps)
+        vsubps          ymm2,ymm0,[.hit_dpos_dist+128]
+        vmovaps         ymm0,[.hit_dpos_dist+32]
+        vmovaps         ymm1,[.hit_dpos_dist+96]
+        vsubps          ymm0,ymm0,[.hit_dpos_dist]
+        vsubps          ymm1,ymm1,[.hit_dpos_dist+64]           ; (ymm0,ymm1,ymm2) normal vector
+        vbroadcastss    ymm3,[light_position]
+        vbroadcastss    ymm4,[light_position+4]
+        vbroadcastss    ymm5,[light_position+8]
+        vsubps          ymm3,ymm3,[.hit_pos]
+        vsubps          ymm4,ymm4,[.hit_pos+32]
+        vsubps          ymm5,ymm5,[.hit_pos+64]                 ; (ymm3,ymm4,ymm5) light vector
+        vmulps          ymm6,ymm0,ymm0
+        vmulps          ymm7,ymm3,ymm3
+        vfmadd231ps     ymm6,ymm1,ymm1
+        vfmadd231ps     ymm7,ymm4,ymm4
+        vfmadd231ps     ymm6,ymm2,ymm2
+        vfmadd231ps     ymm7,ymm5,ymm5
+        vrsqrtps        ymm6,ymm6
+        vrsqrtps        ymm7,ymm7
+        vmulps          ymm0,ymm0,ymm6
+        vmulps          ymm1,ymm1,ymm6
+        vmulps          ymm2,ymm2,ymm6                          ; (ymm0,ymm1,ymm2) normalized normal vector
+        vmulps          ymm3,ymm3,ymm7
+        vmulps          ymm4,ymm4,ymm7
+        vmulps          ymm5,ymm5,ymm7                          ; (ymm3,ymm4,ymm5) normalized light vector
+        vmulps          ymm6,ymm0,ymm3
+        vmulps          ymm7,ymm1,ymm4
+        vmulps          ymm8,ymm2,ymm5
+        vaddps          ymm6,ymm6,ymm7
+        vaddps          ymm6,ymm6,ymm8
+        vbroadcastss    ymm7,[k_background_color]
+        vbroadcastss    ymm8,[k_background_color+4]
+        vbroadcastss    ymm9,[k_background_color+8]
+        vmovaps         ymm11,[.hit_mask]
+        vmovmskps       eax,ymm11
+        test            eax,eax
+        jz              .store_color
+        lea             rax,[object]
+        vmovdqa         ymm1,[.hit_id]
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm3,[rax+ymm1*4+(object.red-object)],ymm2
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm4,[rax+ymm1*4+(object.green-object)],ymm2
+        vpcmpeqd        ymm2,ymm2,ymm2
+        vgatherdps      ymm5,[rax+ymm1*4+(object.blue-object)],ymm2
+        vmulps          ymm3,ymm3,ymm6
+        vmulps          ymm4,ymm4,ymm6
+        vmulps          ymm5,ymm5,ymm6
+    .store_color:
+        vblendvps       ymm0,ymm7,ymm3,ymm11
+        vblendvps       ymm1,ymm8,ymm4,ymm11
+        vblendvps       ymm2,ymm9,ymm5,ymm11
+        add             rsp,.k_stack_size
+        ret
+;========================================================================
+; Generate fractal tile by tile. Take one tile from the pool, compute
+; it's color and then take next tile, and so on. Finish when all tiles
+; are computed. This function is dispatched from all worker threads in
+; parallel.
+;------------------------------------------------------------------------
+align 32
 generate_fractal:
         push            rsi rdi rbx rbp r12 r13 r14 r15
         sub             rsp,24
-        lea             rdi,[object]
     .for_each_tile:
         mov             eax,1
         lock xadd       [tileidx],eax
@@ -253,21 +383,7 @@ generate_fractal:
         vmulps          ymm3,ymm3,ymm10
         vmulps          ymm4,ymm6,ymm10
         vmulps          ymm5,ymm9,ymm10
-        call            raymarch
-        vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm3,[rdi+ymm1*4+(object.red-object)],ymm2
-        vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm4,[rdi+ymm1*4+(object.green-object)],ymm2
-        vpcmpeqd        ymm2,ymm2,ymm2
-        vgatherdps      ymm5,[rdi+ymm1*4+(object.blue-object)],ymm2
-        vmovaps         ymm6,[k_view_distance]
-        vbroadcastss    ymm7,[k_background_color]
-        vbroadcastss    ymm8,[k_background_color+4]
-        vbroadcastss    ymm9,[k_background_color+8]
-        vcmpltps        ymm11,ymm0,ymm6                         ; ymm11 = hit mask
-        vblendvps       ymm0,ymm7,ymm3,ymm11
-        vblendvps       ymm1,ymm8,ymm4,ymm11
-        vblendvps       ymm2,ymm9,ymm5,ymm11
+        call            compute_color
         vxorps          ymm7,ymm7,ymm7                          ; ymm7 = (0 ... 0)
         vmovaps         ymm8,[k_1_0]                            ; ymm8 = (1.0 ... 1.0)
         vmovaps         ymm9,[k_255_0]                          ; ymm9 = (255.0 ... 255.0)
@@ -304,11 +420,13 @@ generate_fractal:
         pop             r15 r14 r13 r12 rbp rbx rdi rsi
         ret
 ;========================================================================
-align 16
-update_state:
+; Update eye position. Runs in the main thread.
+;------------------------------------------------------------------------
+align 32
+update_eye:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
-        ;vcvtsd2ss       xmm0,xmm0,[time]
+        vcvtsd2ss       xmm0,xmm0,[time]
         vbroadcastss    ymm0,xmm0
         call            sincos
         vmovaps         ymm2,[k_7_0]
@@ -376,6 +494,7 @@ else if qjulia_section = 'data'
 align 4
 eye_position dd 0.0,3.0,7.0
 eye_focus dd 0.0,0.0,0.0
+light_position dd 10.0,10.0,10.0
 k_background_color dd 0.1,0.3,0.6
 
 align 32
@@ -396,8 +515,9 @@ k_2: dd 8 dup 2
 k_1_0: dd 8 dup 1.0
 k_7_0: dd 8 dup 7.0
 k_255_0: dd 8 dup 255.0
-k_hit_distance: dd 8 dup 0.0001
+k_hit_distance: dd 8 dup 0.0002
 k_view_distance: dd 8 dup 25.0
+k_normal_eps: dd 8 dup 0.0001
 
 align 32
 object:
