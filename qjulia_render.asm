@@ -492,7 +492,7 @@ update_eye:
 else if qjulia_section = 'data'
 
 align 4
-eye_position dd 0.0,3.0,7.0
+eye_position dd 0.0,3.0,12.0
 eye_focus dd 0.0,0.0,0.0
 light_position dd 10.0,10.0,10.0
 k_background_color dd 0.1,0.3,0.6
@@ -505,8 +505,8 @@ eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 align 32
 generate_fractal.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
 generate_fractal.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-generate_fractal.k_win_width_rcp: dd 8 dup 0.0027765625                   ; 1.777f * 2.0f / k_win_width, k_win_width = 1280
-generate_fractal.k_win_height_rcp: dd 8 dup 0.0027777777777778            ; 2.0f / k_win_height, k_win_height = 720
+generate_fractal.k_win_width_rcp: dd 8 dup 0.0015625           ; 2.0f / k_win_width, k_win_width = 1280
+generate_fractal.k_win_height_rcp: dd 8 dup 0.0015625          ; 2.0f / k_win_width, k_win_width = 1280
 generate_fractal.k_rd_z: dd 8 dup -1.732
 
 align 32
