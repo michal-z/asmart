@@ -425,15 +425,15 @@ generate_fractal:
 align 32
 update_eye:
         sub             rsp,24
-        vxorps          xmm0,xmm0,xmm0
-        vcvtsd2ss       xmm0,xmm0,[time]
-        vbroadcastss    ymm0,xmm0
-        call            sincos
-        vmovaps         ymm2,[k_7_0]
-        vmulps          ymm0,ymm0,ymm2
-        vmulps          ymm1,ymm1,ymm2
-        vmovss          [eye_position],xmm0
-        vmovss          [eye_position+8],xmm1
+        ;vxorps          xmm0,xmm0,xmm0
+        ;vcvtsd2ss       xmm0,xmm0,[time]
+        ;vbroadcastss    ymm0,xmm0
+        ;call            sincos
+        ;vmovaps         ymm2,[k_7_0]
+        ;vmulps          ymm0,ymm0,ymm2
+        ;vmulps          ymm1,ymm1,ymm2
+        ;vmovss          [eye_position],xmm0
+        ;vmovss          [eye_position+8],xmm1
         vbroadcastss    ymm0,[eye_position]           ; ymm0 = eye x pos
         vbroadcastss    ymm3,[eye_focus]
         vbroadcastss    ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -529,7 +529,7 @@ dd 8 dup 24
 .param_x:
 dd 8 dup -1.0
 dd 8 dup 0.0
-dd 8 dup 0.0
+dd 8 dup 3.0
 dd 8 dup 0.0
 .param_y:
 dd 8 dup 0.0
@@ -539,28 +539,28 @@ dd 8 dup 1.0
 .param_z:
 dd 8 dup 0.0
 dd 8 dup 3.0
-dd 8 dup 4.0
+dd 8 dup 0.0
 dd 8 dup 0.0
 .param_w:
 dd 8 dup 2.0
 dd 8 dup 0.5
-dd 8 dup 0.25
+dd 8 dup 1.0
 dd 8 dup 2.0
 .red:
 dd 8 dup 1.0
 dd 8 dup 0.0
 dd 8 dup 0.0
-dd 8 dup 1.0
+dd 8 dup 1.2
 .green:
 dd 8 dup 0.0
 dd 8 dup 1.0
 dd 8 dup 0.0
-dd 8 dup 0.8
+dd 8 dup 1.2
 .blue:
 dd 8 dup 0.0
 dd 8 dup 0.0
 dd 8 dup 1.0
-dd 8 dup 0.1
+dd 8 dup 0.0
 
 align 32
 sincos.k_inv_sign_mask: dd 8 dup not 0x80000000
