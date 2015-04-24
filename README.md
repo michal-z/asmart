@@ -1,3 +1,3 @@
 # qjulia
 
-Software rendering using fasm assembler (http://flatassembler.net/index.php). AVX2 capable CPU required.
+Distance field rendering on the AVX2 capable CPU using fasm assembler (http://flatassembler.net/index.php).
