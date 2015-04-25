@@ -139,7 +139,7 @@ nearest_object:
 ;      <ymm1> id of the nearest object, <ymm2,ymm3,ymm4> ray hit position
 ;------------------------------------------------------------------------
 align 32
-raymarch:
+cast_ray:
     virtual at rsp
     .rayo: rd 3*8
     .rayd: rd 3*8
@@ -199,28 +199,7 @@ raymarch:
         pop             rsi
         ret
 ;========================================================================
-; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
-; out: <ymm0,ymm1,ymm2> rgb color
-;------------------------------------------------------------------------
-align 32
-compute_color:
-    virtual at rsp
-    .hit_mask: rd 8
-    .hit_id: rd 8
-    .hit_pos: rd 3*8
-    .hit_dpos: rd 5*8
-    .hit_dpos_dist: rd 5*8
-    .k_stack_size = $-$$+24
-    end virtual
-        sub             rsp,.k_stack_size
-        call            raymarch
-        vcmpltps        ymm11,ymm0,[k_view_distance]            ; ymm11 = hit mask
-        vmovaps         ymm5,[k_normal_eps]
-        vmovaps         [.hit_id],ymm1
-        vmovaps         [.hit_pos],ymm2
-        vmovaps         [.hit_pos+32],ymm3
-        vmovaps         [.hit_pos+64],ymm4
-        vmovaps         [.hit_mask],ymm11
+macro _calc_normal {
         vsubps          ymm0,ymm2,ymm5                          ; ymm0 = hit_pos.x-k_normal_pos
         vaddps          ymm6,ymm2,ymm5                          ; ymm6 = hit_pos.x+k_normal_eps
         vsubps          ymm7,ymm3,ymm5                          ; ymm7 = hit_pos.y-k_normal_eps
@@ -265,6 +244,34 @@ compute_color:
         vmovaps         ymm1,[.hit_dpos_dist+96]
         vsubps          ymm0,ymm0,[.hit_dpos_dist]
         vsubps          ymm1,ymm1,[.hit_dpos_dist+64]           ; (ymm0,ymm1,ymm2) normal vector
+}
+;========================================================================
+; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; out: <ymm0,ymm1,ymm2> rgb color
+;------------------------------------------------------------------------
+align 32
+compute_color:
+    virtual at rsp
+    .hit_mask: rd 8
+    .hit_id: rd 8
+    .hit_pos: rd 3*8
+    .hit_dpos: rd 5*8
+    .hit_dpos_dist: rd 5*8
+    .k_stack_size = $-$$+24
+    end virtual
+        sub             rsp,.k_stack_size
+        call            cast_ray
+        vcmpltps        ymm11,ymm0,[k_view_distance]            ; ymm11 = hit mask
+        vmovmskps       eax,ymm11
+        test            eax,eax
+        jz              .no_hit
+        vmovaps         ymm5,[k_normal_eps]
+        vmovaps         [.hit_id],ymm1
+        vmovaps         [.hit_pos],ymm2
+        vmovaps         [.hit_pos+32],ymm3
+        vmovaps         [.hit_pos+64],ymm4
+        vmovaps         [.hit_mask],ymm11
+        _calc_normal                                            ; (ymm0,ymm1,ymm2) normal vector
         vbroadcastss    ymm3,[light_position]
         vbroadcastss    ymm4,[light_position+4]
         vbroadcastss    ymm5,[light_position+8]
@@ -289,14 +296,8 @@ compute_color:
         vmulps          ymm7,ymm1,ymm4
         vmulps          ymm8,ymm2,ymm5
         vaddps          ymm6,ymm6,ymm7
-        vaddps          ymm6,ymm6,ymm8
-        vbroadcastss    ymm7,[k_background_color]
-        vbroadcastss    ymm8,[k_background_color+4]
-        vbroadcastss    ymm9,[k_background_color+8]
+        vaddps          ymm6,ymm6,ymm8                          ; ymm6 = N dot L
         vmovaps         ymm11,[.hit_mask]
-        vmovmskps       eax,ymm11
-        test            eax,eax
-        jz              .store_color
         lea             rax,[object]
         vmovdqa         ymm1,[.hit_id]
         vpcmpeqd        ymm2,ymm2,ymm2
@@ -308,10 +309,19 @@ compute_color:
         vmulps          ymm3,ymm3,ymm6
         vmulps          ymm4,ymm4,ymm6
         vmulps          ymm5,ymm5,ymm6
-    .store_color:
+        vbroadcastss    ymm7,[k_background_color]
+        vbroadcastss    ymm8,[k_background_color+4]
+        vbroadcastss    ymm9,[k_background_color+8]
         vblendvps       ymm0,ymm7,ymm3,ymm11
         vblendvps       ymm1,ymm8,ymm4,ymm11
         vblendvps       ymm2,ymm9,ymm5,ymm11
+        add             rsp,.k_stack_size
+        ret
+    align 32
+    .no_hit:
+        vbroadcastss    ymm0,[k_background_color]
+        vbroadcastss    ymm1,[k_background_color+4]
+        vbroadcastss    ymm2,[k_background_color+8]
         add             rsp,.k_stack_size
         ret
 ;========================================================================

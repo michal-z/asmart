@@ -7,13 +7,11 @@ INFINITE = -1
 
 section '.text' code readable executable
 ;========================================================================
-macro iaca_begin
-{
+macro iaca_begin {
         mov             ebx,111
         db              0x64,0x67,0x90
 }
-macro iaca_end
-{
+macro iaca_end {
         mov             ebx,222
         db              0x64,0x67,0x90
 }
