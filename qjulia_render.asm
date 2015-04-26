@@ -251,6 +251,9 @@ cast_shadow_ray:
         pop             rsi
         ret
 ;========================================================================
+; in: <ymm2,ymm3,ymm4> position, <ymm5> k_normal_eps
+; out: <ymm0,ymm1,ymm2> normal vector at input position
+;------------------------------------------------------------------------
 macro _calc_normal {
         vsubps          ymm0,ymm2,ymm5                          ; ymm0 = hit_pos.x-k_normal_pos
         vaddps          ymm6,ymm2,ymm5                          ; ymm6 = hit_pos.x+k_normal_eps
@@ -309,8 +312,10 @@ compute_color:
     .hit_pos: rd 3*8
     .hit_dpos: rd 5*8
     .hit_dpos_dist: rd 5*8
-    .normal_vec: rd 3*8
-    .light_vec: rd 3*8
+    .light1_vec: rd 3*8
+    .n_dot_l0: rd 8
+    .n_dot_l1: rd 8
+    .shadow_l0: rd 8
     .k_stack_size = $-$$+24
     end virtual
         sub             rsp,.k_stack_size
@@ -326,50 +331,71 @@ compute_color:
         vmovaps         [.hit_pos+64],ymm4
         vmovaps         [.hit_mask],ymm11
         _calc_normal                                            ; (ymm0,ymm1,ymm2) normal vector
-        vmovaps         ymm10,[.hit_pos]
-        vmovaps         ymm11,[.hit_pos+32]
-        vmovaps         ymm12,[.hit_pos+64]
-        vbroadcastss    ymm3,[light_position]
-        vbroadcastss    ymm4,[light_position+4]
-        vbroadcastss    ymm5,[light_position+8]
-        vsubps          ymm3,ymm3,ymm10
-        vsubps          ymm4,ymm4,ymm11
-        vsubps          ymm5,ymm5,ymm12                         ; (ymm3,ymm4,ymm5) light vector
-        vmulps          ymm6,ymm0,ymm0
-        vmulps          ymm7,ymm3,ymm3
-        vfmadd231ps     ymm6,ymm1,ymm1
-        vfmadd231ps     ymm7,ymm4,ymm4
-        vfmadd231ps     ymm6,ymm2,ymm2
-        vfmadd231ps     ymm7,ymm5,ymm5
-        vrsqrtps        ymm6,ymm6
-        vrsqrtps        ymm7,ymm7
-        vmulps          ymm0,ymm0,ymm6
-        vmulps          ymm1,ymm1,ymm6
-        vmulps          ymm2,ymm2,ymm6                          ; (ymm0,ymm1,ymm2) normalized normal vector
-        vmulps          ymm3,ymm3,ymm7
-        vmulps          ymm4,ymm4,ymm7
-        vmulps          ymm5,ymm5,ymm7                          ; (ymm3,ymm4,ymm5) normalized light vector
-        vmovaps         [.normal_vec],ymm0
-        vmovaps         [.normal_vec+32],ymm1
-        vmovaps         [.normal_vec+64],ymm2
-        vmovaps         ymm0,ymm10
-        vmovaps         ymm1,ymm11
-        vmovaps         ymm2,ymm12
-        vmovaps         [.light_vec],ymm3
-        vmovaps         [.light_vec+32],ymm4
-        vmovaps         [.light_vec+64],ymm5
+        vmovaps         ymm9,[.hit_pos]
+        vmovaps         ymm10,[.hit_pos+32]
+        vmovaps         ymm11,[.hit_pos+64]                     ; (ymm9,ymm10,ymm11) hit position
+        vbroadcastss    ymm3,[light0_position]
+        vbroadcastss    ymm4,[light0_position+4]
+        vbroadcastss    ymm5,[light0_position+8]
+        vbroadcastss    ymm6,[light1_position]
+        vbroadcastss    ymm7,[light1_position+4]
+        vbroadcastss    ymm8,[light1_position+8]
+        vsubps          ymm3,ymm3,ymm9
+        vsubps          ymm4,ymm4,ymm10
+        vsubps          ymm5,ymm5,ymm11                         ; (ymm3,ymm4,ymm5) light0 vector
+        vsubps          ymm6,ymm6,ymm9
+        vsubps          ymm7,ymm7,ymm10
+        vsubps          ymm8,ymm8,ymm11                         ; (ymm6,ymm7,ymm8) light1 vector
+        vmulps          ymm12,ymm0,ymm0
+        vmulps          ymm13,ymm3,ymm3
+        vmulps          ymm14,ymm6,ymm6
+        vfmadd231ps     ymm12,ymm1,ymm1
+        vfmadd231ps     ymm13,ymm4,ymm4
+        vfmadd231ps     ymm14,ymm7,ymm7
+        vfmadd231ps     ymm12,ymm2,ymm2
+        vfmadd231ps     ymm13,ymm5,ymm5
+        vfmadd231ps     ymm14,ymm8,ymm8
+        vrsqrtps        ymm12,ymm12
+        vrsqrtps        ymm13,ymm13
+        vrsqrtps        ymm14,ymm14
+        vmulps          ymm0,ymm0,ymm12
+        vmulps          ymm1,ymm1,ymm12
+        vmulps          ymm2,ymm2,ymm12                         ; (ymm0,ymm1,ymm2) normalized normal vector
+        vmulps          ymm3,ymm3,ymm13
+        vmulps          ymm4,ymm4,ymm13
+        vmulps          ymm5,ymm5,ymm13                         ; (ymm3,ymm4,ymm5) normalized light0 vector
+        vmulps          ymm6,ymm6,ymm14
+        vmulps          ymm7,ymm7,ymm14
+        vmulps          ymm8,ymm8,ymm14                         ; (ymm6,ymm7,ymm8) normalized light1 vector
+        vxorps          ymm14,ymm14,ymm14
+        vmulps          ymm12,ymm0,ymm3
+        vmulps          ymm13,ymm0,ymm6
+        vfmadd231ps     ymm12,ymm1,ymm4
+        vfmadd231ps     ymm13,ymm1,ymm7
+        vfmadd231ps     ymm12,ymm2,ymm5
+        vfmadd231ps     ymm13,ymm2,ymm8
+        vmaxps          ymm12,ymm12,ymm14                       ; ymm12 = n dot l0
+        vmaxps          ymm13,ymm13,ymm14                       ; ymm13 = n dot l1
+        vmovaps         [.n_dot_l0],ymm12
+        vmovaps         [.n_dot_l1],ymm13
+        vmovaps         ymm0,ymm9
+        vmovaps         ymm1,ymm10
+        vmovaps         ymm2,ymm11
+        vmovaps         [.light1_vec],ymm6
+        vmovaps         [.light1_vec+32],ymm7
+        vmovaps         [.light1_vec+64],ymm8
         call            cast_shadow_ray
         vcmpgtps        ymm12,ymm0,[k_view_distance]            ; ymm11 = shadow mask
-        vmovaps         ymm0,[.normal_vec]
-        vmovaps         ymm1,[.normal_vec+32]
-        vmovaps         ymm2,[.normal_vec+64]
-        vmulps          ymm6,ymm0,[.light_vec]
-        vmulps          ymm7,ymm1,[.light_vec+32]
-        vmulps          ymm8,ymm2,[.light_vec+64]
-        vaddps          ymm6,ymm6,ymm7
-        vxorps          ymm7,ymm7,ymm7
-        vaddps          ymm6,ymm6,ymm8                          ; ymm6 = N dot L
-        vmaxps          ymm6,ymm6,ymm7
+        vmovaps         [.shadow_l0],ymm12
+        vmovaps         ymm0,[.hit_pos]
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         ymm3,[.light1_vec]
+        vmovaps         ymm4,[.light1_vec+32]
+        vmovaps         ymm5,[.light1_vec+64]
+        call            cast_shadow_ray
+        vmovaps         ymm12,[.shadow_l0]
+        vmovaps         ymm6,[.n_dot_l0]
         vmovaps         ymm11,[.hit_mask]
         lea             rax,[object]
         vmovdqa         ymm1,[.hit_id]
@@ -580,8 +606,9 @@ else if qjulia_section = 'data'
 align 4
 eye_position dd 0.0,3.0,12.0
 eye_focus dd 0.0,0.0,0.0
-light_position dd 10.0,10.0,10.0
 k_background_color dd 0.1,0.3,0.6
+light0_position dd 10.0,10.0,10.0
+light1_position dd 5.0,10.0,-10.0
 
 align 32
 eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
@@ -637,12 +664,12 @@ dd 8 dup 2.0
 dd 8 dup 1.0
 dd 8 dup 0.0
 dd 8 dup 0.0
-dd 8 dup 1.2
+dd 8 dup 1.0
 .green:
 dd 8 dup 0.0
 dd 8 dup 1.0
 dd 8 dup 0.0
-dd 8 dup 1.2
+dd 8 dup 1.0
 .blue:
 dd 8 dup 0.0
 dd 8 dup 0.0
