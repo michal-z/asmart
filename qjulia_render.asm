@@ -317,14 +317,21 @@ compute_color:
     .n_dot_l0: rd 8
     .n_dot_l1: rd 8
     .shadow_l0: rd 8
+    .fog: rd 8
     .k_stack_size = $-$$+24
     end virtual
         sub             rsp,.k_stack_size
         call            cast_ray
-        vcmpltps        ymm11,ymm0,[k_view_distance]            ; ymm11 = hit mask
+        vmovaps         ymm5,[k_view_distance]
+        vcmpltps        ymm11,ymm0,ymm5                         ; ymm11 = hit mask
         vmovmskps       eax,ymm11
         test            eax,eax
         jz              .no_hit
+        vmovaps         ymm7,[k_1_0]
+        vrcpps          ymm5,ymm5
+        vmulps          ymm5,ymm0,ymm5
+        vsubps          ymm5,ymm7,ymm5
+        vmovaps         [.fog],ymm5
         vmovaps         ymm5,[k_normal_eps]
         vmovaps         [.hit_id],ymm1
         vmovaps         [.hit_pos],ymm2
@@ -335,12 +342,12 @@ compute_color:
         vmovaps         ymm9,[.hit_pos]
         vmovaps         ymm10,[.hit_pos+32]
         vmovaps         ymm11,[.hit_pos+64]                     ; (ymm9,ymm10,ymm11) hit position
-        vbroadcastss    ymm3,[light0_position]
-        vbroadcastss    ymm4,[light0_position+4]
-        vbroadcastss    ymm5,[light0_position+8]
-        vbroadcastss    ymm6,[light1_position]
-        vbroadcastss    ymm7,[light1_position+4]
-        vbroadcastss    ymm8,[light1_position+8]
+        vmovaps         ymm3,[light0_position]
+        vmovaps         ymm4,[light0_position+32]
+        vmovaps         ymm5,[light0_position+64]
+        vmovaps         ymm6,[light1_position]
+        vmovaps         ymm7,[light1_position+32]
+        vmovaps         ymm8,[light1_position+64]
         vsubps          ymm3,ymm3,ymm9
         vsubps          ymm4,ymm4,ymm10
         vsubps          ymm5,ymm5,ymm11                         ; (ymm3,ymm4,ymm5) light0 vector
@@ -394,14 +401,14 @@ compute_color:
         vmovaps         ymm4,[.light1_vec+32]
         vmovaps         ymm5,[.light1_vec+64]
         call            cast_shadow_ray
-
         vmulps          ymm7,ymm0,[.n_dot_l1]
-
         vmovaps         ymm6,[.n_dot_l0]
         vmulps          ymm6,ymm6,[.shadow_l0]
-
+        vmulps          ymm7,ymm7,[light1_power]
+        vmulps          ymm6,ymm6,[light0_power]
         vaddps          ymm6,ymm6,ymm7
-
+        vmovaps         ymm7,[.fog]
+        vmovaps         ymm8,[ambient]
         vmovaps         ymm11,[.hit_mask]
         lea             rax,[object]
         vmovdqa         ymm1,[.hit_id]
@@ -411,9 +418,12 @@ compute_color:
         vgatherdps      ymm4,[rax+ymm1*4+(object.green-object)],ymm2
         vpcmpeqd        ymm2,ymm2,ymm2
         vgatherdps      ymm5,[rax+ymm1*4+(object.blue-object)],ymm2
-        vmulps          ymm3,ymm3,ymm6
-        vmulps          ymm4,ymm4,ymm6
-        vmulps          ymm5,ymm5,ymm6
+        vfmadd132ps     ymm3,ymm8,ymm6
+        vfmadd132ps     ymm4,ymm8,ymm6
+        vfmadd132ps     ymm5,ymm8,ymm6
+        vmulps          ymm3,ymm3,ymm7
+        vmulps          ymm4,ymm4,ymm7
+        vmulps          ymm5,ymm5,ymm7
         vbroadcastss    ymm7,[k_background_color]
         vbroadcastss    ymm8,[k_background_color+4]
         vbroadcastss    ymm9,[k_background_color+8]
@@ -607,11 +617,9 @@ update_eye:
 else if qjulia_section = 'data'
 
 align 4
-eye_position dd 0.0,3.0,12.0
+eye_position dd 0.0,4.0,400.0
 eye_focus dd 0.0,0.0,0.0
-k_background_color dd 0.1,0.3,0.6
-light0_position dd 10.0,10.0,10.0
-light1_position dd 5.0,10.0,-10.0
+k_background_color dd 0.0,0.0,0.0
 
 align 32
 eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
@@ -629,12 +637,19 @@ align 32
 k_1: dd 8 dup 1
 k_2: dd 8 dup 2
 k_1_0: dd 8 dup 1.0
-k_7_0: dd 8 dup 12.0
+k_7_0: dd 8 dup 16.0
 k_255_0: dd 8 dup 255.0
 k_0_02: dd 8 dup 0.02
 k_hit_distance: dd 8 dup 0.0002
-k_view_distance: dd 8 dup 25.0
+k_view_distance: dd 8 dup 50.0
 k_normal_eps: dd 8 dup 0.0001
+
+align 32
+light0_position: dd 8 dup 10.0, 8 dup 10.0, 8 dup 10.0
+light0_power: dd 8 dup 0.9
+light1_position: dd 8 dup 5.0, 8 dup 20.0, 8 dup -15.0
+light1_power: dd 8 dup 0.6
+ambient: dd 8 dup 0.1
 
 align 32
 object:
@@ -667,17 +682,17 @@ dd 8 dup 2.0
 dd 8 dup 1.0
 dd 8 dup 0.0
 dd 8 dup 0.0
-dd 8 dup 1.0
+dd 8 dup 0.5
 .green:
 dd 8 dup 0.0
 dd 8 dup 1.0
 dd 8 dup 0.0
-dd 8 dup 1.0
+dd 8 dup 0.3
 .blue:
 dd 8 dup 0.0
 dd 8 dup 0.0
 dd 8 dup 1.0
-dd 8 dup 0.0
+dd 8 dup 0.2
 
 align 32
 sincos.k_inv_sign_mask: dd 8 dup not 0x80000000
