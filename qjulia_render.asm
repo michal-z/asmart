@@ -200,7 +200,7 @@ cast_ray:
         ret
 ;========================================================================
 ; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
-; out: <ymm0> distance to the nearest object
+; out: <ymm0> shadow factor
 ;------------------------------------------------------------------------
 align 32
 cast_shadow_ray:
@@ -246,7 +246,9 @@ cast_shadow_ray:
         sub             esi,1
         jnz             .march
     .march_end:
-        vmovaps         ymm0,ymm6
+        vmovaps         ymm1,[k_1_0]
+        vxorps          ymm2,ymm2,ymm2
+        vblendvps       ymm0,ymm2,ymm1,ymm8
         add             rsp,.k_stack_size
         pop             rsi
         ret
@@ -385,8 +387,7 @@ compute_color:
         vmovaps         [.light1_vec+32],ymm7
         vmovaps         [.light1_vec+64],ymm8
         call            cast_shadow_ray
-        vcmpgtps        ymm12,ymm0,[k_view_distance]            ; ymm11 = shadow mask
-        vmovaps         [.shadow_l0],ymm12
+        vmovaps         [.shadow_l0],ymm0
         vmovaps         ymm0,[.hit_pos]
         vmovaps         ymm1,[.hit_pos+32]
         vmovaps         ymm2,[.hit_pos+64]
@@ -394,8 +395,14 @@ compute_color:
         vmovaps         ymm4,[.light1_vec+32]
         vmovaps         ymm5,[.light1_vec+64]
         call            cast_shadow_ray
-        vmovaps         ymm12,[.shadow_l0]
+
+        vmulps          ymm7,ymm0,[.n_dot_l1]
+
         vmovaps         ymm6,[.n_dot_l0]
+        vmulps          ymm6,ymm6,[.shadow_l0]
+
+        vaddps          ymm6,ymm6,ymm7
+
         vmovaps         ymm11,[.hit_mask]
         lea             rax,[object]
         vmovdqa         ymm1,[.hit_id]
@@ -408,9 +415,6 @@ compute_color:
         vmulps          ymm3,ymm3,ymm6
         vmulps          ymm4,ymm4,ymm6
         vmulps          ymm5,ymm5,ymm6
-        vandps          ymm3,ymm3,ymm12
-        vandps          ymm4,ymm4,ymm12
-        vandps          ymm5,ymm5,ymm12
         vbroadcastss    ymm7,[k_background_color]
         vbroadcastss    ymm8,[k_background_color+4]
         vbroadcastss    ymm9,[k_background_color+8]
@@ -537,15 +541,15 @@ generate_fractal:
 align 32
 update_eye:
         sub             rsp,24
-        ;vxorps          xmm0,xmm0,xmm0
-        ;vcvtsd2ss       xmm0,xmm0,[time]
-        ;vbroadcastss    ymm0,xmm0
-        ;call            sincos
-        ;vmovaps         ymm2,[k_7_0]
-        ;vmulps          ymm0,ymm0,ymm2
-        ;vmulps          ymm1,ymm1,ymm2
-        ;vmovss          [eye_position],xmm0
-        ;vmovss          [eye_position+8],xmm1
+        vxorps          xmm0,xmm0,xmm0
+        vcvtsd2ss       xmm0,xmm0,[time]
+        vbroadcastss    ymm0,xmm0
+        call            sincos
+        vmovaps         ymm2,[k_7_0]
+        vmulps          ymm0,ymm0,ymm2
+        vmulps          ymm1,ymm1,ymm2
+        vmovss          [eye_position],xmm0
+        vmovss          [eye_position+8],xmm1
         vbroadcastss    ymm0,[eye_position]           ; ymm0 = eye x pos
         vbroadcastss    ymm3,[eye_focus]
         vbroadcastss    ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -626,7 +630,7 @@ align 32
 k_1: dd 8 dup 1
 k_2: dd 8 dup 2
 k_1_0: dd 8 dup 1.0
-k_7_0: dd 8 dup 7.0
+k_7_0: dd 8 dup 12.0
 k_255_0: dd 8 dup 255.0
 k_0_02: dd 8 dup 0.02
 k_hit_distance: dd 8 dup 0.0002
