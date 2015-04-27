@@ -139,7 +139,7 @@ nearest_object:
 ;      <ymm1> id of the nearest object, <ymm2,ymm3,ymm4> ray hit position
 ;------------------------------------------------------------------------
 align 32
-raymarch:
+cast_ray:
     virtual at rsp
     .rayo: rd 3*8
     .rayd: rd 3*8
@@ -183,7 +183,7 @@ raymarch:
         vmovaps         ymm4,[.rayd+32]
         vmovaps         ymm5,[.rayd+64]
         vmovaps         [.distance],ymm6
-        dec             esi
+        sub             esi,1
         jnz             .march
     .march_end:
         vmovaps         ymm0,[.pos]
@@ -200,27 +200,62 @@ raymarch:
         ret
 ;========================================================================
 ; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
-; out: <ymm0,ymm1,ymm2> rgb color
+; out: <ymm0> shadow factor
 ;------------------------------------------------------------------------
 align 32
-compute_color:
+cast_shadow_ray:
     virtual at rsp
-    .hit_mask: rd 8
-    .hit_id: rd 8
-    .hit_pos: rd 3*8
-    .hit_dpos: rd 5*8
-    .hit_dpos_dist: rd 5*8
-    .k_stack_size = $-$$+24
+    .rayo: rd 3*8
+    .rayd: rd 3*8
+    .distance: rd 8
+    .k_stack_size = $-$$+16
     end virtual
+        push            rsi
         sub             rsp,.k_stack_size
-        call            raymarch
-        vcmpltps        ymm11,ymm0,[k_view_distance]            ; ymm11 = hit mask
-        vmovaps         ymm5,[k_normal_eps]
-        vmovaps         [.hit_id],ymm1
-        vmovaps         [.hit_pos],ymm2
-        vmovaps         [.hit_pos+32],ymm3
-        vmovaps         [.hit_pos+64],ymm4
-        vmovaps         [.hit_mask],ymm11
+        vmovaps         ymm6,[k_0_02]
+        vmovaps         [.rayo],ymm0
+        vmovaps         [.rayo+32],ymm1
+        vmovaps         [.rayo+64],ymm2
+        vmovaps         [.distance],ymm6
+        vmovaps         [.rayd],ymm3
+        vmovaps         [.rayd+32],ymm4
+        vmovaps         [.rayd+64],ymm5
+        mov             esi,128
+    align 32
+    .march:
+        vfmadd231ps     ymm0,ymm6,ymm3
+        vfmadd231ps     ymm1,ymm6,ymm4
+        vfmadd231ps     ymm2,ymm6,ymm5
+        call            nearest_distance
+        vmovaps         ymm6,[.distance]                              ; ymm6 = [.distance]
+        vcmpltps        ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
+        vcmpgtps        ymm8,ymm6,[k_view_distance]                   ; .distance > k_view_distance
+        vorps           ymm7,ymm7,ymm8
+        vmovmskps       eax,ymm7
+        cmp             eax,0xff
+        je              .march_end
+        vandnps         ymm0,ymm7,ymm0
+        vaddps          ymm6,ymm6,ymm0
+        vmovaps         ymm0,[.rayo]
+        vmovaps         ymm1,[.rayo+32]
+        vmovaps         ymm2,[.rayo+64]
+        vmovaps         ymm3,[.rayd]
+        vmovaps         ymm4,[.rayd+32]
+        vmovaps         ymm5,[.rayd+64]
+        vmovaps         [.distance],ymm6
+        sub             esi,1
+        jnz             .march
+    .march_end:
+        vxorps          ymm1,ymm1,ymm1
+        vblendvps       ymm0,ymm1,[k_1_0],ymm8
+        add             rsp,.k_stack_size
+        pop             rsi
+        ret
+;========================================================================
+; in: <ymm2,ymm3,ymm4> position, <ymm5> k_normal_eps
+; out: <ymm0,ymm1,ymm2> normal vector at input position
+;------------------------------------------------------------------------
+macro _calc_normal {
         vsubps          ymm0,ymm2,ymm5                          ; ymm0 = hit_pos.x-k_normal_pos
         vaddps          ymm6,ymm2,ymm5                          ; ymm6 = hit_pos.x+k_normal_eps
         vsubps          ymm7,ymm3,ymm5                          ; ymm7 = hit_pos.y-k_normal_eps
@@ -265,38 +300,116 @@ compute_color:
         vmovaps         ymm1,[.hit_dpos_dist+96]
         vsubps          ymm0,ymm0,[.hit_dpos_dist]
         vsubps          ymm1,ymm1,[.hit_dpos_dist+64]           ; (ymm0,ymm1,ymm2) normal vector
-        vbroadcastss    ymm3,[light_position]
-        vbroadcastss    ymm4,[light_position+4]
-        vbroadcastss    ymm5,[light_position+8]
-        vsubps          ymm3,ymm3,[.hit_pos]
-        vsubps          ymm4,ymm4,[.hit_pos+32]
-        vsubps          ymm5,ymm5,[.hit_pos+64]                 ; (ymm3,ymm4,ymm5) light vector
-        vmulps          ymm6,ymm0,ymm0
-        vmulps          ymm7,ymm3,ymm3
-        vfmadd231ps     ymm6,ymm1,ymm1
-        vfmadd231ps     ymm7,ymm4,ymm4
-        vfmadd231ps     ymm6,ymm2,ymm2
-        vfmadd231ps     ymm7,ymm5,ymm5
-        vrsqrtps        ymm6,ymm6
-        vrsqrtps        ymm7,ymm7
-        vmulps          ymm0,ymm0,ymm6
-        vmulps          ymm1,ymm1,ymm6
-        vmulps          ymm2,ymm2,ymm6                          ; (ymm0,ymm1,ymm2) normalized normal vector
-        vmulps          ymm3,ymm3,ymm7
-        vmulps          ymm4,ymm4,ymm7
-        vmulps          ymm5,ymm5,ymm7                          ; (ymm3,ymm4,ymm5) normalized light vector
-        vmulps          ymm6,ymm0,ymm3
-        vmulps          ymm7,ymm1,ymm4
-        vmulps          ymm8,ymm2,ymm5
-        vaddps          ymm6,ymm6,ymm7
-        vaddps          ymm6,ymm6,ymm8
-        vbroadcastss    ymm7,[k_background_color]
-        vbroadcastss    ymm8,[k_background_color+4]
-        vbroadcastss    ymm9,[k_background_color+8]
-        vmovaps         ymm11,[.hit_mask]
+}
+;========================================================================
+; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
+; out: <ymm0,ymm1,ymm2> rgb color
+;------------------------------------------------------------------------
+align 32
+compute_color:
+    virtual at rsp
+    .hit_mask: rd 8
+    .hit_id: rd 8
+    .hit_pos: rd 3*8
+    .hit_dpos: rd 5*8
+    .hit_dpos_dist: rd 5*8
+    .light1_vec: rd 3*8
+    .n_dot_l0: rd 8
+    .n_dot_l1: rd 8
+    .shadow_l0: rd 8
+    .fog: rd 8
+    .k_stack_size = $-$$+24
+    end virtual
+        sub             rsp,.k_stack_size
+        call            cast_ray
+        vmovaps         ymm5,[k_view_distance]
+        vcmpltps        ymm11,ymm0,ymm5                         ; ymm11 = hit mask
         vmovmskps       eax,ymm11
         test            eax,eax
-        jz              .store_color
+        jz              .no_hit
+        vmovaps         ymm7,[k_1_0]
+        vrcpps          ymm5,ymm5
+        vmulps          ymm5,ymm0,ymm5
+        vsubps          ymm5,ymm7,ymm5
+        vmovaps         [.fog],ymm5
+        vmovaps         ymm5,[k_normal_eps]
+        vmovaps         [.hit_id],ymm1
+        vmovaps         [.hit_pos],ymm2
+        vmovaps         [.hit_pos+32],ymm3
+        vmovaps         [.hit_pos+64],ymm4
+        vmovaps         [.hit_mask],ymm11
+        _calc_normal                                            ; (ymm0,ymm1,ymm2) normal vector
+        vmovaps         ymm9,[.hit_pos]
+        vmovaps         ymm10,[.hit_pos+32]
+        vmovaps         ymm11,[.hit_pos+64]                     ; (ymm9,ymm10,ymm11) hit position
+        vmovaps         ymm3,[light0_position]
+        vmovaps         ymm4,[light0_position+32]
+        vmovaps         ymm5,[light0_position+64]
+        vmovaps         ymm6,[light1_position]
+        vmovaps         ymm7,[light1_position+32]
+        vmovaps         ymm8,[light1_position+64]
+        vsubps          ymm3,ymm3,ymm9
+        vsubps          ymm4,ymm4,ymm10
+        vsubps          ymm5,ymm5,ymm11                         ; (ymm3,ymm4,ymm5) light0 vector
+        vsubps          ymm6,ymm6,ymm9
+        vsubps          ymm7,ymm7,ymm10
+        vsubps          ymm8,ymm8,ymm11                         ; (ymm6,ymm7,ymm8) light1 vector
+        vmulps          ymm12,ymm0,ymm0
+        vmulps          ymm13,ymm3,ymm3
+        vmulps          ymm14,ymm6,ymm6
+        vfmadd231ps     ymm12,ymm1,ymm1
+        vfmadd231ps     ymm13,ymm4,ymm4
+        vfmadd231ps     ymm14,ymm7,ymm7
+        vfmadd231ps     ymm12,ymm2,ymm2
+        vfmadd231ps     ymm13,ymm5,ymm5
+        vfmadd231ps     ymm14,ymm8,ymm8
+        vrsqrtps        ymm12,ymm12
+        vrsqrtps        ymm13,ymm13
+        vrsqrtps        ymm14,ymm14
+        vmulps          ymm0,ymm0,ymm12
+        vmulps          ymm1,ymm1,ymm12
+        vmulps          ymm2,ymm2,ymm12                         ; (ymm0,ymm1,ymm2) normalized normal vector
+        vmulps          ymm3,ymm3,ymm13
+        vmulps          ymm4,ymm4,ymm13
+        vmulps          ymm5,ymm5,ymm13                         ; (ymm3,ymm4,ymm5) normalized light0 vector
+        vmulps          ymm6,ymm6,ymm14
+        vmulps          ymm7,ymm7,ymm14
+        vmulps          ymm8,ymm8,ymm14                         ; (ymm6,ymm7,ymm8) normalized light1 vector
+        vxorps          ymm14,ymm14,ymm14
+        vmulps          ymm12,ymm0,ymm3
+        vmulps          ymm13,ymm0,ymm6
+        vfmadd231ps     ymm12,ymm1,ymm4
+        vfmadd231ps     ymm13,ymm1,ymm7
+        vfmadd231ps     ymm12,ymm2,ymm5
+        vfmadd231ps     ymm13,ymm2,ymm8
+        vmaxps          ymm12,ymm12,ymm14                       ; ymm12 = n dot l0
+        vmaxps          ymm13,ymm13,ymm14                       ; ymm13 = n dot l1
+        vmovaps         [.n_dot_l0],ymm12
+        vmovaps         [.n_dot_l1],ymm13
+        vmovaps         ymm0,ymm9
+        vmovaps         ymm1,ymm10
+        vmovaps         ymm2,ymm11
+        vmovaps         [.light1_vec],ymm6
+        vmovaps         [.light1_vec+32],ymm7
+        vmovaps         [.light1_vec+64],ymm8
+        call            cast_shadow_ray
+        vmovaps         [.shadow_l0],ymm0
+        vmovaps         ymm0,[.hit_pos]
+        vmovaps         ymm1,[.hit_pos+32]
+        vmovaps         ymm2,[.hit_pos+64]
+        vmovaps         ymm3,[.light1_vec]
+        vmovaps         ymm4,[.light1_vec+32]
+        vmovaps         ymm5,[.light1_vec+64]
+        call            cast_shadow_ray
+        vmulps          ymm7,ymm0,[.n_dot_l1]
+        vmovaps         ymm6,[.n_dot_l0]
+        vmulps          ymm6,ymm6,[.shadow_l0]
+        vmulps          ymm7,ymm7,[light1_power]
+        vmulps          ymm6,ymm6,[light0_power]
+        vaddps          ymm6,ymm6,ymm7
+        vmovaps         ymm7,[.fog]
+        vmovaps         ymm8,[ambient]
+        vmovaps         ymm11,[.hit_mask]
         lea             rax,[object]
         vmovdqa         ymm1,[.hit_id]
         vpcmpeqd        ymm2,ymm2,ymm2
@@ -305,13 +418,25 @@ compute_color:
         vgatherdps      ymm4,[rax+ymm1*4+(object.green-object)],ymm2
         vpcmpeqd        ymm2,ymm2,ymm2
         vgatherdps      ymm5,[rax+ymm1*4+(object.blue-object)],ymm2
-        vmulps          ymm3,ymm3,ymm6
-        vmulps          ymm4,ymm4,ymm6
-        vmulps          ymm5,ymm5,ymm6
-    .store_color:
+        vfmadd132ps     ymm3,ymm8,ymm6
+        vfmadd132ps     ymm4,ymm8,ymm6
+        vfmadd132ps     ymm5,ymm8,ymm6
+        vmulps          ymm3,ymm3,ymm7
+        vmulps          ymm4,ymm4,ymm7
+        vmulps          ymm5,ymm5,ymm7
+        vbroadcastss    ymm7,[k_background_color]
+        vbroadcastss    ymm8,[k_background_color+4]
+        vbroadcastss    ymm9,[k_background_color+8]
         vblendvps       ymm0,ymm7,ymm3,ymm11
         vblendvps       ymm1,ymm8,ymm4,ymm11
         vblendvps       ymm2,ymm9,ymm5,ymm11
+        add             rsp,.k_stack_size
+        ret
+    align 32
+    .no_hit:
+        vbroadcastss    ymm0,[k_background_color]
+        vbroadcastss    ymm1,[k_background_color+4]
+        vbroadcastss    ymm2,[k_background_color+8]
         add             rsp,.k_stack_size
         ret
 ;========================================================================
@@ -425,15 +550,15 @@ generate_fractal:
 align 32
 update_eye:
         sub             rsp,24
-        ;vxorps          xmm0,xmm0,xmm0
-        ;vcvtsd2ss       xmm0,xmm0,[time]
-        ;vbroadcastss    ymm0,xmm0
-        ;call            sincos
-        ;vmovaps         ymm2,[k_7_0]
-        ;vmulps          ymm0,ymm0,ymm2
-        ;vmulps          ymm1,ymm1,ymm2
-        ;vmovss          [eye_position],xmm0
-        ;vmovss          [eye_position+8],xmm1
+        vxorps          xmm0,xmm0,xmm0
+        vcvtsd2ss       xmm0,xmm0,[time]
+        vbroadcastss    ymm0,xmm0
+        call            sincos
+        vmovaps         ymm2,[k_7_0]
+        vmulps          ymm0,ymm0,ymm2
+        vmulps          ymm1,ymm1,ymm2
+        vmovss          [eye_position],xmm0
+        vmovss          [eye_position+8],xmm1
         vbroadcastss    ymm0,[eye_position]           ; ymm0 = eye x pos
         vbroadcastss    ymm3,[eye_focus]
         vbroadcastss    ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -492,10 +617,9 @@ update_eye:
 else if qjulia_section = 'data'
 
 align 4
-eye_position dd 0.0,3.0,12.0
+eye_position dd 0.0,4.0,400.0
 eye_focus dd 0.0,0.0,0.0
-light_position dd 10.0,10.0,10.0
-k_background_color dd 0.1,0.3,0.6
+k_background_color dd 0.0,0.0,0.0
 
 align 32
 eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
@@ -513,11 +637,19 @@ align 32
 k_1: dd 8 dup 1
 k_2: dd 8 dup 2
 k_1_0: dd 8 dup 1.0
-k_7_0: dd 8 dup 7.0
+k_7_0: dd 8 dup 16.0
 k_255_0: dd 8 dup 255.0
+k_0_02: dd 8 dup 0.02
 k_hit_distance: dd 8 dup 0.0002
-k_view_distance: dd 8 dup 25.0
+k_view_distance: dd 8 dup 50.0
 k_normal_eps: dd 8 dup 0.0001
+
+align 32
+light0_position: dd 8 dup 10.0, 8 dup 10.0, 8 dup 10.0
+light0_power: dd 8 dup 0.9
+light1_position: dd 8 dup 5.0, 8 dup 20.0, 8 dup -15.0
+light1_power: dd 8 dup 0.6
+ambient: dd 8 dup 0.1
 
 align 32
 object:
@@ -550,17 +682,17 @@ dd 8 dup 2.0
 dd 8 dup 1.0
 dd 8 dup 0.0
 dd 8 dup 0.0
-dd 8 dup 1.2
+dd 8 dup 0.5
 .green:
 dd 8 dup 0.0
 dd 8 dup 1.0
 dd 8 dup 0.0
-dd 8 dup 1.2
+dd 8 dup 0.3
 .blue:
 dd 8 dup 0.0
 dd 8 dup 0.0
 dd 8 dup 1.0
-dd 8 dup 0.0
+dd 8 dup 0.2
 
 align 32
 sincos.k_inv_sign_mask: dd 8 dup not 0x80000000
