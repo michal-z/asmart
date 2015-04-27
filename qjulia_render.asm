@@ -246,9 +246,8 @@ cast_shadow_ray:
         sub             esi,1
         jnz             .march
     .march_end:
-        vmovaps         ymm1,[k_1_0]
-        vxorps          ymm2,ymm2,ymm2
-        vblendvps       ymm0,ymm2,ymm1,ymm8
+        vxorps          ymm1,ymm1,ymm1
+        vblendvps       ymm0,ymm1,[k_1_0],ymm8
         add             rsp,.k_stack_size
         pop             rsi
         ret
