@@ -241,9 +241,8 @@ cast_shadow_ray:
         vmulps          ymm10,ymm0,ymm10
         vmulps          ymm10,ymm10,[k_shadow_hardness]
         vminps          ymm10,ymm10,[.res]
-
         vmovaps         [.res],ymm10
-        ;vandnps         ymm0,ymm7,ymm0
+        vandnps         ymm0,ymm7,ymm0
         vaddps          ymm6,ymm6,ymm0
         vmovaps         ymm0,[.rayo]
         vmovaps         ymm1,[.rayo+32]
