@@ -208,10 +208,13 @@ cast_shadow_ray:
     .rayo: rd 3*8
     .rayd: rd 3*8
     .distance: rd 8
+    .res: rd 8
     .k_stack_size = $-$$+16
     end virtual
         push            rsi
         sub             rsp,.k_stack_size
+        vmovaps         ymm6,[k_1_0]
+        vmovaps         [.res],ymm6
         vmovaps         ymm6,[k_0_02]
         vmovaps         [.rayo],ymm0
         vmovaps         [.rayo+32],ymm1
@@ -234,7 +237,13 @@ cast_shadow_ray:
         vmovmskps       eax,ymm7
         cmp             eax,0xff
         je              .march_end
-        vandnps         ymm0,ymm7,ymm0
+        vrcpps          ymm10,ymm6
+        vmulps          ymm10,ymm0,ymm10
+        vmulps          ymm10,ymm10,[k_shadow_hardness]
+        vminps          ymm10,ymm10,[.res]
+
+        vmovaps         [.res],ymm10
+        ;vandnps         ymm0,ymm7,ymm0
         vaddps          ymm6,ymm6,ymm0
         vmovaps         ymm0,[.rayo]
         vmovaps         ymm1,[.rayo+32]
@@ -246,8 +255,7 @@ cast_shadow_ray:
         sub             esi,1
         jnz             .march
     .march_end:
-        vxorps          ymm1,ymm1,ymm1
-        vblendvps       ymm0,ymm1,[k_1_0],ymm8
+        vmovaps         ymm0,[.res]
         add             rsp,.k_stack_size
         pop             rsi
         ret
@@ -551,14 +559,30 @@ align 32
 update_eye:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
-        vcvtsd2ss       xmm0,xmm0,[time]
+        ;vcvtsd2ss       xmm0,xmm0,[time]
         vbroadcastss    ymm0,xmm0
+        vmulps          ymm0,ymm0,[k_0_5]
         call            sincos
-        vmovaps         ymm2,[k_7_0]
+        vmovaps         ymm2,[k_camera_radius]
         vmulps          ymm0,ymm0,ymm2
         vmulps          ymm1,ymm1,ymm2
         vmovss          [eye_position],xmm0
         vmovss          [eye_position+8],xmm1
+        vxorps          xmm0,xmm0,xmm0
+        vcvtsd2ss       xmm0,xmm0,[time]
+        vbroadcastss    ymm0,xmm0
+        vmulps          ymm0,ymm0,[k_0_5]
+        call            sincos
+        vmovaps         ymm2,[k_sphere_radius]
+        vmulps          ymm0,ymm0,ymm2
+        vmulps          ymm1,ymm1,ymm2
+        vmovaps         [object.param_x+32],ymm1
+        vmovaps         [object.param_z+32],ymm0
+        vxorps          ymm2,ymm2,ymm2
+        vsubps          ymm0,ymm2,ymm0
+        vsubps          ymm1,ymm2,ymm1
+        vmovaps         [object.param_x+64],ymm1
+        vmovaps         [object.param_z+64],ymm0
         vbroadcastss    ymm0,[eye_position]           ; ymm0 = eye x pos
         vbroadcastss    ymm3,[eye_focus]
         vbroadcastss    ymm1,[eye_position+4]         ; ymm1 = eye y pos
@@ -637,12 +661,16 @@ align 32
 k_1: dd 8 dup 1
 k_2: dd 8 dup 2
 k_1_0: dd 8 dup 1.0
-k_7_0: dd 8 dup 16.0
+k_0_5: dd 8 dup 0.5
+k_0_1: dd 8 dup 0.1
+k_camera_radius: dd 8 dup 16.0
+k_sphere_radius: dd 8 dup -4.0
 k_255_0: dd 8 dup 255.0
 k_0_02: dd 8 dup 0.02
-k_hit_distance: dd 8 dup 0.0002
+k_hit_distance: dd 8 dup 0.00001
 k_view_distance: dd 8 dup 50.0
-k_normal_eps: dd 8 dup 0.0001
+k_normal_eps: dd 8 dup 0.00002
+k_shadow_hardness: dd 8 dup 16.0
 
 align 32
 light0_position: dd 8 dup 10.0, 8 dup 10.0, 8 dup 10.0
@@ -659,7 +687,7 @@ dd 8 dup 8
 dd 8 dup 16
 dd 8 dup 24
 .param_x:
-dd 8 dup -1.0
+dd 8 dup 0.0
 dd 8 dup 0.0
 dd 8 dup 3.0
 dd 8 dup 0.0
@@ -675,7 +703,7 @@ dd 8 dup 0.0
 dd 8 dup 0.0
 .param_w:
 dd 8 dup 2.0
-dd 8 dup 0.5
+dd 8 dup 0.7
 dd 8 dup 1.0
 dd 8 dup 2.0
 .red:
