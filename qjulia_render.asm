@@ -141,60 +141,57 @@ nearest_object:
 align 32
 cast_ray:
     virtual at rsp
-    .rayo: rd 3*8
-    .rayd: rd 3*8
-    .distance: rd 8
-    .pos: rd 3*8
+    .m256: rd 10*8
     .k_stack_size = $-$$+16
     end virtual
         push            rsi
         sub             rsp,.k_stack_size
         vmovaps         ymm6,[k_1_0]
-        vmovaps         [.rayo],ymm0
-        vmovaps         [.rayo+32],ymm1
-        vmovaps         [.rayo+64],ymm2
-        vmovaps         [.distance],ymm6
-        vmovaps         [.rayd],ymm3
-        vmovaps         [.rayd+32],ymm4
-        vmovaps         [.rayd+64],ymm5
+        vmovaps         [.m256+000h],ymm0                       ; [.m256+000h] = ray origin x
+        vmovaps         [.m256+020h],ymm1                       ; [.m256+020h] = ray origin y
+        vmovaps         [.m256+040h],ymm2                       ; [.m256+040h] = ray origin z
+        vmovaps         [.m256+0c0h],ymm6                       ; [.m256+0c0h] = distance
+        vmovaps         [.m256+060h],ymm3                       ; [.m256+060h] = ray dir x
+        vmovaps         [.m256+080h],ymm4                       ; [.m256+080h] = ray dir y
+        vmovaps         [.m256+0a0h],ymm5                       ; [.m256+0a0h] = ray dir z
         mov             esi,128
     align 32
-    .march:
+    .01:
         vfmadd231ps     ymm0,ymm6,ymm3
         vfmadd231ps     ymm1,ymm6,ymm4
         vfmadd231ps     ymm2,ymm6,ymm5
-        vmovaps         [.pos],ymm0
-        vmovaps         [.pos+32],ymm1
-        vmovaps         [.pos+64],ymm2
+        vmovaps         [.m256+0e0h],ymm0                       ; [.m256+0e0h] = pos x
+        vmovaps         [.m256+100h],ymm1                       ; [.m256+100h] = pos y
+        vmovaps         [.m256+120h],ymm2                       ; [.m256+120h] = pos z
         call            nearest_distance
-        vmovaps         ymm6,[.distance]                              ; ymm6 = [.distance]
-        vcmpltps        ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
-        vcmpgtps        ymm8,ymm6,[k_view_distance]                   ; .distance > k_view_distance
+        vmovaps         ymm6,[.m256+0c0h]                       ; ymm6 = distance
+        vcmpltps        ymm7,ymm0,[k_hit_distance]              ; ymm7 = nearest_distance() < k_hit_distance
+        vcmpgtps        ymm8,ymm6,[k_view_distance]             ; ymm8 = distance > k_view_distance
         vorps           ymm7,ymm7,ymm8
         vmovmskps       eax,ymm7
         cmp             eax,0xff
-        je              .march_end
+        je              .02
         vandnps         ymm0,ymm7,ymm0
         vaddps          ymm6,ymm6,ymm0
-        vmovaps         ymm0,[.rayo]
-        vmovaps         ymm1,[.rayo+32]
-        vmovaps         ymm2,[.rayo+64]
-        vmovaps         ymm3,[.rayd]
-        vmovaps         ymm4,[.rayd+32]
-        vmovaps         ymm5,[.rayd+64]
-        vmovaps         [.distance],ymm6
+        vmovaps         ymm0,[.m256+000h]                       ; ymm0 = ray origin x
+        vmovaps         ymm1,[.m256+020h]                       ; ymm1 = ray origin y
+        vmovaps         ymm2,[.m256+040h]                       ; ymm2 = ray origin z
+        vmovaps         ymm3,[.m256+060h]                       ; ymm3 = ray dir x
+        vmovaps         ymm4,[.m256+080h]                       ; ymm4 = ray dir y
+        vmovaps         ymm5,[.m256+0a0h]                       ; ymm5 = ray dir z
+        vmovaps         [.m256+0c0h],ymm6                       ; [.m256+0c0h] = distance
         sub             esi,1
-        jnz             .march
-    .march_end:
-        vmovaps         ymm0,[.pos]
-        vmovaps         ymm1,[.pos+32]
-        vmovaps         ymm2,[.pos+64]
+        jnz             .01
+    .02:
+        vmovaps         ymm0,[.m256+0e0h]                       ; ymm0 = pos x
+        vmovaps         ymm1,[.m256+100h]                       ; ymm1 = pos y
+        vmovaps         ymm2,[.m256+120h]                       ; ymm2 = pos z
         call            nearest_object
-        vmovaps         ymm2,[.pos]
-        vmovaps         ymm3,[.pos+32]
-        vmovaps         ymm4,[.pos+64]
-        vmovaps         ymm1,ymm0
-        vmovaps         ymm0,[.distance]
+        vmovaps         ymm2,[.m256+0e0h]                       ; ymm2 = pos x
+        vmovaps         ymm3,[.m256+100h]                       ; ymm3 = pos y
+        vmovaps         ymm4,[.m256+120h]                       ; ymm4 = pos z
+        vmovaps         ymm1,ymm0                               ; ymm1 = object id
+        vmovaps         ymm0,[.m256+0c0h]                       ; ymm0 = distance
         add             rsp,.k_stack_size
         pop             rsi
         ret
