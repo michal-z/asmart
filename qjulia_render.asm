@@ -54,15 +54,15 @@ sincos:
 ;------------------------------------------------------------------------
 align 32
 nearest_distance:
-        vsubps          ymm3,ymm0,[object.param_x+0*32]
-        vsubps          ymm6,ymm0,[object.param_x+1*32]
-        vsubps          ymm9,ymm0,[object.param_x+2*32]
-        vsubps          ymm4,ymm1,[object.param_y+0*32]
-        vsubps          ymm7,ymm1,[object.param_y+1*32]
-        vsubps          ymm10,ymm1,[object.param_y+2*32]
-        vsubps          ymm5,ymm2,[object.param_z+0*32]
-        vsubps          ymm8,ymm2,[object.param_z+1*32]
-        vsubps          ymm11,ymm2,[object.param_z+2*32]
+        vsubps          ymm3,ymm0,[object.param_x+000h]
+        vsubps          ymm6,ymm0,[object.param_x+020h]
+        vsubps          ymm9,ymm0,[object.param_x+040h]
+        vsubps          ymm4,ymm1,[object.param_y+000h]
+        vsubps          ymm7,ymm1,[object.param_y+020h]
+        vsubps          ymm10,ymm1,[object.param_y+040h]
+        vsubps          ymm5,ymm2,[object.param_z+000h]
+        vsubps          ymm8,ymm2,[object.param_z+020h]
+        vsubps          ymm11,ymm2,[object.param_z+040h]
         vmulps          ymm3,ymm3,ymm3
         vmulps          ymm6,ymm6,ymm6
         vmulps          ymm9,ymm9,ymm9
@@ -72,13 +72,13 @@ nearest_distance:
         vfmadd231ps     ymm3,ymm5,ymm5
         vfmadd231ps     ymm6,ymm8,ymm8
         vfmadd231ps     ymm9,ymm11,ymm11
-        vaddps          ymm5,ymm1,[object.param_w+3*32]
+        vaddps          ymm5,ymm1,[object.param_w+060h]
         vsqrtps         ymm3,ymm3
         vsqrtps         ymm6,ymm6
         vsqrtps         ymm9,ymm9
-        vmovaps         ymm10,[object.param_w+0*32]
-        vmovaps         ymm11,[object.param_w+1*32]
-        vmovaps         ymm12,[object.param_w+2*32]
+        vmovaps         ymm10,[object.param_w+000h]
+        vmovaps         ymm11,[object.param_w+020h]
+        vmovaps         ymm12,[object.param_w+040h]
         vsubps          ymm3,ymm3,ymm10
         vsubps          ymm6,ymm6,ymm11
         vsubps          ymm9,ymm9,ymm12
@@ -92,15 +92,15 @@ nearest_distance:
 ;------------------------------------------------------------------------
 align 32
 nearest_object:
-        vsubps          ymm3,ymm0,[object.param_x+0*32]
-        vsubps          ymm6,ymm0,[object.param_x+1*32]
-        vsubps          ymm9,ymm0,[object.param_x+2*32]
-        vsubps          ymm4,ymm1,[object.param_y+0*32]
-        vsubps          ymm7,ymm1,[object.param_y+1*32]
-        vsubps          ymm10,ymm1,[object.param_y+2*32]
-        vsubps          ymm5,ymm2,[object.param_z+0*32]
-        vsubps          ymm8,ymm2,[object.param_z+1*32]
-        vsubps          ymm11,ymm2,[object.param_z+2*32]
+        vsubps          ymm3,ymm0,[object.param_x+000h]
+        vsubps          ymm6,ymm0,[object.param_x+020h]
+        vsubps          ymm9,ymm0,[object.param_x+040h]
+        vsubps          ymm4,ymm1,[object.param_y+000h]
+        vsubps          ymm7,ymm1,[object.param_y+020h]
+        vsubps          ymm10,ymm1,[object.param_y+040h]
+        vsubps          ymm5,ymm2,[object.param_z+000h]
+        vsubps          ymm8,ymm2,[object.param_z+020h]
+        vsubps          ymm11,ymm2,[object.param_z+040h]
         vmulps          ymm3,ymm3,ymm3
         vmulps          ymm6,ymm6,ymm6
         vmulps          ymm9,ymm9,ymm9
@@ -110,17 +110,17 @@ nearest_object:
         vfmadd231ps     ymm3,ymm5,ymm5
         vfmadd231ps     ymm6,ymm8,ymm8
         vfmadd231ps     ymm9,ymm11,ymm11
-        vaddps          ymm5,ymm1,[object.param_w+3*32]         ; ymm5 = object[3] distance
+        vaddps          ymm5,ymm1,[object.param_w+060h]         ; ymm5 = object[3] distance
         vsqrtps         ymm2,ymm3
         vsqrtps         ymm3,ymm6
         vsqrtps         ymm4,ymm9
-        vmovaps         ymm10,[object.param_w+0*32]
-        vmovaps         ymm11,[object.param_w+1*32]
-        vmovaps         ymm12,[object.param_w+2*32]
-        vmovaps         ymm6,[object.id+0*32]
-        vmovaps         ymm7,[object.id+1*32]
-        vmovaps         ymm8,[object.id+2*32]
-        vmovaps         ymm9,[object.id+3*32]
+        vmovaps         ymm10,[object.param_w+000h]
+        vmovaps         ymm11,[object.param_w+020h]
+        vmovaps         ymm12,[object.param_w+040h]
+        vmovaps         ymm6,[object.id+000h]
+        vmovaps         ymm7,[object.id+020h]
+        vmovaps         ymm8,[object.id+040h]
+        vmovaps         ymm9,[object.id+060h]
         vsubps          ymm2,ymm2,ymm10                         ; ymm2 = object[0] distance
         vsubps          ymm3,ymm3,ymm11                         ; ymm3 = object[1] distance
         vsubps          ymm4,ymm4,ymm12                         ; ymm4 = object[2] distance
@@ -141,31 +141,31 @@ nearest_object:
 align 32
 cast_ray:
     virtual at rsp
-    .rayo: rd 3*8
-    .rayd: rd 3*8
+    .rayo:     rd 3*8
+    .rayd:     rd 3*8
     .distance: rd 8
-    .pos: rd 3*8
+    .pos:      rd 3*8
     .k_stack_size = $-$$+16
     end virtual
         push            rsi
         sub             rsp,.k_stack_size
         vmovaps         ymm6,[k_1_0]
-        vmovaps         [.rayo],ymm0
-        vmovaps         [.rayo+32],ymm1
-        vmovaps         [.rayo+64],ymm2
+        vmovaps         [.rayo+000h],ymm0
+        vmovaps         [.rayo+020h],ymm1
+        vmovaps         [.rayo+040h],ymm2
         vmovaps         [.distance],ymm6
-        vmovaps         [.rayd],ymm3
-        vmovaps         [.rayd+32],ymm4
-        vmovaps         [.rayd+64],ymm5
+        vmovaps         [.rayd+000h],ymm3
+        vmovaps         [.rayd+020h],ymm4
+        vmovaps         [.rayd+040h],ymm5
         mov             esi,128
     align 32
     .march:
         vfmadd231ps     ymm0,ymm6,ymm3
         vfmadd231ps     ymm1,ymm6,ymm4
         vfmadd231ps     ymm2,ymm6,ymm5
-        vmovaps         [.pos],ymm0
-        vmovaps         [.pos+32],ymm1
-        vmovaps         [.pos+64],ymm2
+        vmovaps         [.pos+000h],ymm0
+        vmovaps         [.pos+020h],ymm1
+        vmovaps         [.pos+040h],ymm2
         call            nearest_distance
         vmovaps         ymm6,[.distance]                              ; ymm6 = [.distance]
         vcmpltps        ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
@@ -176,23 +176,23 @@ cast_ray:
         je              .march_end
         vandnps         ymm0,ymm7,ymm0
         vaddps          ymm6,ymm6,ymm0
-        vmovaps         ymm0,[.rayo]
-        vmovaps         ymm1,[.rayo+32]
-        vmovaps         ymm2,[.rayo+64]
-        vmovaps         ymm3,[.rayd]
-        vmovaps         ymm4,[.rayd+32]
-        vmovaps         ymm5,[.rayd+64]
+        vmovaps         ymm0,[.rayo+000h]
+        vmovaps         ymm1,[.rayo+020h]
+        vmovaps         ymm2,[.rayo+040h]
+        vmovaps         ymm3,[.rayd+000h]
+        vmovaps         ymm4,[.rayd+020h]
+        vmovaps         ymm5,[.rayd+040h]
         vmovaps         [.distance],ymm6
         sub             esi,1
         jnz             .march
     .march_end:
-        vmovaps         ymm0,[.pos]
-        vmovaps         ymm1,[.pos+32]
-        vmovaps         ymm2,[.pos+64]
+        vmovaps         ymm0,[.pos+000h]
+        vmovaps         ymm1,[.pos+020h]
+        vmovaps         ymm2,[.pos+040h]
         call            nearest_object
-        vmovaps         ymm2,[.pos]
-        vmovaps         ymm3,[.pos+32]
-        vmovaps         ymm4,[.pos+64]
+        vmovaps         ymm2,[.pos+000h]
+        vmovaps         ymm3,[.pos+020h]
+        vmovaps         ymm4,[.pos+040h]
         vmovaps         ymm1,ymm0
         vmovaps         ymm0,[.distance]
         add             rsp,.k_stack_size
@@ -205,10 +205,10 @@ cast_ray:
 align 32
 cast_shadow_ray:
     virtual at rsp
-    .rayo: rd 3*8
-    .rayd: rd 3*8
+    .rayo:     rd 3*8
+    .rayd:     rd 3*8
     .distance: rd 8
-    .res: rd 8
+    .res:      rd 8
     .k_stack_size = $-$$+16
     end virtual
         push            rsi
@@ -216,13 +216,13 @@ cast_shadow_ray:
         vmovaps         ymm6,[k_1_0]
         vmovaps         [.res],ymm6
         vmovaps         ymm6,[k_0_02]
-        vmovaps         [.rayo],ymm0
-        vmovaps         [.rayo+32],ymm1
-        vmovaps         [.rayo+64],ymm2
+        vmovaps         [.rayo+000h],ymm0
+        vmovaps         [.rayo+020h],ymm1
+        vmovaps         [.rayo+040h],ymm2
         vmovaps         [.distance],ymm6
-        vmovaps         [.rayd],ymm3
-        vmovaps         [.rayd+32],ymm4
-        vmovaps         [.rayd+64],ymm5
+        vmovaps         [.rayd+000h],ymm3
+        vmovaps         [.rayd+020h],ymm4
+        vmovaps         [.rayd+040h],ymm5
         mov             esi,128
     align 32
     .march:
@@ -244,12 +244,12 @@ cast_shadow_ray:
         vmovaps         [.res],ymm10
         vandnps         ymm0,ymm7,ymm0
         vaddps          ymm6,ymm6,ymm0
-        vmovaps         ymm0,[.rayo]
-        vmovaps         ymm1,[.rayo+32]
-        vmovaps         ymm2,[.rayo+64]
-        vmovaps         ymm3,[.rayd]
-        vmovaps         ymm4,[.rayd+32]
-        vmovaps         ymm5,[.rayd+64]
+        vmovaps         ymm0,[.rayo+000h]
+        vmovaps         ymm1,[.rayo+020h]
+        vmovaps         ymm2,[.rayo+040h]
+        vmovaps         ymm3,[.rayd+000h]
+        vmovaps         ymm4,[.rayd+020h]
+        vmovaps         ymm5,[.rayd+040h]
         vmovaps         [.distance],ymm6
         sub             esi,1
         jnz             .march
@@ -315,16 +315,16 @@ macro _calc_normal {
 align 32
 compute_color:
     virtual at rsp
-    .hit_mask: rd 8
-    .hit_id: rd 8
-    .hit_pos: rd 3*8
-    .hit_dpos: rd 5*8
+    .hit_mask:      rd 8
+    .hit_id:        rd 8
+    .hit_pos:       rd 3*8
+    .hit_dpos:      rd 5*8
     .hit_dpos_dist: rd 5*8
-    .light1_vec: rd 3*8
-    .n_dot_l0: rd 8
-    .n_dot_l1: rd 8
-    .shadow_l0: rd 8
-    .fog: rd 8
+    .light1_vec:    rd 3*8
+    .n_dot_l0:      rd 8
+    .n_dot_l1:      rd 8
+    .shadow_l0:     rd 8
+    .fog:           rd 8
     .k_stack_size = $-$$+24
     end virtual
         sub             rsp,.k_stack_size
