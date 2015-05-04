@@ -198,13 +198,6 @@ cast_ray:
 ;------------------------------------------------------------------------
 align 32
 cast_shadow_ray:
-    virtual at rsp
-    .rayo:     rd 3*8
-    .rayd:     rd 3*8
-    .distance: rd 8
-    .res:      rd 8
-    .k_stack_size = $-$$+16
-    end virtual
     .k_stack_size = 8*32+16
         push            rsi
         sub             rsp,.k_stack_size
@@ -212,12 +205,12 @@ cast_shadow_ray:
         vmovaps         [rsp+0e0h],ymm6                         ; [rsp+0e0h] = shadow_factor = 1.0
         vmovaps         ymm6,[k_0_02]
         vmovaps         [rsp+000h],ymm0                         ; [rsp+000h] = ray_org_x
-        vmovaps         [rsp+020h],ymm1
-        vmovaps         [rsp+040h],ymm2
-        vmovaps         [rsp+0c0h],ymm6
-        vmovaps         [rsp+060h],ymm3
-        vmovaps         [rsp+080h],ymm4
-        vmovaps         [rsp+0a0h],ymm5
+        vmovaps         [rsp+020h],ymm1                         ; [rsp+020h] = ray_org_y
+        vmovaps         [rsp+040h],ymm2                         ; [rsp+040h] = ray_org_z
+        vmovaps         [rsp+0c0h],ymm6                         ; [rsp+0c0h] = distance
+        vmovaps         [rsp+060h],ymm3                         ; [rsp+060h] = ray_dir_x
+        vmovaps         [rsp+080h],ymm4                         ; [rsp+080h] = ray_dir_y
+        vmovaps         [rsp+0a0h],ymm5                         ; [rsp+0a0h] = ray_dir_z
         mov             esi,128
     align 32
     .march:
@@ -225,9 +218,9 @@ cast_shadow_ray:
         vfmadd231ps     ymm1,ymm6,ymm4
         vfmadd231ps     ymm2,ymm6,ymm5
         call            nearest_distance
-        vmovaps         ymm6,[.distance]                              ; ymm6 = [.distance]
-        vcmpltps        ymm7,ymm0,[k_hit_distance]                    ; nearest_distance() < k_hit_distance
-        vcmpgtps        ymm8,ymm6,[k_view_distance]                   ; .distance > k_view_distance
+        vmovaps         ymm6,[rsp+0c0h]                         ; ymm6 = distance
+        vcmpltps        ymm7,ymm0,[k_hit_distance]              ; ymm7 = nearest_distance() < k_hit_distance
+        vcmpgtps        ymm8,ymm6,[k_view_distance]             ; ymm8 = distance > k_view_distance
         vorps           ymm7,ymm7,ymm8
         vmovmskps       eax,ymm7
         cmp             eax,0xff
@@ -235,21 +228,21 @@ cast_shadow_ray:
         vrcpps          ymm10,ymm6
         vmulps          ymm10,ymm0,ymm10
         vmulps          ymm10,ymm10,[k_shadow_hardness]
-        vminps          ymm10,ymm10,[.res]
-        vmovaps         [.res],ymm10
+        vminps          ymm10,ymm10,[rsp+0e0h]                  ; ymm10 = min(ymm10, shadow_factor)
+        vmovaps         [rsp+0e0h],ymm10                        ; shadow_factor = ymm10
         vandnps         ymm0,ymm7,ymm0
         vaddps          ymm6,ymm6,ymm0
-        vmovaps         ymm0,[.rayo+000h]
-        vmovaps         ymm1,[.rayo+020h]
-        vmovaps         ymm2,[.rayo+040h]
-        vmovaps         ymm3,[.rayd+000h]
-        vmovaps         ymm4,[.rayd+020h]
-        vmovaps         ymm5,[.rayd+040h]
-        vmovaps         [.distance],ymm6
+        vmovaps         ymm0,[rsp+000h]                         ; ymm0 = ray_org_x
+        vmovaps         ymm1,[rsp+020h]                         ; ymm1 = ray_org_y
+        vmovaps         ymm2,[rsp+040h]                         ; ymm2 = ray_org_z
+        vmovaps         ymm3,[rsp+060h]                         ; ymm3 = ray_dir_x
+        vmovaps         ymm4,[rsp+080h]                         ; ymm4 = ray_dir_y
+        vmovaps         ymm5,[rsp+0a0h]                         ; ymm5 = ray_dir_z
+        vmovaps         [rsp+0c0h],ymm6                         ; distance = ymm6
         sub             esi,1
         jnz             .march
     .march_end:
-        vmovaps         ymm0,[rsp+0e0h]
+        vmovaps         ymm0,[rsp+0e0h]                         ; ymm0 = shadow_factor
         add             rsp,.k_stack_size
         pop             rsi
         ret
@@ -258,50 +251,50 @@ cast_shadow_ray:
 ; out: <ymm0,ymm1,ymm2> normal vector at input position
 ;------------------------------------------------------------------------
 macro _calc_normal {
-        vsubps          ymm0,ymm2,ymm5                          ; ymm0 = hit_pos.x-k_normal_pos
-        vaddps          ymm6,ymm2,ymm5                          ; ymm6 = hit_pos.x+k_normal_eps
-        vsubps          ymm7,ymm3,ymm5                          ; ymm7 = hit_pos.y-k_normal_eps
-        vaddps          ymm8,ymm3,ymm5                          ; ymm8 = hit_pos.y+k_normal_eps
-        vsubps          ymm9,ymm4,ymm5                          ; ymm9 = hit_pos.z-k_normal_eps
-        vaddps          ymm10,ymm4,ymm5                         ; ymm10 = hit_pos.z+k_normal_eps
-        vmovaps         ymm1,ymm3                               ; ymm1 = hit_pos.y
-        vmovaps         ymm2,ymm4                               ; ymm2 = hit_pos.z
-        vmovaps         [.m256+000h],ymm6                       ; [.m256+000h] = hit_pos.x+k_normal_eps
-        vmovaps         [.m256+020h],ymm7                       ; [.m256+020h] = hit_pos.y-k_normal_eps
-        vmovaps         [.m256+040h],ymm8                       ; [.m256+040h] = hit_pos.y+k_normal_eps
-        vmovaps         [.m256+060h],ymm9                       ; [.m256+060h] = hit_pos.z-k_normal_eps
-        vmovaps         [.m256+080h],ymm10                      ; [.m256+080h] = hit_pos.z+k_normal_eps
+        vsubps          ymm0,ymm2,ymm5                          ; ymm0 = hit_pos_x-k_normal_pos
+        vaddps          ymm6,ymm2,ymm5                          ; ymm6 = hit_pos_x+k_normal_eps
+        vsubps          ymm7,ymm3,ymm5                          ; ymm7 = hit_pos_y-k_normal_eps
+        vaddps          ymm8,ymm3,ymm5                          ; ymm8 = hit_pos_y+k_normal_eps
+        vsubps          ymm9,ymm4,ymm5                          ; ymm9 = hit_pos_z-k_normal_eps
+        vaddps          ymm10,ymm4,ymm5                         ; ymm10 = hit_pos_z+k_normal_eps
+        vmovaps         ymm1,ymm3                               ; ymm1 = hit_pos_y
+        vmovaps         ymm2,ymm4                               ; ymm2 = hit_pos_z
+        vmovaps         [rsp+0a0h],ymm6                         ; [rsp+0a0h] = hit_pos_x+k_normal_eps
+        vmovaps         [rsp+0c0h],ymm7                         ; [rsp+0c0h] = hit_pos_y-k_normal_eps
+        vmovaps         [rsp+0e0h],ymm8                         ; [rsp+0e0h] = hit_pos_y+k_normal_eps
+        vmovaps         [rsp+100h],ymm9                         ; [rsp+100h] = hit_pos_z-k_normal_eps
+        vmovaps         [rsp+120h],ymm10                        ; [rsp+120h] = hit_pos_z+k_normal_eps
         call            nearest_distance                        ; ymm0 = nearest_distance(x-eps,y,z)
-        vmovaps         ymm1,[.hit_pos+020h]
-        vmovaps         ymm2,[.hit_pos+040h]
-        vmovaps         [.m256+0a0h],ymm0                       ; [.m256+0a0h] = nearest_distance(x-eps,y,z)
-        vmovaps         ymm0,[.m256+000h]
+        vmovaps         ymm1,[rsp+060h]                         ; ymm1 = hit_pos_y
+        vmovaps         ymm2,[rsp+080h]                         ; ymm2 = hit_pos_z
+        vmovaps         [rsp+140h],ymm0                         ; [rsp+140h] = nearest_distance(x-eps,y,z)
+        vmovaps         ymm0,[rsp+0a0h]                         ; ymm0 = hit_pos_x+k_normal_eps
         call            nearest_distance                        ; ymm0 = nearest_distance(x+eps,y,z)
-        vmovaps         ymm1,[.m256+020h]
-        vmovaps         ymm2,[.hit_pos+040h]
-        vmovaps         [.m256+0c0h],ymm0                       ; [.m256+0c0h] = nearest_distance(x+eps,y,z)
-        vmovaps         ymm0,[.hit_pos]
+        vmovaps         ymm1,[rsp+0c0h]                         ; ymm1 = hit_pos_y-k_normal_eps
+        vmovaps         ymm2,[rsp+080h]                         ; ymm2 = hit_pos_z
+        vmovaps         [rsp+160h],ymm0                         ; [rsp+160h] = nearest_distance(x+eps,y,z)
+        vmovaps         ymm0,[rsp+040h]                         ; ymm0 = hit_pos_x
         call            nearest_distance                        ; ymm0 = nearest_distance(x,y-eps,z)
-        vmovaps         ymm1,[.m256+040h]
-        vmovaps         ymm2,[.hit_pos+040h]
-        vmovaps         [.m256+0e0h],ymm0                       ; [.m256+0e0h] = nearest_distance(x,y-eps,z)
-        vmovaps         ymm0,[.hit_pos]
+        vmovaps         ymm1,[rsp+0e0h]                         ; ymm1 = hit_pos_y+k_normal_eps
+        vmovaps         ymm2,[rsp+080h]                         ; ymm2 = hit_pos_z
+        vmovaps         [rsp+180h],ymm0                         ; [rsp+180h] = nearest_distance(x,y-eps,z)
+        vmovaps         ymm0,[rsp+040h]                         ; ymm0 = hit_pos_x
         call            nearest_distance                        ; ymm0 = nearest_distance(x,y+eps,z)
-        vmovaps         ymm1,[.hit_pos+020h]
-        vmovaps         ymm2,[.m256+060h]
-        vmovaps         [.m256+100h],ymm0                       ; [.m256+100h] = nearest_distance(x,y+eps,z)
-        vmovaps         ymm0,[.hit_pos]
+        vmovaps         ymm1,[rsp+060h]                         ; ymm1 = hit_pos_y
+        vmovaps         ymm2,[rsp+100h]                         ; ymm2 = hit_pos_z-k_normal_eps
+        vmovaps         [rsp+1a0h],ymm0                         ; [rsp+1a0h] = nearest_distance(x,y+eps,z)
+        vmovaps         ymm0,[rsp+040h]                         ; ymm0 = hit_pos_x
         call            nearest_distance                        ; ymm0 = nearest_distance(x,y,z-eps)
-        vmovaps         ymm1,[.hit_pos+020h]
-        vmovaps         ymm2,[.m256+080h]
-        vmovaps         [.m256+120h],ymm0                       ; [.m256+120h] = nearest_distance(x,y,z-eps)
-        vmovaps         ymm0,[.hit_pos]
+        vmovaps         ymm1,[rsp+060h]                         ; ymm1 = hit_pos_y
+        vmovaps         ymm2,[rsp+120h]                         ; ymm2 = hit_pos_z+k_normal_eps
+        vmovaps         [rsp+1c0h],ymm0                         ; [rsp+1c0h] = nearest_distance(x,y,z-eps)
+        vmovaps         ymm0,[rsp+040h]                         ; ymm0 = hit_pos_x
         call            nearest_distance                        ; ymm0 = nearest_distance(x,y,z+eps)
-        vsubps          ymm2,ymm0,[.m256+120h]
-        vmovaps         ymm0,[.m256+0c0h]
-        vmovaps         ymm1,[.m256+100h]
-        vsubps          ymm0,ymm0,[.m256+0a0h]
-        vsubps          ymm1,ymm1,[.m256+0e0h]                  ; (ymm0,ymm1,ymm2) normal_vector
+        vsubps          ymm2,ymm0,[rsp+1c0h]
+        vmovaps         ymm0,[rsp+160h]
+        vmovaps         ymm1,[rsp+1a0h]
+        vsubps          ymm0,ymm0,[rsp+140h]
+        vsubps          ymm1,ymm1,[rsp+180h]                    ; (ymm0,ymm1,ymm2) = normal_vector
 }
 ;========================================================================
 ; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
@@ -309,18 +302,7 @@ macro _calc_normal {
 ;------------------------------------------------------------------------
 align 32
 compute_color:
-    virtual at rsp
-    .hit_mask:      rd 8
-    .hit_id:        rd 8
-    .hit_pos:       rd 3*8
-    .light1_vec:    rd 3*8
-    .n_dot_l0:      rd 8
-    .n_dot_l1:      rd 8
-    .shadow_l0:     rd 8
-    .fog:           rd 8
-    .m256:          rd 10*8
-    .k_stack_size = $-$$+24
-    end virtual
+    .k_stack_size = 16*32+24
         sub             rsp,.k_stack_size
         call            cast_ray
         vmovaps         ymm5,[k_view_distance]
@@ -332,29 +314,29 @@ compute_color:
         vrcpps          ymm5,ymm5
         vmulps          ymm5,ymm0,ymm5
         vsubps          ymm5,ymm7,ymm5
-        vmovaps         [.fog],ymm5
+        vmovaps         [rsp+1e0h],ymm5                         ; [rsp+1e0h] = fog_factor
         vmovaps         ymm5,[k_normal_eps]
-        vmovaps         [.hit_id],ymm1
-        vmovaps         [.hit_pos+000h],ymm2
-        vmovaps         [.hit_pos+020h],ymm3
-        vmovaps         [.hit_pos+040h],ymm4
-        vmovaps         [.hit_mask],ymm11
-        _calc_normal                                            ; (ymm0,ymm1,ymm2) normal_vector
-        vmovaps         ymm9,[.hit_pos]
-        vmovaps         ymm10,[.hit_pos+32]
-        vmovaps         ymm11,[.hit_pos+64]             ; (ymm9,ymm10,ymm11) hit_pos
-        vmovaps         ymm3,[light0_position]
-        vmovaps         ymm4,[light0_position+32]
-        vmovaps         ymm5,[light0_position+64]
-        vmovaps         ymm6,[light1_position]
-        vmovaps         ymm7,[light1_position+32]
-        vmovaps         ymm8,[light1_position+64]
+        vmovaps         [rsp+020h],ymm1                         ; [rsp+020h] = hit_id
+        vmovaps         [rsp+040h],ymm2                         ; [rsp+040h] = pos_x
+        vmovaps         [rsp+060h],ymm3                         ; [rsp+060h] = pos_y
+        vmovaps         [rsp+080h],ymm4                         ; [rsp+080h] = pos_z
+        vmovaps         [rsp+000h],ymm11                        ; [rsp+000h] = hit_mask
+        _calc_normal                                            ; (ymm0,ymm1,ymm2) = normal_vector
+        vmovaps         ymm9,[rsp+040h]                         ; ymm9 = hit_pos_x
+        vmovaps         ymm10,[rsp+060h]                        ; ymm10 = hit_pos_y
+        vmovaps         ymm11,[rsp+080h]                        ; ymm11 = hit_pos_z
+        vmovaps         ymm3,[light0_position+000h]
+        vmovaps         ymm4,[light0_position+020h]
+        vmovaps         ymm5,[light0_position+040h]
+        vmovaps         ymm6,[light1_position+000h]
+        vmovaps         ymm7,[light1_position+020h]
+        vmovaps         ymm8,[light1_position+040h]
         vsubps          ymm3,ymm3,ymm9
         vsubps          ymm4,ymm4,ymm10
-        vsubps          ymm5,ymm5,ymm11                         ; (ymm3,ymm4,ymm5) light0_vector
+        vsubps          ymm5,ymm5,ymm11                         ; (ymm3,ymm4,ymm5) = light0_vector
         vsubps          ymm6,ymm6,ymm9
         vsubps          ymm7,ymm7,ymm10
-        vsubps          ymm8,ymm8,ymm11                         ; (ymm6,ymm7,ymm8) light1_vector
+        vsubps          ymm8,ymm8,ymm11                         ; (ymm6,ymm7,ymm8) = light1_vector
         vmulps          ymm12,ymm0,ymm0
         vmulps          ymm13,ymm3,ymm3
         vmulps          ymm14,ymm6,ymm6
@@ -369,13 +351,13 @@ compute_color:
         vrsqrtps        ymm14,ymm14
         vmulps          ymm0,ymm0,ymm12
         vmulps          ymm1,ymm1,ymm12
-        vmulps          ymm2,ymm2,ymm12                         ; (ymm0,ymm1,ymm2) normalized normal_vector
+        vmulps          ymm2,ymm2,ymm12                         ; (ymm0,ymm1,ymm2) = normalize(normal_vector)
         vmulps          ymm3,ymm3,ymm13
         vmulps          ymm4,ymm4,ymm13
-        vmulps          ymm5,ymm5,ymm13                         ; (ymm3,ymm4,ymm5) normalized light0_vector
+        vmulps          ymm5,ymm5,ymm13                         ; (ymm3,ymm4,ymm5) = normalize(light0_vector)
         vmulps          ymm6,ymm6,ymm14
         vmulps          ymm7,ymm7,ymm14
-        vmulps          ymm8,ymm8,ymm14                         ; (ymm6,ymm7,ymm8) normalized light1_vector
+        vmulps          ymm8,ymm8,ymm14                         ; (ymm6,ymm7,ymm8) = normalize(light1_vector)
         vxorps          ymm14,ymm14,ymm14
         vmulps          ymm12,ymm0,ymm3
         vmulps          ymm13,ymm0,ymm6
@@ -385,34 +367,34 @@ compute_color:
         vfmadd231ps     ymm13,ymm2,ymm8
         vmaxps          ymm12,ymm12,ymm14                       ; ymm12 = n_dot_l0
         vmaxps          ymm13,ymm13,ymm14                       ; ymm13 = n_dot_l1
-        vmovaps         [.n_dot_l0],ymm12
-        vmovaps         [.n_dot_l1],ymm13
+        vmovaps         [rsp+0a0h],ymm12                        ; [rsp+0a0h] = n_dot_l0
+        vmovaps         [rsp+0c0h],ymm13                        ; [rsp+0c0h] = n_dot_l1
         vmovaps         ymm0,ymm9
         vmovaps         ymm1,ymm10
         vmovaps         ymm2,ymm11
-        vmovaps         [.light1_vec],ymm6
-        vmovaps         [.light1_vec+32],ymm7
-        vmovaps         [.light1_vec+64],ymm8
+        vmovaps         [rsp+0e0h],ymm6                         ; [rsp+0e0h] = light1_vec_x
+        vmovaps         [rsp+100h],ymm7                         ; [rsp+100h] = light1_vec_y
+        vmovaps         [rsp+120h],ymm8                         ; [rsp+120h] = light1_vec_z
         call            cast_shadow_ray
-        vmovaps         [.shadow_l0],ymm0
-        vmovaps         ymm0,[.hit_pos]
-        vmovaps         ymm1,[.hit_pos+32]
-        vmovaps         ymm2,[.hit_pos+64]
-        vmovaps         ymm3,[.light1_vec]
-        vmovaps         ymm4,[.light1_vec+32]
-        vmovaps         ymm5,[.light1_vec+64]
+        vmovaps         [rsp+140h],ymm0                         ; [rsp+140h] = light0_shadow
+        vmovaps         ymm0,[rsp+040h]                         ; ymm0 = hit_pos_x
+        vmovaps         ymm1,[rsp+060h]                         ; ymm1 = hit_pos_y
+        vmovaps         ymm2,[rsp+080h]                         ; ymm2 = hit_pos_z
+        vmovaps         ymm3,[rsp+0e0h]                         ; ymm3 = light1_vec_x
+        vmovaps         ymm4,[rsp+100h]                         ; ymm4 = light1_vec_y
+        vmovaps         ymm5,[rsp+120h]                         ; ymm5 = light1_vec_z
         call            cast_shadow_ray
-        vmulps          ymm7,ymm0,[.n_dot_l1]
-        vmovaps         ymm6,[.n_dot_l0]
-        vmulps          ymm6,ymm6,[.shadow_l0]
+        vmulps          ymm7,ymm0,[rsp+0c0h]                    ; ymm7 = ymm0 * n_dot_l1
+        vmovaps         ymm6,[rsp+0a0h]                         ; ymm6 = n_dot_l0
+        vmulps          ymm6,ymm6,[rsp+140h]                    ; ymm6 = ymm6 * light0_shadow
         vmulps          ymm7,ymm7,[light1_power]
         vmulps          ymm6,ymm6,[light0_power]
         vaddps          ymm6,ymm6,ymm7
-        vmovaps         ymm7,[.fog]
+        vmovaps         ymm7,[rsp+1e0h]                         ; ymm7 = fog_factor
         vmovaps         ymm8,[ambient]
-        vmovaps         ymm11,[.hit_mask]
+        vmovaps         ymm11,[rsp+000h]                        ; ymm11 = hit_mask
         lea             rax,[object]
-        vmovdqa         ymm1,[.hit_id]
+        vmovdqa         ymm1,[rsp+020h]                         ; ymm1 = hit_id
         vpcmpeqd        ymm2,ymm2,ymm2
         vgatherdps      ymm3,[rax+ymm1*4+(object.red-object)],ymm2
         vpcmpeqd        ymm2,ymm2,ymm2
@@ -576,11 +558,11 @@ update_state:
         vsubps          ymm1,ymm2,ymm1
         vmovaps         [object.param_x+64],ymm1
         vmovaps         [object.param_z+64],ymm0
-        vbroadcastss    ymm0,[eye_position]           ; ymm0 = eye x pos
+        vbroadcastss    ymm0,[eye_position]                     ; ymm0 = eye x pos
         vbroadcastss    ymm3,[eye_focus]
-        vbroadcastss    ymm1,[eye_position+4]         ; ymm1 = eye y pos
+        vbroadcastss    ymm1,[eye_position+4]                   ; ymm1 = eye y pos
         vbroadcastss    ymm4,[eye_focus+4]
-        vbroadcastss    ymm2,[eye_position+8]         ; ymm2 = eye z pos
+        vbroadcastss    ymm2,[eye_position+8]                   ; ymm2 = eye z pos
         vbroadcastss    ymm5,[eye_focus+8]
         vsubps          ymm3,ymm0,ymm3
         vsubps          ymm4,ymm1,ymm4
@@ -593,20 +575,20 @@ update_state:
         vrsqrtps        ymm6,ymm6
         vmulps          ymm3,ymm3,ymm6
         vmulps          ymm4,ymm4,ymm6
-        vmulps          ymm5,ymm5,ymm6                ; (ymm3,ymm4,ymm5) = normalized(iz)
+        vmulps          ymm5,ymm5,ymm6                          ; (ymm3,ymm4,ymm5) = normalized(iz)
         vmovaps         [eye_zaxis],ymm3
         vmovaps         [eye_zaxis+32],ymm4
         vmovaps         [eye_zaxis+64],ymm5
         vxorps          ymm8,ymm8,ymm8
         vsubps          ymm8,ymm8,ymm3
         vxorps          ymm7,ymm7,ymm7
-        vmovaps         ymm6,ymm5                     ; (ymm6,ymm7,ymm8) = ix
+        vmovaps         ymm6,ymm5                               ; (ymm6,ymm7,ymm8) = ix
         vmulps          ymm9,ymm8,ymm8
         vmulps          ymm10,ymm6,ymm6
         vaddps          ymm9,ymm9,ymm10
         vrsqrtps        ymm9,ymm9
         vmulps          ymm6,ymm6,ymm9
-        vmulps          ymm8,ymm8,ymm9                ; (ymm6,ymm7,ymm8) = normalized(ix)
+        vmulps          ymm8,ymm8,ymm9                          ; (ymm6,ymm7,ymm8) = normalized(ix)
         vmovaps         [eye_xaxis],ymm6
         vmovaps         [eye_xaxis+32],ymm7
         vmovaps         [eye_xaxis+64],ymm8
@@ -615,7 +597,7 @@ update_state:
         vmulps          ymm11,ymm4,ymm6
         vfmsub231ps     ymm9,ymm4,ymm8
         vfmsub231ps     ymm10,ymm5,ymm6
-        vfmsub231ps     ymm11,ymm3,ymm7               ; (ymm9,ymm10,ymm11) = iy
+        vfmsub231ps     ymm11,ymm3,ymm7                         ; (ymm9,ymm10,ymm11) = iy
         vmulps          ymm12,ymm9,ymm9
         vmulps          ymm13,ymm10,ymm10
         vmulps          ymm14,ymm11,ymm11
@@ -624,7 +606,7 @@ update_state:
         vrsqrtps        ymm12,ymm12
         vmulps          ymm9,ymm9,ymm12
         vmulps          ymm10,ymm10,ymm12
-        vmulps          ymm11,ymm11,ymm12             ; (ymm9,ymm10,ymm11) = normalized(iy)
+        vmulps          ymm11,ymm11,ymm12                       ; (ymm9,ymm10,ymm11) = normalized(iy)
         vmovaps         [eye_yaxis],ymm9
         vmovaps         [eye_yaxis+32],ymm10
         vmovaps         [eye_yaxis+64],ymm11
