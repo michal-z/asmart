@@ -16,19 +16,19 @@ macro iaca_end {
         db              0x64,0x67,0x90
 }
 ;========================================================================
-qjulia_section = 'code'
-include 'qjulia_render.asm'
+program_section = 'code'
+include 'sphere_render.asm'
 ;========================================================================
 align 16
 generate_fractal_thread:
         and             rsp,-32
-        mov             esi,ecx       ; thread id
+        mov             esi,ecx                                 ; thread id
     .run:
         invoke          WaitForSingleObject,[main_thrd_semaphore],INFINITE
         mov             eax,[quit]
         test            eax,eax
         jnz             .return
-        call            generate_fractal
+        call            generate_image
         invoke          ReleaseSemaphore,[thrd_semaphore+rsi*8],1,NULL
         jmp             .run
     .return:
@@ -36,17 +36,13 @@ generate_fractal_thread:
 ;========================================================================
 align 16
 get_time:
-    virtual at rsp
-    .perf_counter dq ?
-    end virtual
         sub             rsp,24
         mov             rax,[.perf_freq]
         test            rax,rax
         jnz             @f
         invoke          QueryPerformanceFrequency,.perf_freq
         invoke          QueryPerformanceCounter,.first_perf_counter
-    @@: lea             rcx,[.perf_counter]
-        invoke          QueryPerformanceCounter,rcx
+    @@: invoke          QueryPerformanceCounter,.perf_counter
         mov             rcx,[.perf_counter]
         sub             rcx,[.first_perf_counter]
         mov             rdx,[.perf_freq]
@@ -217,7 +213,7 @@ align 16
 update:
         sub             rsp,24
         call            update_frame_stats
-        call            update_eye
+        call            update_state
         mov             [tileidx],0
         invoke          ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
         invoke          WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
@@ -290,8 +286,8 @@ bmp_handle dq 0
 bmp_hdc dq 0
 win_handle dq 0
 win_hdc dq 0
-win_title db 'Fractal', 64 dup 0
-win_title_fmt db '[%d fps  %d us] Fractal',0
+win_title db 'Spheres', 64 dup 0
+win_title_fmt db '[%d fps  %d us] Spheres',0
 win_msg MSG
 win_class WNDCLASSEX sizeof.WNDCLASSEX,0,winproc,0,0,NULL,NULL,NULL,COLOR_BTNFACE+1,NULL,win_title,NULL
 win_rect RECT
@@ -305,6 +301,7 @@ time dq 0
 time_delta dd 0
 quit dd 0
 
+get_time.perf_counter dq 0
 get_time.perf_freq dq 0
 get_time.first_perf_counter dq 0
 
@@ -322,8 +319,8 @@ main_thrd_semaphore dq 0
 thrd_handle dq k_thrd_count dup 0
 thrd_semaphore dq k_thrd_count dup 0
 
-qjulia_section = 'data'
-include 'qjulia_render.asm'
+program_section = 'data'
+include 'sphere_render.asm'
 ;========================================================================
 section '.idata' import data readable writeable
 

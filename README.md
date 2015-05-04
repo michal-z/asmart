@@ -1,4 +1,4 @@
-# qjulia
+# asmart project
 
 Software distance field rendering (wip).<br />
 Requires x86_64 CPU with AVX2 and FMA3 instruction sets support.<br />

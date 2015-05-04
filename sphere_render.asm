@@ -1,4 +1,4 @@
-if qjulia_section = 'code'
+if program_section = 'code'
 ;========================================================================
 ; in: <ymm0> angle in radians
 ; out: <ymm0> sin(ymm0), <ymm1> cos(ymm0)
@@ -441,13 +441,13 @@ compute_color:
         add             rsp,.k_stack_size
         ret
 ;========================================================================
-; Generate fractal tile by tile. Take one tile from the pool, compute
+; Generate image tile by tile. Take one tile from the pool, compute
 ; it's color and then take next tile, and so on. Finish when all tiles
 ; are computed. This function is dispatched from all worker threads in
 ; parallel.
 ;------------------------------------------------------------------------
 align 32
-generate_fractal:
+generate_image:
         push            rsi rdi rbx rbp r12 r13 r14 r15
         sub             rsp,24
     .for_each_tile:
@@ -546,10 +546,10 @@ generate_fractal:
         pop             r15 r14 r13 r12 rbp rbx rdi rsi
         ret
 ;========================================================================
-; Update eye position. Runs in the main thread.
+; Update global state. Runs in the main thread.
 ;------------------------------------------------------------------------
 align 32
-update_eye:
+update_state:
         sub             rsp,24
         vxorps          xmm0,xmm0,xmm0
         ;vcvtsd2ss       xmm0,xmm0,[time]
@@ -631,7 +631,7 @@ update_eye:
         add             rsp,24
         ret
 ;========================================================================
-else if qjulia_section = 'data'
+else if program_section = 'data'
 
 align 4
 eye_position dd 0.0,4.0,400.0
@@ -644,11 +644,11 @@ eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
 eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 
 align 32
-generate_fractal.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-generate_fractal.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-generate_fractal.k_win_width_rcp: dd 8 dup 0.0015625           ; 2.0f / k_win_width, k_win_width = 1280
-generate_fractal.k_win_height_rcp: dd 8 dup 0.0015625          ; 2.0f / k_win_width, k_win_width = 1280
-generate_fractal.k_rd_z: dd 8 dup -1.732
+generate_image.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
+generate_image.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
+generate_image.k_win_width_rcp: dd 8 dup 0.0015625           ; 2.0f / k_win_width, k_win_width = 1280
+generate_image.k_win_height_rcp: dd 8 dup 0.0015625          ; 2.0f / k_win_width, k_win_width = 1280
+generate_image.k_rd_z: dd 8 dup -1.732
 
 align 32
 k_1: dd 8 dup 1
