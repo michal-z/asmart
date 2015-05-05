@@ -325,7 +325,29 @@ include 'sphere_render.asm'
 section '.idata' import data readable writeable
 
 library kernel32,'KERNEL32.DLL',user32,'USER32.DLL',gdi32,'GDI32.DLL'
-include 'api\kernel32.inc'
-include 'api\user32.inc'
-include 'api\gdi32.inc'
+
+import kernel32,\
+       GetModuleHandle,'GetModuleHandleA',ExitProcess,'ExitProcess',\
+       WaitForSingleObject,'WaitForSingleObject',ReleaseSemaphore,'ReleaseSemaphore',\
+       ExitThread,'ExitThread',QueryPerformanceFrequency,'QueryPerformanceFrequency',\
+       QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
+       CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
+       WaitForMultipleObjects,'WaitForMultipleObjects'
+
+import user32,\
+       wsprintf,'wsprintfA',\
+       RegisterClassEx,'RegisterClassExA',\
+       CreateWindowEx,'CreateWindowExA',\
+       DefWindowProc,'DefWindowProcA',\
+       PeekMessage,'PeekMessageA',\
+       DispatchMessage,'DispatchMessageA',\
+       LoadCursor,'LoadCursorA',\
+       LoadIcon,'LoadIconA',\
+       SetWindowText,'SetWindowTextA',SetRect,'SetRect',AdjustWindowRect,'AdjustWindowRect',\
+       GetDC,'GetDC',ReleaseDC,'ReleaseDC',PostQuitMessage,'PostQuitMessage'
+
+import gdi32,\
+       GetStockObject,'GetStockObject',CreateDIBSection,'CreateDIBSection',\
+       CreateCompatibleDC,'CreateCompatibleDC',SelectObject,'SelectObject',\
+       BitBlt,'BitBlt',DeleteDC,'DeleteDC',DeleteObject,'DeleteObject'
 ;========================================================================
