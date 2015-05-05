@@ -223,7 +223,7 @@ cast_shadow_ray:
         vcmpgtps        ymm8,ymm6,[k_view_distance]             ; ymm8 = distance > k_view_distance
         vorps           ymm7,ymm7,ymm8
         vmovmskps       eax,ymm7
-        cmp             eax,0xff
+        cmp             eax,$ff
         je              .march_end
         vrcpps          ymm10,ymm6
         vmulps          ymm10,ymm0,ymm10
