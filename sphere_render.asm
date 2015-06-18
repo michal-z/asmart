@@ -250,7 +250,8 @@ cast_shadow_ray:
 ; in: <ymm2,ymm3,ymm4> position, <ymm5> k_normal_eps
 ; out: <ymm0,ymm1,ymm2> normal $vector at input position
 ;------------------------------------------------------------------------
-macro calculate_normal_vector {
+macro calculate_normal_vector
+{
         $vsubps ymm0,ymm2,ymm5                          ; ymm0 = hit_pos_x-k_normal_pos
         $vaddps ymm6,ymm2,ymm5                          ; ymm6 = hit_pos_x+k_normal_eps
         $vsubps ymm7,ymm3,ymm5                          ; ymm7 = hit_pos_y-k_normal_eps
