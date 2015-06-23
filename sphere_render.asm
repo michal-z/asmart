@@ -144,51 +144,51 @@ cast_ray:
         $push rsi
         $sub rsp,.k_stack_size
         $vmovaps ymm6,[k_1_0]
-        $vmovaps [rsp+$000],ymm0                         ; [rsp+$000] = ray_org_x
-        $vmovaps [rsp+$020],ymm1                         ; [rsp+$020] = ray_org_y
-        $vmovaps [rsp+$040],ymm2                         ; [rsp+$040] = ray_org_z
-        $vmovaps [rsp+$0c0],ymm6                         ; [rsp+$0c0] = distance
-        $vmovaps [rsp+$060],ymm3                         ; [rsp+$060] = ray_dir_x
-        $vmovaps [rsp+$080],ymm4                         ; [rsp+$080] = ray_dir_y
-        $vmovaps [rsp+$0a0],ymm5                         ; [rsp+$0a0] = ray_dir_z
+        $vmovaps [rsp+$000],ymm0                        ; [rsp+$000] = ray_org_x
+        $vmovaps [rsp+$020],ymm1                        ; [rsp+$020] = ray_org_y
+        $vmovaps [rsp+$040],ymm2                        ; [rsp+$040] = ray_org_z
+        $vmovaps [rsp+$0c0],ymm6                        ; [rsp+$0c0] = distance
+        $vmovaps [rsp+$060],ymm3                        ; [rsp+$060] = ray_dir_x
+        $vmovaps [rsp+$080],ymm4                        ; [rsp+$080] = ray_dir_y
+        $vmovaps [rsp+$0a0],ymm5                        ; [rsp+$0a0] = ray_dir_z
         $mov esi,128
     align 32
     .march:
         $vfmadd231ps ymm0,ymm6,ymm3
         $vfmadd231ps ymm1,ymm6,ymm4
         $vfmadd231ps ymm2,ymm6,ymm5
-        $vmovaps [rsp+$0e0],ymm0                         ; [rsp+$0e0] = pos_x
-        $vmovaps [rsp+$100],ymm1                         ; [rsp+$100] = pos_y
-        $vmovaps [rsp+$120],ymm2                         ; [rsp+$120] = pos_z
+        $vmovaps [rsp+$0e0],ymm0                        ; [rsp+$0e0] = pos_x
+        $vmovaps [rsp+$100],ymm1                        ; [rsp+$100] = pos_y
+        $vmovaps [rsp+$120],ymm2                        ; [rsp+$120] = pos_z
         $call nearest_distance
-        $vmovaps ymm6,[rsp+$0c0]                         ; ymm6 = distance
-        $vcmpltps ymm7,ymm0,[k_hit_distance]              ; ymm7 = nearest_distance() < k_hit_distance
-        $vcmpgtps ymm8,ymm6,[k_view_distance]             ; ymm8 = distance > k_view_distance
+        $vmovaps ymm6,[rsp+$0c0]                        ; ymm6 = distance
+        $vcmpltps ymm7,ymm0,[k_hit_distance]            ; ymm7 = nearest_distance() < k_hit_distance
+        $vcmpgtps ymm8,ymm6,[k_view_distance]           ; ymm8 = distance > k_view_distance
         $vorps ymm7,ymm7,ymm8
         $vmovmskps eax,ymm7
         $cmp eax,$ff
         $je .march_end
         $vandnps ymm0,ymm7,ymm0
         $vaddps ymm6,ymm6,ymm0
-        $vmovaps ymm0,[rsp+$000]                         ; ymm0 = ray_org_x
-        $vmovaps ymm1,[rsp+$020]                         ; ymm1 = ray_org_y
-        $vmovaps ymm2,[rsp+$040]                         ; ymm2 = ray_org_z
-        $vmovaps ymm3,[rsp+$060]                         ; ymm3 = ray_dir_x
-        $vmovaps ymm4,[rsp+$080]                         ; ymm4 = ray_dir_y
-        $vmovaps ymm5,[rsp+$0a0]                         ; ymm5 = ray_dir_z
-        $vmovaps [rsp+$0c0],ymm6                         ; distance = ymm6
+        $vmovaps ymm0,[rsp+$000]                        ; ymm0 = ray_org_x
+        $vmovaps ymm1,[rsp+$020]                        ; ymm1 = ray_org_y
+        $vmovaps ymm2,[rsp+$040]                        ; ymm2 = ray_org_z
+        $vmovaps ymm3,[rsp+$060]                        ; ymm3 = ray_dir_x
+        $vmovaps ymm4,[rsp+$080]                        ; ymm4 = ray_dir_y
+        $vmovaps ymm5,[rsp+$0a0]                        ; ymm5 = ray_dir_z
+        $vmovaps [rsp+$0c0],ymm6                        ; distance = ymm6
         $sub esi,1
         $jnz .march
     .march_end:
-        $vmovaps ymm0,[rsp+$0e0]                         ; ymm0 = pos_x
-        $vmovaps ymm1,[rsp+$100]                         ; ymm1 = pos_y
-        $vmovaps ymm2,[rsp+$120]                         ; ymm2 = pos_z
+        $vmovaps ymm0,[rsp+$0e0]                        ; ymm0 = pos_x
+        $vmovaps ymm1,[rsp+$100]                        ; ymm1 = pos_y
+        $vmovaps ymm2,[rsp+$120]                        ; ymm2 = pos_z
         $call nearest_object
-        $vmovaps ymm2,[rsp+$0e0]                         ; ymm2 = pos_x
-        $vmovaps ymm3,[rsp+$100]                         ; ymm3 = pos_y
-        $vmovaps ymm4,[rsp+$120]                         ; ymm4 = pos_z
-        $vmovaps ymm1,ymm0                               ; ymm1 = object_id
-        $vmovaps ymm0,[rsp+$0c0]                         ; ymm0 = distance
+        $vmovaps ymm2,[rsp+$0e0]                        ; ymm2 = pos_x
+        $vmovaps ymm3,[rsp+$100]                        ; ymm3 = pos_y
+        $vmovaps ymm4,[rsp+$120]                        ; ymm4 = pos_z
+        $vmovaps ymm1,ymm0                              ; ymm1 = object_id
+        $vmovaps ymm0,[rsp+$0c0]                        ; ymm0 = distance
         $add rsp,.k_stack_size
         $pop rsi
         $ret
@@ -202,15 +202,15 @@ cast_shadow_ray:
         $push rsi
         $sub rsp,.k_stack_size
         $vmovaps ymm6,[k_1_0]
-        $vmovaps [rsp+$0e0],ymm6                         ; [rsp+$0e0] = shadow_factor = 1.0
+        $vmovaps [rsp+$0e0],ymm6                        ; [rsp+$0e0] = shadow_factor = 1.0
         $vmovaps ymm6,[k_0_02]
-        $vmovaps [rsp+$000],ymm0                         ; [rsp+$000] = ray_org_x
-        $vmovaps [rsp+$020],ymm1                         ; [rsp+$020] = ray_org_y
-        $vmovaps [rsp+$040],ymm2                         ; [rsp+$040] = ray_org_z
-        $vmovaps [rsp+$0c0],ymm6                         ; [rsp+$0c0] = distance
-        $vmovaps [rsp+$060],ymm3                         ; [rsp+$060] = ray_dir_x
-        $vmovaps [rsp+$080],ymm4                         ; [rsp+$080] = ray_dir_y
-        $vmovaps [rsp+$0a0],ymm5                         ; [rsp+$0a0] = ray_dir_z
+        $vmovaps [rsp+$000],ymm0                        ; [rsp+$000] = ray_org_x
+        $vmovaps [rsp+$020],ymm1                        ; [rsp+$020] = ray_org_y
+        $vmovaps [rsp+$040],ymm2                        ; [rsp+$040] = ray_org_z
+        $vmovaps [rsp+$0c0],ymm6                        ; [rsp+$0c0] = distance
+        $vmovaps [rsp+$060],ymm3                        ; [rsp+$060] = ray_dir_x
+        $vmovaps [rsp+$080],ymm4                        ; [rsp+$080] = ray_dir_y
+        $vmovaps [rsp+$0a0],ymm5                        ; [rsp+$0a0] = ray_dir_z
         $mov esi,128
     align 32
     .march:
@@ -218,9 +218,9 @@ cast_shadow_ray:
         $vfmadd231ps ymm1,ymm6,ymm4
         $vfmadd231ps ymm2,ymm6,ymm5
         $call nearest_distance
-        $vmovaps ymm6,[rsp+$0c0]                         ; ymm6 = distance
-        $vcmpltps ymm7,ymm0,[k_hit_distance]              ; ymm7 = nearest_distance() < k_hit_distance
-        $vcmpgtps ymm8,ymm6,[k_view_distance]             ; ymm8 = distance > k_view_distance
+        $vmovaps ymm6,[rsp+$0c0]                        ; ymm6 = distance
+        $vcmpltps ymm7,ymm0,[k_hit_distance]            ; ymm7 = nearest_distance() < k_hit_distance
+        $vcmpgtps ymm8,ymm6,[k_view_distance]           ; ymm8 = distance > k_view_distance
         $vorps ymm7,ymm7,ymm8
         $vmovmskps eax,ymm7
         $cmp eax,$ff
@@ -229,20 +229,20 @@ cast_shadow_ray:
         $vmulps ymm10,ymm0,ymm10
         $vmulps ymm10,ymm10,[k_shadow_hardness]
         $vminps ymm10,ymm10,[rsp+$0e0]                  ; ymm10 = min(ymm10, shadow_factor)
-        $vmovaps [rsp+$0e0],ymm10                        ; shadow_factor = ymm10
+        $vmovaps [rsp+$0e0],ymm10                       ; shadow_factor = ymm10
         $vandnps ymm0,ymm7,ymm0
         $vaddps ymm6,ymm6,ymm0
-        $vmovaps ymm0,[rsp+$000]                         ; ymm0 = ray_org_x
-        $vmovaps ymm1,[rsp+$020]                         ; ymm1 = ray_org_y
-        $vmovaps ymm2,[rsp+$040]                         ; ymm2 = ray_org_z
-        $vmovaps ymm3,[rsp+$060]                         ; ymm3 = ray_dir_x
-        $vmovaps ymm4,[rsp+$080]                         ; ymm4 = ray_dir_y
-        $vmovaps ymm5,[rsp+$0a0]                         ; ymm5 = ray_dir_z
-        $vmovaps [rsp+$0c0],ymm6                         ; distance = ymm6
+        $vmovaps ymm0,[rsp+$000]                        ; ymm0 = ray_org_x
+        $vmovaps ymm1,[rsp+$020]                        ; ymm1 = ray_org_y
+        $vmovaps ymm2,[rsp+$040]                        ; ymm2 = ray_org_z
+        $vmovaps ymm3,[rsp+$060]                        ; ymm3 = ray_dir_x
+        $vmovaps ymm4,[rsp+$080]                        ; ymm4 = ray_dir_y
+        $vmovaps ymm5,[rsp+$0a0]                        ; ymm5 = ray_dir_z
+        $vmovaps [rsp+$0c0],ymm6                        ; distance = ymm6
         $sub esi,1
         $jnz .march
     .march_end:
-        $vmovaps ymm0,[rsp+$0e0]                         ; ymm0 = shadow_factor
+        $vmovaps ymm0,[rsp+$0e0]                        ; ymm0 = shadow_factor
         $add rsp,.k_stack_size
         $pop rsi
         $ret
@@ -258,39 +258,39 @@ macro calculate_normal_vector
         $vaddps ymm8,ymm3,ymm5                          ; ymm8 = hit_pos_y+k_normal_eps
         $vsubps ymm9,ymm4,ymm5                          ; ymm9 = hit_pos_z-k_normal_eps
         $vaddps ymm10,ymm4,ymm5                         ; ymm10 = hit_pos_z+k_normal_eps
-        $vmovaps ymm1,ymm3                               ; ymm1 = hit_pos_y
-        $vmovaps ymm2,ymm4                               ; ymm2 = hit_pos_z
-        $vmovaps [rsp+$0a0],ymm6                         ; [rsp+$0a0] = hit_pos_x+k_normal_eps
-        $vmovaps [rsp+$0c0],ymm7                         ; [rsp+$0c0] = hit_pos_y-k_normal_eps
-        $vmovaps [rsp+$0e0],ymm8                         ; [rsp+$0e0] = hit_pos_y+k_normal_eps
-        $vmovaps [rsp+$100],ymm9                         ; [rsp+$100] = hit_pos_z-k_normal_eps
-        $vmovaps [rsp+$120],ymm10                        ; [rsp+$120] = hit_pos_z+k_normal_eps
-        $call nearest_distance                        ; ymm0 = nearest_distance(x-eps,y,z)
-        $vmovaps ymm1,[rsp+$060]                         ; ymm1 = hit_pos_y
-        $vmovaps ymm2,[rsp+$080]                         ; ymm2 = hit_pos_z
-        $vmovaps [rsp+$140],ymm0                         ; [rsp+$140] = nearest_distance(x-eps,y,z)
-        $vmovaps ymm0,[rsp+$0a0]                         ; ymm0 = hit_pos_x+k_normal_eps
-        $call nearest_distance                        ; ymm0 = nearest_distance(x+eps,y,z)
-        $vmovaps ymm1,[rsp+$0c0]                         ; ymm1 = hit_pos_y-k_normal_eps
-        $vmovaps ymm2,[rsp+$080]                         ; ymm2 = hit_pos_z
-        $vmovaps [rsp+$160],ymm0                         ; [rsp+$160] = nearest_distance(x+eps,y,z)
-        $vmovaps ymm0,[rsp+$040]                         ; ymm0 = hit_pos_x
-        $call nearest_distance                        ; ymm0 = nearest_distance(x,y-eps,z)
-        $vmovaps ymm1,[rsp+$0e0]                         ; ymm1 = hit_pos_y+k_normal_eps
-        $vmovaps ymm2,[rsp+$080]                         ; ymm2 = hit_pos_z
-        $vmovaps [rsp+$180],ymm0                         ; [rsp+$180] = nearest_distance(x,y-eps,z)
-        $vmovaps ymm0,[rsp+$040]                         ; ymm0 = hit_pos_x
-        $call nearest_distance                        ; ymm0 = nearest_distance(x,y+eps,z)
-        $vmovaps ymm1,[rsp+$060]                         ; ymm1 = hit_pos_y
-        $vmovaps ymm2,[rsp+$100]                         ; ymm2 = hit_pos_z-k_normal_eps
-        $vmovaps [rsp+$1a0],ymm0                         ; [rsp+$1a0] = nearest_distance(x,y+eps,z)
-        $vmovaps ymm0,[rsp+$040]                         ; ymm0 = hit_pos_x
-        $call nearest_distance                        ; ymm0 = nearest_distance(x,y,z-eps)
-        $vmovaps ymm1,[rsp+$060]                         ; ymm1 = hit_pos_y
-        $vmovaps ymm2,[rsp+$120]                         ; ymm2 = hit_pos_z+k_normal_eps
-        $vmovaps [rsp+$1c0],ymm0                         ; [rsp+$1c0] = nearest_distance(x,y,z-eps)
-        $vmovaps ymm0,[rsp+$040]                         ; ymm0 = hit_pos_x
-        $call nearest_distance                        ; ymm0 = nearest_distance(x,y,z+eps)
+        $vmovaps ymm1,ymm3                              ; ymm1 = hit_pos_y
+        $vmovaps ymm2,ymm4                              ; ymm2 = hit_pos_z
+        $vmovaps [rsp+$0a0],ymm6                        ; [rsp+$0a0] = hit_pos_x+k_normal_eps
+        $vmovaps [rsp+$0c0],ymm7                        ; [rsp+$0c0] = hit_pos_y-k_normal_eps
+        $vmovaps [rsp+$0e0],ymm8                        ; [rsp+$0e0] = hit_pos_y+k_normal_eps
+        $vmovaps [rsp+$100],ymm9                        ; [rsp+$100] = hit_pos_z-k_normal_eps
+        $vmovaps [rsp+$120],ymm10                       ; [rsp+$120] = hit_pos_z+k_normal_eps
+        $call nearest_distance                          ; ymm0 = nearest_distance(x-eps,y,z)
+        $vmovaps ymm1,[rsp+$060]                        ; ymm1 = hit_pos_y
+        $vmovaps ymm2,[rsp+$080]                        ; ymm2 = hit_pos_z
+        $vmovaps [rsp+$140],ymm0                        ; [rsp+$140] = nearest_distance(x-eps,y,z)
+        $vmovaps ymm0,[rsp+$0a0]                        ; ymm0 = hit_pos_x+k_normal_eps
+        $call nearest_distance                          ; ymm0 = nearest_distance(x+eps,y,z)
+        $vmovaps ymm1,[rsp+$0c0]                        ; ymm1 = hit_pos_y-k_normal_eps
+        $vmovaps ymm2,[rsp+$080]                        ; ymm2 = hit_pos_z
+        $vmovaps [rsp+$160],ymm0                        ; [rsp+$160] = nearest_distance(x+eps,y,z)
+        $vmovaps ymm0,[rsp+$040]                        ; ymm0 = hit_pos_x
+        $call nearest_distance                          ; ymm0 = nearest_distance(x,y-eps,z)
+        $vmovaps ymm1,[rsp+$0e0]                        ; ymm1 = hit_pos_y+k_normal_eps
+        $vmovaps ymm2,[rsp+$080]                        ; ymm2 = hit_pos_z
+        $vmovaps [rsp+$180],ymm0                        ; [rsp+$180] = nearest_distance(x,y-eps,z)
+        $vmovaps ymm0,[rsp+$040]                        ; ymm0 = hit_pos_x
+        $call nearest_distance                          ; ymm0 = nearest_distance(x,y+eps,z)
+        $vmovaps ymm1,[rsp+$060]                        ; ymm1 = hit_pos_y
+        $vmovaps ymm2,[rsp+$100]                        ; ymm2 = hit_pos_z-k_normal_eps
+        $vmovaps [rsp+$1a0],ymm0                        ; [rsp+$1a0] = nearest_distance(x,y+eps,z)
+        $vmovaps ymm0,[rsp+$040]                        ; ymm0 = hit_pos_x
+        $call nearest_distance                          ; ymm0 = nearest_distance(x,y,z-eps)
+        $vmovaps ymm1,[rsp+$060]                        ; ymm1 = hit_pos_y
+        $vmovaps ymm2,[rsp+$120]                        ; ymm2 = hit_pos_z+k_normal_eps
+        $vmovaps [rsp+$1c0],ymm0                        ; [rsp+$1c0] = nearest_distance(x,y,z-eps)
+        $vmovaps ymm0,[rsp+$040]                        ; ymm0 = hit_pos_x
+        $call nearest_distance                          ; ymm0 = nearest_distance(x,y,z+eps)
         $vsubps ymm2,ymm0,[rsp+$1c0]
         $vmovaps ymm0,[rsp+$160]
         $vmovaps ymm1,[rsp+$1a0]
@@ -307,7 +307,7 @@ compute_color:
         $sub rsp,.k_stack_size
         $call cast_ray
         $vmovaps ymm5,[k_view_distance]
-        $vcmpltps ymm11,ymm0,ymm5                         ; ymm11 = hit_mask
+        $vcmpltps ymm11,ymm0,ymm5                       ; ymm11 = hit_mask
         $vmovmskps eax,ymm11
         $test eax,eax
         $jz .no_hit
@@ -315,17 +315,17 @@ compute_color:
         $vrcpps ymm5,ymm5
         $vmulps ymm5,ymm0,ymm5
         $vsubps ymm5,ymm7,ymm5
-        $vmovaps [rsp+$1e0],ymm5                         ; [rsp+$1e0] = fog_factor
+        $vmovaps [rsp+$1e0],ymm5                        ; [rsp+$1e0] = fog_factor
         $vmovaps ymm5,[k_normal_eps]
-        $vmovaps [rsp+$020],ymm1                         ; [rsp+$020] = hit_id
-        $vmovaps [rsp+$040],ymm2                         ; [rsp+$040] = pos_x
-        $vmovaps [rsp+$060],ymm3                         ; [rsp+$060] = pos_y
-        $vmovaps [rsp+$080],ymm4                         ; [rsp+$080] = pos_z
-        $vmovaps [rsp+$000],ymm11                        ; [rsp+$000] = hit_mask
-        calculate_normal_vector                          ; (ymm0,ymm1,ymm2) = normal_vector
-        $vmovaps ymm9,[rsp+$040]                         ; ymm9 = hit_pos_x
-        $vmovaps ymm10,[rsp+$060]                        ; ymm10 = hit_pos_y
-        $vmovaps ymm11,[rsp+$080]                        ; ymm11 = hit_pos_z
+        $vmovaps [rsp+$020],ymm1                        ; [rsp+$020] = hit_id
+        $vmovaps [rsp+$040],ymm2                        ; [rsp+$040] = pos_x
+        $vmovaps [rsp+$060],ymm3                        ; [rsp+$060] = pos_y
+        $vmovaps [rsp+$080],ymm4                        ; [rsp+$080] = pos_z
+        $vmovaps [rsp+$000],ymm11                       ; [rsp+$000] = hit_mask
+        calculate_normal_vector                         ; (ymm0,ymm1,ymm2) = normal_vector
+        $vmovaps ymm9,[rsp+$040]                        ; ymm9 = hit_pos_x
+        $vmovaps ymm10,[rsp+$060]                       ; ymm10 = hit_pos_y
+        $vmovaps ymm11,[rsp+$080]                       ; ymm11 = hit_pos_z
         $vmovaps ymm3,[light0_position+$000]
         $vmovaps ymm4,[light0_position+$020]
         $vmovaps ymm5,[light0_position+$040]
@@ -368,34 +368,34 @@ compute_color:
         $vfmadd231ps ymm13,ymm2,ymm8
         $vmaxps ymm12,ymm12,ymm14                       ; ymm12 = n_dot_l0
         $vmaxps ymm13,ymm13,ymm14                       ; ymm13 = n_dot_l1
-        $vmovaps [rsp+$0a0],ymm12                        ; [rsp+$0a0] = n_dot_l0
-        $vmovaps [rsp+$0c0],ymm13                        ; [rsp+$0c0] = n_dot_l1
+        $vmovaps [rsp+$0a0],ymm12                       ; [rsp+$0a0] = n_dot_l0
+        $vmovaps [rsp+$0c0],ymm13                       ; [rsp+$0c0] = n_dot_l1
         $vmovaps ymm0,ymm9
         $vmovaps ymm1,ymm10
         $vmovaps ymm2,ymm11
-        $vmovaps [rsp+$0e0],ymm6                         ; [rsp+$0e0] = light1_vec_x
-        $vmovaps [rsp+$100],ymm7                         ; [rsp+$100] = light1_vec_y
-        $vmovaps [rsp+$120],ymm8                         ; [rsp+$120] = light1_vec_z
+        $vmovaps [rsp+$0e0],ymm6                        ; [rsp+$0e0] = light1_vec_x
+        $vmovaps [rsp+$100],ymm7                        ; [rsp+$100] = light1_vec_y
+        $vmovaps [rsp+$120],ymm8                        ; [rsp+$120] = light1_vec_z
         $call cast_shadow_ray
-        $vmovaps [rsp+$140],ymm0                         ; [rsp+$140] = light0_shadow
-        $vmovaps ymm0,[rsp+$040]                         ; ymm0 = hit_pos_x
-        $vmovaps ymm1,[rsp+$060]                         ; ymm1 = hit_pos_y
-        $vmovaps ymm2,[rsp+$080]                         ; ymm2 = hit_pos_z
-        $vmovaps ymm3,[rsp+$0e0]                         ; ymm3 = light1_vec_x
-        $vmovaps ymm4,[rsp+$100]                         ; ymm4 = light1_vec_y
-        $vmovaps ymm5,[rsp+$120]                         ; ymm5 = light1_vec_z
+        $vmovaps [rsp+$140],ymm0                        ; [rsp+$140] = light0_shadow
+        $vmovaps ymm0,[rsp+$040]                        ; ymm0 = hit_pos_x
+        $vmovaps ymm1,[rsp+$060]                        ; ymm1 = hit_pos_y
+        $vmovaps ymm2,[rsp+$080]                        ; ymm2 = hit_pos_z
+        $vmovaps ymm3,[rsp+$0e0]                        ; ymm3 = light1_vec_x
+        $vmovaps ymm4,[rsp+$100]                        ; ymm4 = light1_vec_y
+        $vmovaps ymm5,[rsp+$120]                        ; ymm5 = light1_vec_z
         $call cast_shadow_ray
         $vmulps ymm7,ymm0,[rsp+$0c0]                    ; ymm7 = ymm0 * n_dot_l1
-        $vmovaps ymm6,[rsp+$0a0]                         ; ymm6 = n_dot_l0
+        $vmovaps ymm6,[rsp+$0a0]                        ; ymm6 = n_dot_l0
         $vmulps ymm6,ymm6,[rsp+$140]                    ; ymm6 = ymm6 * light0_shadow
         $vmulps ymm7,ymm7,[light1_power]
         $vmulps ymm6,ymm6,[light0_power]
         $vaddps ymm6,ymm6,ymm7
-        $vmovaps ymm7,[rsp+$1e0]                         ; ymm7 = fog_factor
+        $vmovaps ymm7,[rsp+$1e0]                        ; ymm7 = fog_factor
         $vmovaps ymm8,[ambient]
-        $vmovaps ymm11,[rsp+$000]                        ; ymm11 = hit_mask
+        $vmovaps ymm11,[rsp+$000]                       ; ymm11 = hit_mask
         $lea rax,[object]
-        $vmovdqa ymm1,[rsp+$020]                         ; ymm1 = hit_id
+        $vmovdqa ymm1,[rsp+$020]                        ; ymm1 = hit_id
         $vpcmpeqd ymm2,ymm2,ymm2
         $vgatherdps ymm3,[rax+ymm1*4+(object.red-object)],ymm2
         $vpcmpeqd ymm2,ymm2,ymm2
@@ -440,15 +440,15 @@ generate_image:
         $jae .return
         $xor edx,edx
         $mov ecx,k_tile_x_count
-        $div ecx                                     ; eax = (k_tile_count / k_tile_x_count), edx = (k_tile_count % k_tile_x_count)
+        $div ecx                                        ; eax = (k_tile_count / k_tile_x_count), edx = (k_tile_count % k_tile_x_count)
         $mov r14d,k_tile_width
         $mov r15d,k_tile_height
-        $imul edx,r14d                                ; edx = (k_tile_count % k_tile_x_count) * k_tile_width
-        $imul eax,r15d                                ; eax = (k_tile_count / k_tile_x_count) * k_tile_height
-        $mov r12d,edx                                ; r12d = x0
-        $mov r13d,eax                                ; r13d = y0
-        $add r14d,r12d                               ; r14d = x1 = x0 + k_tile_width
-        $add r15d,r13d                               ; r15d = y1 = y0 + k_tile_height
+        $imul edx,r14d                                  ; edx = (k_tile_count % k_tile_x_count) * k_tile_width
+        $imul eax,r15d                                  ; eax = (k_tile_count / k_tile_x_count) * k_tile_height
+        $mov r12d,edx                                   ; r12d = x0
+        $mov r13d,eax                                   ; r13d = y0
+        $add r14d,r12d                                  ; r14d = x1 = x0 + k_tile_width
+        $add r15d,r13d                                  ; r15d = y1 = y0 + k_tile_height
         $imul eax,k_win_width
         $add eax,edx
         $shl eax,2
@@ -462,10 +462,10 @@ generate_image:
         $mov edx,r13d
         $sub eax,k_win_width/2
         $sub edx,k_win_height/2
-        $vcvtsi2ss xmm0,xmm0,eax                           ; (0, 0, 0, xf = (float)(x - k_win_width / 2))
-        $vcvtsi2ss xmm1,xmm1,edx                           ; (0, 0, 0, yf = (float)(y - k_win_height / 2))
-        $vbroadcastss ymm0,xmm0                               ; ymm0 = (xf ... xf)
-        $vbroadcastss ymm1,xmm1                               ; ymm1 = (yf ... yf)
+        $vcvtsi2ss xmm0,xmm0,eax                        ; (0, 0, 0, xf = (float)(x - k_win_width / 2))
+        $vcvtsi2ss xmm1,xmm1,edx                        ; (0, 0, 0, yf = (float)(y - k_win_height / 2))
+        $vbroadcastss ymm0,xmm0                         ; ymm0 = (xf ... xf)
+        $vbroadcastss ymm1,xmm1                         ; ymm1 = (yf ... yf)
         $vaddps ymm0,ymm0,[.k_x_offset]
         $vaddps ymm1,ymm1,[.k_y_offset]
         $vmovaps ymm2,[.k_rd_z]
@@ -494,8 +494,8 @@ generate_image:
         $vmulps ymm5,ymm9,ymm10
         $call compute_color
         $vxorps ymm7,ymm7,ymm7                          ; ymm7 = (0 ... 0)
-        $vmovaps ymm8,[k_1_0]                            ; ymm8 = (1.0 ... 1.0)
-        $vmovaps ymm9,[k_255_0]                          ; ymm9 = (255.0 ... 255.0)
+        $vmovaps ymm8,[k_1_0]                           ; ymm8 = (1.0 ... 1.0)
+        $vmovaps ymm9,[k_255_0]                         ; ymm9 = (255.0 ... 255.0)
         $vmaxps ymm0,ymm0,ymm7
         $vmaxps ymm1,ymm1,ymm7
         $vmaxps ymm2,ymm2,ymm7
@@ -559,11 +559,11 @@ update_state:
         $vsubps ymm1,ymm2,ymm1
         $vmovaps [object.param_x+$040],ymm1
         $vmovaps [object.param_z+$040],ymm0
-        $vbroadcastss ymm0,[eye_position+0]                   ; ymm0 = eye x pos
+        $vbroadcastss ymm0,[eye_position+0]             ; ymm0 = eye x pos
         $vbroadcastss ymm3,[eye_focus+0]
-        $vbroadcastss ymm1,[eye_position+4]                   ; ymm1 = eye y pos
+        $vbroadcastss ymm1,[eye_position+4]             ; ymm1 = eye y pos
         $vbroadcastss ymm4,[eye_focus+4]
-        $vbroadcastss ymm2,[eye_position+8]                   ; ymm2 = eye z pos
+        $vbroadcastss ymm2,[eye_position+8]             ; ymm2 = eye z pos
         $vbroadcastss ymm5,[eye_focus+8]
         $vsubps ymm3,ymm0,ymm3
         $vsubps ymm4,ymm1,ymm4
@@ -583,7 +583,7 @@ update_state:
         $vxorps ymm8,ymm8,ymm8
         $vsubps ymm8,ymm8,ymm3
         $vxorps ymm7,ymm7,ymm7
-        $vmovaps ymm6,ymm5                               ; (ymm6,ymm7,ymm8) = ix
+        $vmovaps ymm6,ymm5                              ; (ymm6,ymm7,ymm8) = ix
         $vmulps ymm9,ymm8,ymm8
         $vmulps ymm10,ymm6,ymm6
         $vaddps ymm9,ymm9,ymm10
@@ -598,7 +598,7 @@ update_state:
         $vmulps ymm11,ymm4,ymm6
         $vfmsub231ps ymm9,ymm4,ymm8
         $vfmsub231ps ymm10,ymm5,ymm6
-        $vfmsub231ps ymm11,ymm3,ymm7                         ; (ymm9,ymm10,ymm11) = iy
+        $vfmsub231ps ymm11,ymm3,ymm7                    ; (ymm9,ymm10,ymm11) = iy
         $vmulps ymm12,ymm9,ymm9
         $vmulps ymm13,ymm10,ymm10
         $vmulps ymm14,ymm11,ymm11
@@ -629,8 +629,8 @@ eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 align 32
 generate_image.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
 generate_image.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-generate_image.k_win_width_rcp: dd 8 dup 0.0015625              ; 2.0f / k_win_width, k_win_width = 1280
-generate_image.k_win_height_rcp: dd 8 dup 0.0015625             ; 2.0f / k_win_width, k_win_width = 1280
+generate_image.k_win_width_rcp: dd 8 dup 0.0015625      ; 2.0f / k_win_width, k_win_width = 1280
+generate_image.k_win_height_rcp: dd 8 dup 0.0015625     ; 2.0f / k_win_width, k_win_width = 1280
 generate_image.k_rd_z: dd 8 dup -1.732
 
 align 32

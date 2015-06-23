@@ -22,10 +22,10 @@ macro iaca_end
 program_section = 'code'
 include 'sphere_render.asm'
 ;========================================================================
-align 16
-generate_fractal_thread:
+align 32
+generate_image_thread:
         $and rsp,-32
-        $mov esi,ecx                                 ; thread id
+        $mov esi,ecx                                    ; thread id
     .run:
         $invoke WaitForSingleObject,[main_thrd_semaphore],INFINITE
         $mov eax,[quit]
@@ -37,7 +37,7 @@ generate_fractal_thread:
     .return:
         $invoke ExitThread,0
 ;========================================================================
-align 16
+align 32
 get_time:
         $sub rsp,24
         $mov rax,[.perf_freq]
@@ -56,7 +56,7 @@ get_time:
         $add rsp,24
         $ret
 ;========================================================================
-align 16
+align 32
 update_frame_stats:
         $sub rsp,24
         $mov rax,[.prev_time]
@@ -65,12 +65,12 @@ update_frame_stats:
         $call get_time
         $vmovsd [.prev_time],xmm0
         $vmovsd [.prev_update_time],xmm0
-    @@: $call get_time                                ; xmm0 = (0, time)
+    @@: $call get_time                                  ; xmm0 = (0, time)
         $vmovsd [time],xmm0
         $vsubsd xmm1,xmm0,[.prev_time]                  ; xmm1 = (0, time_delta)
         $vmovsd [.prev_time],xmm0
         $vxorps xmm2,xmm2,xmm2
-        $vcvtsd2ss xmm1,xmm2,xmm1                          ; xmm1 = (0, 0, 0, time_delta)
+        $vcvtsd2ss xmm1,xmm2,xmm1                       ; xmm1 = (0, 0, 0, time_delta)
         $vmovss [time_delta],xmm1
         $vmovsd xmm1,[.prev_update_time]                ; xmm1 = (0, prev_update_time)
         $vsubsd xmm2,xmm0,xmm1                          ; xmm2 = (0, time - prev_update_time)
@@ -80,7 +80,7 @@ update_frame_stats:
         $vmovsd [.prev_update_time],xmm0
         $mov eax,[.frame]
         $vxorpd xmm1,xmm1,xmm1
-        $vcvtsi2sd xmm1,xmm1,eax                           ; xmm1 = (0, frame)
+        $vcvtsi2sd xmm1,xmm1,eax                        ; xmm1 = (0, frame)
         $vdivsd xmm0,xmm1,xmm2                          ; xmm0 = (0, frame / (time - prev_update_time))
         $vdivsd xmm1,xmm2,xmm1
         $vmulsd xmm1,xmm1,[.k_1000000_0]
@@ -93,7 +93,7 @@ update_frame_stats:
         $add rsp,24
         $ret
 ;========================================================================
-align 16
+align 32
 init:
         $push rsi
         $sub rsp,16
@@ -151,7 +151,7 @@ init:
         $cmp esi,k_thrd_count
         $jb @b
         $xor esi,esi
-    @@: $invoke CreateThread,NULL,0,generate_fractal_thread,esi,0,NULL
+    @@: $invoke CreateThread,NULL,0,generate_image_thread,esi,0,NULL
         $mov [thrd_handle+rsi*8],rax
         $test rax,rax
         $jz .error
@@ -167,7 +167,7 @@ init:
         $pop rsi
         $ret
 ;========================================================================
-align 16
+align 32
 deinit:
         $push rsi rdi
         $sub rsp,8
@@ -183,11 +183,7 @@ deinit:
     @@: $add esi,1
         $cmp esi,k_thrd_count
         $jb .for_each_thrd
-        $mov rcx,[main_thrd_semaphore]
-        $test rcx,rcx
-        $jz @f
-        $invoke CloseHandle,rcx
-    @@: $xor esi,esi
+        $xor esi,esi
     .for_each_sem:
         $mov rcx,[thrd_semaphore+rsi*8]
         $test rcx,rcx
@@ -196,7 +192,11 @@ deinit:
     @@: $add esi,1
         $cmp esi,k_thrd_count
         $jb .for_each_sem
-        $mov rcx,[bmp_hdc]
+        $mov rcx,[main_thrd_semaphore]
+        $test rcx,rcx
+        $jz @f
+        $invoke CloseHandle,rcx
+    @@: $mov rcx,[bmp_hdc]
         $test rcx,rcx
         $jz @f
         $invoke DeleteDC,rcx
@@ -212,7 +212,7 @@ deinit:
         $pop rdi rsi
         $ret
 ;========================================================================
-align 16
+align 32
 update:
         $sub rsp,24
         $call update_frame_stats
@@ -224,7 +224,7 @@ update:
         $add rsp,24
         $ret
 ;========================================================================
-align 16
+align 32
 start:
         $and rsp,-32
         $call init
@@ -245,7 +245,7 @@ start:
         $call deinit
         $invoke ExitProcess,0
 ;========================================================================
-align 16
+align 32
 proc winproc hwnd,msg,wparam,lparam
         $mov [hwnd],rcx
         $mov [msg],rdx
