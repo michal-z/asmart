@@ -43,9 +43,9 @@ get_time:
         $mov rax,[.perf_freq]
         $test rax,rax
         $jnz @f
-        $invoke QueryPerformanceFrequency,.perf_freq
-        $invoke QueryPerformanceCounter,.first_perf_counter
-    @@: $invoke QueryPerformanceCounter,.perf_counter
+        $invoke QueryPerformanceFrequency,addr .perf_freq
+        $invoke QueryPerformanceCounter,addr .first_perf_counter
+    @@: $invoke QueryPerformanceCounter,addr .perf_counter
         $mov rcx,[.perf_counter]
         $sub rcx,[.first_perf_counter]
         $mov rdx,[.perf_freq]
@@ -159,7 +159,8 @@ init:
         $cmp esi,k_thrd_count
         $jb @b
         $mov eax,1
-        $add rsp,24
+        $add rsp,16
+        $pop rsi
         $ret
     .error:
         $xor eax,eax
