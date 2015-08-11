@@ -283,7 +283,7 @@ k_tile_x_count = k_win_width / k_tile_width
 k_tile_y_count = k_win_height / k_tile_height
 k_tile_count = k_tile_x_count * k_tile_y_count
 
-k_thrd_count = 8
+k_thrd_count = 4
 
 align 8
 bmp_handle dq 0
