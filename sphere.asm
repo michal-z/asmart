@@ -97,6 +97,8 @@ align 32
 init:
         $push rsi
         $sub rsp,16
+        $invoke GetSystemInfo,addr system_info
+        $mov eax,[system_info.dwNumberOfProcessors]
         $invoke GetModuleHandle,0
         $mov [win_class.hInstance],rax
         $invoke LoadIcon,0,IDI_APPLICATION
@@ -323,6 +325,8 @@ main_thrd_semaphore dq 0
 thrd_handle dq k_thrd_count dup 0
 thrd_semaphore dq k_thrd_count dup 0
 
+system_info SYSTEM_INFO
+
 program_section = 'data'
 include 'sphere_render.asm'
 ;========================================================================
@@ -336,7 +340,7 @@ import kernel32,\
        ExitThread,'ExitThread',QueryPerformanceFrequency,'QueryPerformanceFrequency',\
        QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
        CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
-       WaitForMultipleObjects,'WaitForMultipleObjects'
+       WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo'
 
 import user32,\
        wsprintf,'wsprintfA',\
