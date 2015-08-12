@@ -99,6 +99,7 @@ init:
         $sub rsp,16
         $invoke GetSystemInfo,addr system_info
         $mov eax,[system_info.dwNumberOfProcessors]
+        $mov [thrd_count],eax
         $invoke GetModuleHandle,0
         $mov [win_class.hInstance],rax
         $invoke LoadIcon,0,IDI_APPLICATION
@@ -140,7 +141,7 @@ init:
         $invoke SelectObject,[bmp_hdc],[bmp_handle]
         $test eax,eax
         $jz .error
-        $invoke CreateSemaphore,NULL,0,k_thrd_count,NULL
+        $invoke CreateSemaphore,NULL,0,[thrd_count],NULL
         $mov [main_thrd_semaphore],rax
         $test rax,rax
         $jz .error
@@ -150,7 +151,7 @@ init:
         $test rax,rax
         $jz .error
         $add esi,1
-        $cmp esi,k_thrd_count
+        $cmp esi,[thrd_count]
         $jb @b
         $xor esi,esi
     @@: $invoke CreateThread,NULL,0,generate_image_thread,esi,0,NULL
@@ -158,7 +159,7 @@ init:
         $test rax,rax
         $jz .error
         $add esi,1
-        $cmp esi,k_thrd_count
+        $cmp esi,[thrd_count]
         $jb @b
         $mov eax,1
         $add rsp,16
@@ -175,7 +176,7 @@ deinit:
         $push rsi rdi
         $sub rsp,8
         $mov [quit],1
-        $invoke ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
+        $invoke ReleaseSemaphore,[main_thrd_semaphore],[thrd_count],NULL
         $xor esi,esi
     .for_each_thrd:
         $mov rdi,[thrd_handle+rsi*8]
@@ -184,7 +185,7 @@ deinit:
         $invoke WaitForSingleObject,rdi,INFINITE
         $invoke CloseHandle,rdi
     @@: $add esi,1
-        $cmp esi,k_thrd_count
+        $cmp esi,[thrd_count]
         $jb .for_each_thrd
         $xor esi,esi
     .for_each_sem:
@@ -193,7 +194,7 @@ deinit:
         $jz @f
         $invoke CloseHandle,rcx
     @@: $add esi,1
-        $cmp esi,k_thrd_count
+        $cmp esi,[thrd_count]
         $jb .for_each_sem
         $mov rcx,[main_thrd_semaphore]
         $test rcx,rcx
@@ -221,8 +222,8 @@ update:
         $call update_frame_stats
         $call update_state
         $mov [tileidx],0
-        $invoke ReleaseSemaphore,[main_thrd_semaphore],k_thrd_count,NULL
-        $invoke WaitForMultipleObjects,k_thrd_count,thrd_semaphore,TRUE,INFINITE
+        $invoke ReleaseSemaphore,[main_thrd_semaphore],[thrd_count],NULL
+        $invoke WaitForMultipleObjects,[thrd_count],thrd_semaphore,TRUE,INFINITE
         $invoke BitBlt,[win_hdc],0,0,k_win_width,k_win_height,[bmp_hdc],0,0,SRCCOPY
         $add rsp,24
         $ret
@@ -285,7 +286,7 @@ k_tile_x_count = k_win_width / k_tile_width
 k_tile_y_count = k_win_height / k_tile_height
 k_tile_count = k_tile_x_count * k_tile_y_count
 
-k_thrd_count = 4
+k_thrd_max_count = 16
 
 align 8
 bmp_handle dq 0
@@ -322,8 +323,9 @@ tileidx dd 0,0
 
 align 8
 main_thrd_semaphore dq 0
-thrd_handle dq k_thrd_count dup 0
-thrd_semaphore dq k_thrd_count dup 0
+thrd_handle dq k_thrd_max_count dup 0
+thrd_semaphore dq k_thrd_max_count dup 0
+thrd_count dd 0
 
 system_info SYSTEM_INFO
 
@@ -335,27 +337,23 @@ section '.idata' import data readable writeable
 library kernel32,'KERNEL32.DLL',user32,'USER32.DLL',gdi32,'GDI32.DLL'
 
 import kernel32,\
-       GetModuleHandle,'GetModuleHandleA',ExitProcess,'ExitProcess',\
-       WaitForSingleObject,'WaitForSingleObject',ReleaseSemaphore,'ReleaseSemaphore',\
-       ExitThread,'ExitThread',QueryPerformanceFrequency,'QueryPerformanceFrequency',\
-       QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
-       CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
-       WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo'
+    GetModuleHandle,'GetModuleHandleA',ExitProcess,'ExitProcess',\
+    WaitForSingleObject,'WaitForSingleObject',ReleaseSemaphore,'ReleaseSemaphore',\
+    ExitThread,'ExitThread',QueryPerformanceFrequency,'QueryPerformanceFrequency',\
+    QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
+    CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
+    WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo'
 
 import user32,\
-       wsprintf,'wsprintfA',\
-       RegisterClassEx,'RegisterClassExA',\
-       CreateWindowEx,'CreateWindowExA',\
-       DefWindowProc,'DefWindowProcA',\
-       PeekMessage,'PeekMessageA',\
-       DispatchMessage,'DispatchMessageA',\
-       LoadCursor,'LoadCursorA',\
-       LoadIcon,'LoadIconA',\
-       SetWindowText,'SetWindowTextA',SetRect,'SetRect',AdjustWindowRect,'AdjustWindowRect',\
-       GetDC,'GetDC',ReleaseDC,'ReleaseDC',PostQuitMessage,'PostQuitMessage'
+    wsprintf,'wsprintfA',RegisterClassEx,'RegisterClassExA',\
+    CreateWindowEx,'CreateWindowExA',DefWindowProc,'DefWindowProcA',\
+    PeekMessage,'PeekMessageA',DispatchMessage,'DispatchMessageA',\
+    LoadCursor,'LoadCursorA',LoadIcon,'LoadIconA',\
+    SetWindowText,'SetWindowTextA',SetRect,'SetRect',AdjustWindowRect,'AdjustWindowRect',\
+    GetDC,'GetDC',ReleaseDC,'ReleaseDC',PostQuitMessage,'PostQuitMessage'
 
 import gdi32,\
-       GetStockObject,'GetStockObject',CreateDIBSection,'CreateDIBSection',\
-       CreateCompatibleDC,'CreateCompatibleDC',SelectObject,'SelectObject',\
-       BitBlt,'BitBlt',DeleteDC,'DeleteDC',DeleteObject,'DeleteObject'
+    GetStockObject,'GetStockObject',CreateDIBSection,'CreateDIBSection',\
+    CreateCompatibleDC,'CreateCompatibleDC',SelectObject,'SelectObject',\
+    BitBlt,'BitBlt',DeleteDC,'DeleteDC',DeleteObject,'DeleteObject'
 ;========================================================================
