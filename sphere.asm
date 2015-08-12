@@ -38,6 +38,31 @@ generate_image_thread:
         $invoke ExitThread,0
 ;========================================================================
 align 32
+supports_avx2:
+        $mov eax,1
+        $cpuid
+        $and ecx,$018001000                             ; check OSXSAVE,AVX,FMA
+        $cmp ecx,$018001000
+        $jne .not_supported
+        $mov eax,7
+        $xor ecx,ecx
+        $cpuid
+        $and ebx,$20                                    ; check AVX2
+        $cmp ebx,$20
+        $jne .not_supported
+        $xor ecx,ecx
+        $xgetbv
+        $and eax,$06                                    ; check OS support
+        $cmp eax,$06
+        $jne .not_supported
+        $mov eax,1
+        $jmp .return
+    .not_supported:
+        $xor eax,eax
+    .return:
+        $ret
+;========================================================================
+align 32
 get_time:
         $sub rsp,24
         $mov rax,[.perf_freq]
@@ -100,6 +125,9 @@ init:
         $invoke GetSystemInfo,addr system_info
         $mov eax,[system_info.dwNumberOfProcessors]
         $mov [thrd_count],eax
+        $call supports_avx2
+        $test eax,eax
+        $jz .error
         $invoke GetModuleHandle,0
         $mov [win_class.hInstance],rax
         $invoke LoadIcon,0,IDI_APPLICATION
@@ -176,7 +204,11 @@ deinit:
         $push rsi rdi
         $sub rsp,8
         $mov [quit],1
-        $invoke ReleaseSemaphore,[main_thrd_semaphore],[thrd_count],NULL
+        $mov rdi,[main_thrd_semaphore]
+        $test rdi,rdi
+        $jz @f
+        $invoke ReleaseSemaphore,rdi,[thrd_count],NULL
+    @@:
         $xor esi,esi
     .for_each_thrd:
         $mov rdi,[thrd_handle+rsi*8]

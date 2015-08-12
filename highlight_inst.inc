@@ -67,3 +67,5 @@ $vmulsd fix vmulsd
 $vcvtsd2si fix vcvtsd2si
 $cinvoke fix cinvoke
 $jne fix jne
+$cpuid fix cpuid
+$xgetbv fix xgetbv
