@@ -127,7 +127,7 @@ init:
         $mov [thrd_count],eax
         $call supports_avx2
         $test eax,eax
-        $jz .error
+        $jz .no_avx2
         $invoke GetModuleHandle,0
         $mov [win_class.hInstance],rax
         $invoke LoadIcon,0,IDI_APPLICATION
@@ -193,6 +193,8 @@ init:
         $add rsp,16
         $pop rsi
         $ret
+    .no_avx2:
+        $invoke MessageBox,NULL,addr no_avx2_message,addr no_avx2_caption,0
     .error:
         $xor eax,eax
         $add rsp,16
@@ -331,6 +333,9 @@ win_msg MSG
 win_class WNDCLASSEX sizeof.WNDCLASSEX,0,winproc,0,0,NULL,NULL,NULL,COLOR_BTNFACE+1,NULL,win_title,NULL
 win_rect RECT
 
+no_avx2_caption db 'Not supported CPU',0
+no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
+
 align 8
 bmp_info BITMAPINFOHEADER sizeof.BITMAPINFOHEADER,k_win_width,k_win_height,1,32,BI_RGB,k_win_width*k_win_height,0,0,0,0
 dq 0,0,0,0
@@ -382,7 +387,7 @@ import user32,\
     PeekMessage,'PeekMessageA',DispatchMessage,'DispatchMessageA',\
     LoadCursor,'LoadCursorA',LoadIcon,'LoadIconA',\
     SetWindowText,'SetWindowTextA',SetRect,'SetRect',AdjustWindowRect,'AdjustWindowRect',\
-    GetDC,'GetDC',ReleaseDC,'ReleaseDC',PostQuitMessage,'PostQuitMessage'
+    GetDC,'GetDC',ReleaseDC,'ReleaseDC',PostQuitMessage,'PostQuitMessage',MessageBox,'MessageBoxA'
 
 import gdi32,\
     GetStockObject,'GetStockObject',CreateDIBSection,'CreateDIBSection',\
