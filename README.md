@@ -6,6 +6,6 @@ Subjects of interests are:<br />
 
 <ul>
 <li>Multithreaded, vectorized, software graphics rendering.</li>
-<li>Real-time graphics programming using Direct3D 12</li>
-<li>Real-time sound generation</li>
+<li>Real-time graphics rendering using Direct3D 12.</li>
+<li>Real-time sound generation.</li>
 </ul>
