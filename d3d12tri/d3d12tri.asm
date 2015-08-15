@@ -151,9 +151,11 @@ init:
         $test rax,rax
         $jz .error
         $invoke D3D12GetDebugInterface,IID_ID3D12Debug,dbgi
-        $cominvk dbgi,EnableDebugLayer
-
-        $invoke D3D12CreateDevice,NULL,D3D_FEATURE_LEVEL_11_1,IID_ID3D12Device,device
+        $mov rax,[dbgi]
+        $test rax,rax
+        $jz @f
+        $comcall rax,ID3D12Debug,EnableDebugLayer
+    @@: $invoke D3D12CreateDevice,NULL,D3D_FEATURE_LEVEL_11_1,IID_ID3D12Device,device
         $test eax,eax
         $js .error
 
