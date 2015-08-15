@@ -1,7 +1,7 @@
 format PE64 GUI 4.0
 entry start
 include 'win64a.inc'
-include 'highlight_inst.inc'
+include '../highlight_inst.inc'
 
 DIB_RGB_COLORS = 0
 INFINITE = -1
@@ -20,7 +20,7 @@ macro iaca_end
 }
 ;========================================================================
 program_section = 'code'
-include 'sphere_render.asm'
+include 'cpuraymarcher_render.asm'
 ;========================================================================
 align 32
 generate_image_thread:
@@ -327,8 +327,8 @@ bmp_handle dq 0
 bmp_hdc dq 0
 win_handle dq 0
 win_hdc dq 0
-win_title db 'Spheres', 64 dup 0
-win_title_fmt db '[%d fps  %d us] Spheres',0
+win_title db 'CPU Raymarcher', 64 dup 0
+win_title_fmt db '[%d fps  %d us] CPU Raymarcher',0
 win_msg MSG
 win_class WNDCLASSEX sizeof.WNDCLASSEX,0,winproc,0,0,NULL,NULL,NULL,COLOR_BTNFACE+1,NULL,win_title,NULL
 win_rect RECT
@@ -367,7 +367,7 @@ thrd_count dd 0
 system_info SYSTEM_INFO
 
 program_section = 'data'
-include 'sphere_render.asm'
+include 'cpuraymarcher_render.asm'
 ;========================================================================
 section '.idata' import data readable writeable
 
