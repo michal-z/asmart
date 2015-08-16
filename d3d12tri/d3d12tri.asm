@@ -1,22 +1,9 @@
 format PE64 GUI 4.0
 entry start
+
 include 'win64a.inc'
 include '../highlight_inst.inc'
 include '../d3d12.inc'
-
-struct GUID
-  dd ?
-  dw ?
-  dw ?
-  db ?
-  db ?
-  db ?
-  db ?
-  db ?
-  db ?
-  db ?
-  db ?
-ends
 
 section '.text' code readable executable
 program_section = 'code'
@@ -63,9 +50,9 @@ get_time:
         $mov rax,[.perf_freq]
         $test rax,rax
         $jnz @f
-        $invoke QueryPerformanceFrequency,addr .perf_freq
-        $invoke QueryPerformanceCounter,addr .first_perf_counter
-    @@: $invoke QueryPerformanceCounter,addr .perf_counter
+        $invoke QueryPerformanceFrequency,.perf_freq
+        $invoke QueryPerformanceCounter,.first_perf_counter
+    @@: $invoke QueryPerformanceCounter,.perf_counter
         $mov rcx,[.perf_counter]
         $sub rcx,[.first_perf_counter]
         $mov rdx,[.perf_freq]
@@ -107,7 +94,7 @@ update_frame_stats:
         $vcvtsd2si r10,xmm0
         $vcvtsd2si r11,xmm1
         $mov [.frame],0
-        $cinvoke wsprintf,addr win_title,addr win_title_fmt,r10,r11
+        $cinvoke wsprintf,win_title,win_title_fmt,r10,r11
         $invoke SetWindowText,[win_handle],win_title
     @@: $add [.frame],1
         $add rsp,24
@@ -119,7 +106,8 @@ init:
         $sub rsp,16
         $call supports_avx2
         $test eax,eax
-        $jz .no_avx2
+        $jz .error_no_avx2
+        ; window class
         $invoke GetModuleHandle,0
         $mov [win_class.hInstance],rax
         $invoke LoadIcon,0,IDI_APPLICATION
@@ -130,6 +118,7 @@ init:
         $invoke RegisterClassEx,win_class
         $test eax,eax
         $jz .error
+        ; window
         $invoke SetRect,win_rect,0,0,k_win_width,k_win_height
         $test eax,eax
         $jz .error
@@ -144,27 +133,57 @@ init:
         $mov [win_handle],rax
         $test rax,rax
         $jz .error
+        ; DXGI factory
         $invoke CreateDXGIFactory1,IID_IDXGIFactory,dxgifactory
         $test eax,eax
         $js .error
-        $mov rax,[dxgifactory]
-        $test rax,rax
-        $jz .error
+        ; debug layer
         $invoke D3D12GetDebugInterface,IID_ID3D12Debug,dbgi
-        $mov rax,[dbgi]
-        $test rax,rax
+        $mov rcx,[dbgi]
+        $test rcx,rcx
         $jz @f
-        $comcall rax,ID3D12Debug,EnableDebugLayer
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Debug.EnableDebugLayer],rcx
+        ; device
     @@: $invoke D3D12CreateDevice,NULL,D3D_FEATURE_LEVEL_11_1,IID_ID3D12Device,device
         $test eax,eax
         $js .error
+        ; command queue
+        $mov rcx,[device]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Device.CreateCommandQueue],rcx,cmdqueue_desc,IID_ID3D12CommandQueue,cmdqueue
+        $test eax,eax
+        $js .error
+        ; command allocator
+        $mov rcx,[device]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Device.CreateCommandAllocator],rcx,D3D12_COMMAND_LIST_TYPE_DIRECT,IID_ID3D12CommandAllocator,cmdallocator
+        $test eax,eax
+        $js .error
+        ; swap chain
+        $mov rax,[win_handle]
+        $mov [swapchain_desc.OutputWindow],rax
+        $mov rcx,[dxgifactory]
+        $mov rax,[rcx]
+        $fastcall [rax+IDXGIFactory.CreateSwapChain],rcx,[cmdqueue],swapchain_desc,swapchain
+        $test eax,eax
+        $js .error
+        ; RTV descriptor heap
+        $mov rcx,[device]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Device.CreateDescriptorHeap],rcx,rtv_heap_desc,IID_ID3D12DescriptorHeap,rtv_heap
+        $test eax,eax
+        $js .error
+        $mov rcx,[rtv_heap]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart],rcx,retbuf
 
         $mov eax,1
         $add rsp,16
         $pop rsi
         $ret
-    .no_avx2:
-        $invoke MessageBox,NULL,addr no_avx2_message,addr no_avx2_caption,0
+    .error_no_avx2:
+        $invoke MessageBox,NULL,no_avx2_message,no_avx2_caption,0
         $jmp .return0
     .error:
         ;$invoke
@@ -264,14 +283,39 @@ update_frame_stats.k_1000000_0 dq 1000000.0
 update_frame_stats.k_1_0 dq 1.0
 
 align 8
-dxgifactory IDXGIFactory
-dbgi ID3D12Debug
-device ID3D12Device
+dxgifactory dq 0
+swapchain dq 0
+dbgi dq 0
+device dq 0
+cmdqueue dq 0
+cmdallocator dq 0
+rtv_heap dq 0
+rtv_heap_start dq 0
+
+retbuf rb 128
+
+align 4
+rtv_inc_size dd 0
+cbv_srv_uav_inc_size dd 0
+
+align 8
+cmdqueue_desc D3D12_COMMAND_QUEUE_DESC D3D12_COMMAND_LIST_TYPE_DIRECT,0,D3D12_COMMAND_QUEUE_FLAG_NONE,0
+align 8
+swapchain_desc DXGI_SWAP_CHAIN_DESC <k_win_width,k_win_height,<0,0>,DXGI_FORMAT_R8G8B8A8_UNORM,0,0>,<1,0>,DXGI_USAGE_RENDER_TARGET_OUTPUT,\
+                                    4,0,NULL,1,DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,0,0
+align 8
+rtv_heap_desc D3D12_DESCRIPTOR_HEAP_DESC D3D12_DESCRIPTOR_HEAP_TYPE_RTV,4,D3D12_DESCRIPTOR_HEAP_FLAG_NONE,0
+
 
 align 8
 IID_IDXGIFactory GUID 0x7b7166ec,0x21c7,0x44ae,0xb2,0x1a,0xc9,0xae,0x32,0x1a,0xe3,0x69
+IID_IDXGISwapChain GUID 0x310d36a0,0xd2e7,0x4c0a,0xaa,0x04,0x6a,0x9d,0x23,0xb8,0x88,0x6a
 IID_ID3D12Device GUID 0x189819f1,0x1db6,0x4b57,0xbe,0x54,0x18,0x21,0x33,0x9b,0x85,0xf7
 IID_ID3D12Debug GUID 0x344488b7,0x6846,0x474b,0xb9,0x89,0xf0,0x27,0x44,0x82,0x45,0xe0
+IID_ID3D12CommandQueue GUID 0x0ec870a6,0x5d7e,0x4c22,0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x16,0xed
+IID_ID3D12CommandAllocator GUID 0x6102dee4,0xaf59,0x4b09,0xb9,0x99,0xb4,0x4d,0x73,0xf0,0x9b,0x24
+IID_ID3D12DescriptorHeap GUID 0x8efb471d,0x616c,0x4f49,0x90,0xf7,0x12,0x7b,0xb7,0x63,0xfa,0x51
+IID_ID3D12Resource GUID 0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad
 ;========================================================================
 section '.idata' import data readable writeable
 

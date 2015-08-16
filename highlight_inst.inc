@@ -70,5 +70,4 @@ $jne fix jne
 $cpuid fix cpuid
 $xgetbv fix xgetbv
 $js fix js
-$cominvk fix cominvk
-$comcall fix comcall
+$fastcall fix fastcall
