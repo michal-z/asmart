@@ -5,6 +5,8 @@ include 'win64a.inc'
 include '../highlight_inst.inc'
 include '../d3d12.inc'
 
+EVENT_ALL_ACCESS = $000f0000+$00100000+$3
+
 section '.text' code readable executable
 program_section = 'code'
 ;========================================================================
@@ -102,8 +104,9 @@ update_frame_stats:
 ;========================================================================
 align 32
 init:
-        $push rsi
-        $sub rsp,16
+    .k_stack_size = 8
+        $push rdi rsi
+        $sub rsp,.k_stack_size
         $call supports_avx2
         $test eax,eax
         $jz .error_no_avx2
@@ -168,6 +171,15 @@ init:
         $fastcall [rax+IDXGIFactory.CreateSwapChain],rcx,[cmdqueue],swapchain_desc,swapchain
         $test eax,eax
         $js .error
+        ; descriptor increment size
+        $mov rcx,[device]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Device.GetDescriptorHandleIncrementSize],rcx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        $mov [rtv_inc_size],eax
+        $mov rcx,[device]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Device.GetDescriptorHandleIncrementSize],rcx,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+        $mov [cbv_srv_uav_inc_size],eax
         ; RTV descriptor heap
         $mov rcx,[device]
         $mov rax,[rcx]
@@ -177,10 +189,39 @@ init:
         $mov rcx,[rtv_heap]
         $mov rax,[rcx]
         $fastcall [rax+ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart],rcx,retbuf
+        $mov rax,[rax]
+        $mov [rtv_heap_start],rax
+        ; RTV descriptors
+        $xor edi,edi
+    .for_each_swap_buffer:
+        $mov rcx,[swapchain]
+        $mov rax,[rcx]
+        $lea r9,[swap_buffer+rdi*8]
+        $fastcall [rax+IDXGISwapChain.GetBuffer],rcx,edi,IID_ID3D12Resource,r9
+        $test eax,eax
+        $js .error
+        $mov r9d,edi
+        $imul r9d,[rtv_inc_size]
+        $add r9,[rtv_heap_start]
+        $mov rcx,[device]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Device.CreateRenderTargetView],rcx,[swap_buffer+rdi*8],NULL,r9
+        $add edi,1
+        $cmp edi,k_swap_buffer_count
+        $jb .for_each_swap_buffer
+        ; fence
+        $mov rcx,[device]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12Device.CreateFence],rcx,0,D3D12_FENCE_FLAG_NONE,IID_ID3D12Fence,fence
+        $test eax,eax
+        $js .error
+        $invoke CreateEventEx,NULL,NULL,0,EVENT_ALL_ACCESS
+        $test rax,rax
+        $jz .error
 
         $mov eax,1
-        $add rsp,16
-        $pop rsi
+        $add rsp,.k_stack_size
+        $pop rsi rdi
         $ret
     .error_no_avx2:
         $invoke MessageBox,NULL,no_avx2_message,no_avx2_caption,0
@@ -189,8 +230,8 @@ init:
         ;$invoke
     .return0:
         $xor eax,eax
-        $add rsp,16
-        $pop rsi
+        $add rsp,.k_stack_size
+        $pop rsi rdi
         $ret
 ;========================================================================
 align 32
@@ -255,11 +296,15 @@ program_section = 'data'
 
 k_win_width = 1024
 k_win_height = 1024
+k_win_widthf equ 1024.0
+k_win_heightf equ 1024.0
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+
+k_swap_buffer_count = 4
 
 align 8
 win_handle dq 0
-win_title db 'Direct3D 12 Triangle', 64 dup 0
+win_title db 'Direct3D 12 Triangle', 64 dup (0)
 win_title_fmt db '[%d fps  %d us] Direct3D 12 Triangle',0
 win_msg MSG
 win_class WNDCLASSEX sizeof.WNDCLASSEX,0,winproc,0,0,NULL,NULL,NULL,COLOR_BTNFACE+1,NULL,win_title,NULL
@@ -291,20 +336,26 @@ cmdqueue dq 0
 cmdallocator dq 0
 rtv_heap dq 0
 rtv_heap_start dq 0
+swap_buffer dq k_swap_buffer_count dup (0)
+fence dq 0
+fence_value dd 1,0
+fence_event dq 0
 
 retbuf rb 128
 
 align 4
 rtv_inc_size dd 0
 cbv_srv_uav_inc_size dd 0
+viewport D3D12_VIEWPORT 0.0,0.0,k_win_widthf,k_win_heightf,0.0,1.0
+scissor_rect D3D12_RECT 0,0,k_win_width,k_win_height
 
 align 8
 cmdqueue_desc D3D12_COMMAND_QUEUE_DESC D3D12_COMMAND_LIST_TYPE_DIRECT,0,D3D12_COMMAND_QUEUE_FLAG_NONE,0
 align 8
 swapchain_desc DXGI_SWAP_CHAIN_DESC <k_win_width,k_win_height,<0,0>,DXGI_FORMAT_R8G8B8A8_UNORM,0,0>,<1,0>,DXGI_USAGE_RENDER_TARGET_OUTPUT,\
-                                    4,0,NULL,1,DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,0,0
+                                    k_swap_buffer_count,0,NULL,1,DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,0,0
 align 8
-rtv_heap_desc D3D12_DESCRIPTOR_HEAP_DESC D3D12_DESCRIPTOR_HEAP_TYPE_RTV,4,D3D12_DESCRIPTOR_HEAP_FLAG_NONE,0
+rtv_heap_desc D3D12_DESCRIPTOR_HEAP_DESC D3D12_DESCRIPTOR_HEAP_TYPE_RTV,k_swap_buffer_count,D3D12_DESCRIPTOR_HEAP_FLAG_NONE,0
 
 
 align 8
@@ -316,6 +367,7 @@ IID_ID3D12CommandQueue GUID 0x0ec870a6,0x5d7e,0x4c22,0x8c,0xfc,0x5b,0xaa,0xe0,0x
 IID_ID3D12CommandAllocator GUID 0x6102dee4,0xaf59,0x4b09,0xb9,0x99,0xb4,0x4d,0x73,0xf0,0x9b,0x24
 IID_ID3D12DescriptorHeap GUID 0x8efb471d,0x616c,0x4f49,0x90,0xf7,0x12,0x7b,0xb7,0x63,0xfa,0x51
 IID_ID3D12Resource GUID 0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad
+IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a,0x76
 ;========================================================================
 section '.idata' import data readable writeable
 
@@ -327,7 +379,8 @@ import kernel32,\
     ExitThread,'ExitThread',QueryPerformanceFrequency,'QueryPerformanceFrequency',\
     QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
     CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
-    WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo'
+    WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo',\
+    CreateEventEx,'CreateEventExA'
 
 import user32,\
     wsprintf,'wsprintfA',RegisterClassEx,'RegisterClassExA',\

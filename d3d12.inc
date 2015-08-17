@@ -42,6 +42,26 @@ D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES    = ( D3D12_DESCRIPTOR_HEAP_TYPE_DSV + 1 )
 D3D12_DESCRIPTOR_HEAP_FLAG_NONE           = 0
 D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE = 0x1
 
+D3D12_FENCE_FLAG_NONE                 = 0
+D3D12_FENCE_FLAG_SHARED               = 0x1
+D3D12_FENCE_FLAG_SHARED_CROSS_ADAPTER = 0x2
+
+struct D3D12_VIEWPORT
+    TopLeftX dd ?
+    TopLeftY dd ?
+    Width    dd ?
+    Height   dd ?
+    MinDepth dd ?
+    MaxDepth dd ?
+ends
+
+struct D3D12_RECT
+    left   dd ?
+    top    dd ?
+    right  dd ?
+    bottom dd ?
+ends
+
 struct D3D12_COMMAND_QUEUE_DESC
     Type     dd ?
     Priority dd ?
