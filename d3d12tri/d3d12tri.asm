@@ -104,8 +104,12 @@ update_frame_stats:
 ;========================================================================
 align 32
 init:
-    .k_stack_size = 8
-        $push rdi rsi
+        $push rdi rsi rbx
+        frame
+    virtual at size@frame
+    align 32
+    .k_stack_size = $-$$
+    end virtual
         $sub rsp,.k_stack_size
         $call supports_avx2
         $test eax,eax
@@ -122,17 +126,16 @@ init:
         $test eax,eax
         $jz .error
         ; window
-        $invoke SetRect,win_rect,0,0,k_win_width,k_win_height
-        $test eax,eax
-        $jz .error
-        $invoke AdjustWindowRect,win_rect,k_win_style,FALSE
-        $test eax,eax
-        $jz .error
-        $mov esi,[win_rect.right]
-        $mov edi,[win_rect.bottom]
-        $sub esi,[win_rect.left]
-        $sub edi,[win_rect.top]
-        $invoke CreateWindowEx,0,win_title,win_title,WS_VISIBLE+k_win_style,CW_USEDEFAULT,CW_USEDEFAULT,esi,edi,NULL,NULL,[win_class.hInstance],NULL
+        $mov [win_rect.left],0
+        $mov [win_rect.top],0
+        $mov [win_rect.right],k_win_width
+        $mov [win_rect.bottom],k_win_height
+        $invoke AdjustWindowRect,win_rect,k_win_style,0
+        $mov r10d,[win_rect.right]
+        $mov r11d,[win_rect.bottom]
+        $sub r10d,[win_rect.left]
+        $sub r11d,[win_rect.top]
+        $invoke CreateWindowEx,0,win_title,win_title,WS_VISIBLE+k_win_style,CW_USEDEFAULT,CW_USEDEFAULT,r10d,r11d,0,0,[win_class.hInstance],0
         $mov [win_handle],rax
         $test rax,rax
         $jz .error
@@ -147,20 +150,18 @@ init:
         $jz @f
         $mov rax,[rcx]
         $fastcall [rax+ID3D12Debug.EnableDebugLayer],rcx
-        ; device
-    @@: $invoke D3D12CreateDevice,NULL,D3D_FEATURE_LEVEL_11_1,IID_ID3D12Device,device
+    @@: ; device
+        $invoke D3D12CreateDevice,NULL,D3D_FEATURE_LEVEL_11_1,IID_ID3D12Device,device
         $test eax,eax
         $js .error
+        $mov rdi,[device]
+        $mov rsi,[rdi]
         ; command queue
-        $mov rcx,[device]
-        $mov rax,[rcx]
-        $fastcall [rax+ID3D12Device.CreateCommandQueue],rcx,cmdqueue_desc,IID_ID3D12CommandQueue,cmdqueue
+        $fastcall [rsi+ID3D12Device.CreateCommandQueue],rdi,cmdqueue_desc,IID_ID3D12CommandQueue,cmdqueue
         $test eax,eax
         $js .error
         ; command allocator
-        $mov rcx,[device]
-        $mov rax,[rcx]
-        $fastcall [rax+ID3D12Device.CreateCommandAllocator],rcx,D3D12_COMMAND_LIST_TYPE_DIRECT,IID_ID3D12CommandAllocator,cmdallocator
+        $fastcall [rsi+ID3D12Device.CreateCommandAllocator],rdi,D3D12_COMMAND_LIST_TYPE_DIRECT,IID_ID3D12CommandAllocator,cmdallocator
         $test eax,eax
         $js .error
         ; swap chain
@@ -172,18 +173,12 @@ init:
         $test eax,eax
         $js .error
         ; descriptor increment size
-        $mov rcx,[device]
-        $mov rax,[rcx]
-        $fastcall [rax+ID3D12Device.GetDescriptorHandleIncrementSize],rcx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        $fastcall [rsi+ID3D12Device.GetDescriptorHandleIncrementSize],rdi,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
         $mov [rtv_inc_size],eax
-        $mov rcx,[device]
-        $mov rax,[rcx]
-        $fastcall [rax+ID3D12Device.GetDescriptorHandleIncrementSize],rcx,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+        $fastcall [rsi+ID3D12Device.GetDescriptorHandleIncrementSize],rdi,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
         $mov [cbv_srv_uav_inc_size],eax
         ; RTV descriptor heap
-        $mov rcx,[device]
-        $mov rax,[rcx]
-        $fastcall [rax+ID3D12Device.CreateDescriptorHeap],rcx,rtv_heap_desc,IID_ID3D12DescriptorHeap,rtv_heap
+        $fastcall [rsi+ID3D12Device.CreateDescriptorHeap],rdi,rtv_heap_desc,IID_ID3D12DescriptorHeap,rtv_heap
         $test eax,eax
         $js .error
         $mov rcx,[rtv_heap]
@@ -192,46 +187,57 @@ init:
         $mov rax,[rax]
         $mov [rtv_heap_start],rax
         ; RTV descriptors
-        $xor edi,edi
+        $xor ebx,ebx
     .for_each_swap_buffer:
         $mov rcx,[swapchain]
         $mov rax,[rcx]
-        $lea r9,[swap_buffer+rdi*8]
-        $fastcall [rax+IDXGISwapChain.GetBuffer],rcx,edi,IID_ID3D12Resource,r9
+        $lea r9,[swap_buffer+rbx*8]
+        $fastcall [rax+IDXGISwapChain.GetBuffer],rcx,ebx,IID_ID3D12Resource,r9
         $test eax,eax
         $js .error
-        $mov r9d,edi
+        $mov r9d,ebx
         $imul r9d,[rtv_inc_size]
         $add r9,[rtv_heap_start]
-        $mov rcx,[device]
-        $mov rax,[rcx]
-        $fastcall [rax+ID3D12Device.CreateRenderTargetView],rcx,[swap_buffer+rdi*8],NULL,r9
-        $add edi,1
-        $cmp edi,k_swap_buffer_count
+        $fastcall [rsi+ID3D12Device.CreateRenderTargetView],rdi,[swap_buffer+rbx*8],NULL,r9
+        $add ebx,1
+        $cmp ebx,k_swap_buffer_count
         $jb .for_each_swap_buffer
         ; fence
-        $mov rcx,[device]
-        $mov rax,[rcx]
-        $fastcall [rax+ID3D12Device.CreateFence],rcx,0,D3D12_FENCE_FLAG_NONE,IID_ID3D12Fence,fence
+        $fastcall [rsi+ID3D12Device.CreateFence],rdi,0,D3D12_FENCE_FLAG_NONE,IID_ID3D12Fence,fence
         $test eax,eax
         $js .error
         $invoke CreateEventEx,NULL,NULL,0,EVENT_ALL_ACCESS
         $test rax,rax
         $jz .error
+        ; create command list
+        $fastcall [rsi+ID3D12Device.CreateCommandList],rdi,0,D3D12_COMMAND_LIST_TYPE_DIRECT,[cmdallocator],NULL,IID_ID3D12GraphicsCommandList,cmdlist
+        $test eax,eax
+        $js .error
+        ; close and execute command list
+        $mov rcx,[cmdlist]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12GraphicsCommandList.Close],rcx
+        $test eax,eax
+        $js .error
+        $mov rcx,[cmdqueue]
+        $mov rax,[rcx]
+        $fastcall [rax+ID3D12CommandQueue.ExecuteCommandLists],rcx,1,cmdlist
+        $test eax,eax
+        $js .error
 
         $mov eax,1
-        $add rsp,.k_stack_size
-        $pop rsi rdi
-        $ret
+        $jmp .return
     .error_no_avx2:
         $invoke MessageBox,NULL,no_avx2_message,no_avx2_caption,0
-        $jmp .return0
+        $xor eax,eax
+        $jmp .return
     .error:
         ;$invoke
-    .return0:
         $xor eax,eax
+    .return:
         $add rsp,.k_stack_size
-        $pop rsi rdi
+        endf
+        $pop rbx rsi rdi
         $ret
 ;========================================================================
 align 32
@@ -267,11 +273,10 @@ start:
         $invoke ExitProcess,0
 ;========================================================================
 align 32
-proc winproc hwnd,msg,wparam,lparam
-        $mov [hwnd],rcx
-        $mov [msg],rdx
-        $mov [wparam],r8
-        $mov [lparam],r9
+winproc:
+        $push rbp
+        $mov rbp,rsp
+        $and rsp,-32
         $cmp edx,WM_KEYDOWN
         $je .keydown
         $cmp edx,WM_DESTROY
@@ -279,7 +284,7 @@ proc winproc hwnd,msg,wparam,lparam
         $invoke DefWindowProc,rcx,rdx,r8,r9
         $jmp .return
     .keydown:
-        $cmp [wparam],VK_ESCAPE
+        $cmp r8d,VK_ESCAPE
         $jne .return
         $invoke PostQuitMessage,0
         $xor eax,eax
@@ -288,8 +293,9 @@ proc winproc hwnd,msg,wparam,lparam
         $invoke PostQuitMessage,0
         $xor eax,eax
     .return:
+        $mov rsp,rbp
+        $pop rbp
         $ret
-endp
 ;========================================================================
 section '.data' data readable writeable
 program_section = 'data'
@@ -334,6 +340,7 @@ dbgi dq 0
 device dq 0
 cmdqueue dq 0
 cmdallocator dq 0
+cmdlist dq 0
 rtv_heap dq 0
 rtv_heap_start dq 0
 swap_buffer dq k_swap_buffer_count dup (0)
@@ -365,6 +372,8 @@ IID_ID3D12Device GUID 0x189819f1,0x1db6,0x4b57,0xbe,0x54,0x18,0x21,0x33,0x9b,0x8
 IID_ID3D12Debug GUID 0x344488b7,0x6846,0x474b,0xb9,0x89,0xf0,0x27,0x44,0x82,0x45,0xe0
 IID_ID3D12CommandQueue GUID 0x0ec870a6,0x5d7e,0x4c22,0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x16,0xed
 IID_ID3D12CommandAllocator GUID 0x6102dee4,0xaf59,0x4b09,0xb9,0x99,0xb4,0x4d,0x73,0xf0,0x9b,0x24
+IID_ID3D12CommandList GUID 0x7116d91c,0xe7e4,0x47ce,0xb8,0xc6,0xec,0x81,0x68,0xf4,0x37,0xe5
+IID_ID3D12GraphicsCommandList GUID 0x5b160d0f,0xac1b,0x4185,0x8b,0xa8,0xb3,0xae,0x42,0xa5,0xa4,0x55
 IID_ID3D12DescriptorHeap GUID 0x8efb471d,0x616c,0x4f49,0x90,0xf7,0x12,0x7b,0xb7,0x63,0xfa,0x51
 IID_ID3D12Resource GUID 0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad
 IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a,0x76

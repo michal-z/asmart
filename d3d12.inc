@@ -167,6 +167,79 @@ interface ID3D12DescriptorHeap,\
     GetCPUDescriptorHandleForHeapStart,\
     GetGPUDescriptorHandleForHeapStart
 
+interface ID3D12CommandList,\
+    QueryInterface,\
+    AddRef,\
+    Release,\
+    GetPrivateData,\
+    SetPrivateData,\
+    SetPrivateDataInterface,\
+    SetName,\
+    GetDevice,\
+    GetType
+
+interface ID3D12GraphicsCommandList,\
+    QueryInterface,\
+    AddRef,\
+    Release,\
+    GetPrivateData,\
+    SetPrivateData,\
+    SetPrivateDataInterface,\
+    SetName,\
+    GetDevice,\
+    GetType,\
+    Close,\
+    Reset,\
+    ClearState,\
+    DrawInstanced,\
+    DrawIndexedInstanced,\
+    Dispatch,\
+    CopyBufferRegion,\
+    CopyTextureRegion,\
+    CopyResource,\
+    CopyTiles,\
+    ResolveSubresource,\
+    IASetPrimitiveTopology,\
+    RSSetViewports,\
+    RSSetScissorRects,\
+    OMSetBlendFactor,\
+    OMSetStencilRef,\
+    SetPipelineState,\
+    ResourceBarrier,\
+    ExecuteBundle,\
+    SetDescriptorHeaps,\
+    SetComputeRootSignature,\
+    SetGraphicsRootSignature,\
+    SetComputeRootDescriptorTable,\
+    SetGraphicsRootDescriptorTable,\
+    SetComputeRoot32BitConstant,\
+    SetGraphicsRoot32BitConstant,\
+    SetComputeRoot32BitConstants,\
+    SetGraphicsRoot32BitConstants,\
+    SetComputeRootConstantBufferView,\
+    SetGraphicsRootConstantBufferView,\
+    SetComputeRootShaderResourceView,\
+    SetGraphicsRootShaderResourceView,\
+    SetComputeRootUnorderedAccessView,\
+    SetGraphicsRootUnorderedAccessView,\
+    IASetIndexBuffer,\
+    IASetVertexBuffers,\
+    SOSetTargets,\
+    OMSetRenderTargets,\
+    ClearDepthStencilView,\
+    ClearRenderTargetView,\
+    ClearUnorderedAccessViewUint,\
+    ClearUnorderedAccessViewFloat,\
+    DiscardResource,\
+    BeginQuery,\
+    EndQuery,\
+    ResolveQueryData,\
+    SetPredication,\
+    SetMarker,\
+    BeginEvent,\
+    EndEvent,\
+    ExecuteIndirect
+
 ; D3D12 debug layer
 
 interface ID3D12Debug,\
