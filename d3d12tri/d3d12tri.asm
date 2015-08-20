@@ -7,6 +7,30 @@ include '../d3d12.inc'
 
 EVENT_ALL_ACCESS = $000f0000+$00100000+$3
 
+macro $comcall handle,interface,proc,[arg]
+ { common
+    assert defined interface#.com.interface ; must be a COM interface
+    macro call dummy
+    \{ if handle eqtype rcx | handle eqtype 0
+        local ..handle
+        label ..handle at handle
+        mov rax,[..handle]
+       else
+        mov rcx,handle
+        mov rax,[rcx]
+       end if
+       call [rax+interface#.#proc] \}
+    fastcall ,rcx,arg
+    purge call }
+
+macro $comcallv handle,vtable,interface,proc,[arg]
+ { common
+    assert defined interface#.com.interface ; must be a COM interface
+    macro call dummy
+    \{ call [vtable+interface#.#proc] \}
+    fastcall ,handle,arg
+    purge call }
+
 section '.text' code readable executable
 program_section = 'code'
 ;========================================================================
@@ -25,18 +49,18 @@ align 32
 supports_avx2:
         $mov            eax,1
         $cpuid
-        $and            ecx,$018001000                             ; check OSXSAVE,AVX,FMA
+        $and            ecx,$018001000                          ; check OSXSAVE,AVX,FMA
         $cmp            ecx,$018001000
         $jne            .not_supported
         $mov            eax,7
         $xor            ecx,ecx
         $cpuid
-        $and            ebx,$20                                    ; check AVX2
+        $and            ebx,$20                                 ; check AVX2
         $cmp            ebx,$20
         $jne            .not_supported
         $xor            ecx,ecx
         $xgetbv
-        $and            eax,$06                                    ; check OS support
+        $and            eax,$06                                 ; check OS support
         $cmp            eax,$06
         $jne            .not_supported
         $mov            eax,1
@@ -74,12 +98,12 @@ update_frame_stats:
         $call           get_time
         $vmovsd         [.prev_time],xmm0
         $vmovsd         [.prev_update_time],xmm0
-    @@: $call           get_time                                  ; xmm0 = (0, time)
+    @@: $call           get_time                                ; xmm0 = (0, time)
         $vmovsd         [time],xmm0
         $vsubsd         xmm1,xmm0,[.prev_time]                  ; xmm1 = (0, time_delta)
         $vmovsd         [.prev_time],xmm0
         $vxorps         xmm2,xmm2,xmm2
-        $vcvtsd2ss      xmm1,xmm2,xmm1                       ; xmm1 = (0, 0, 0, time_delta)
+        $vcvtsd2ss      xmm1,xmm2,xmm1                          ; xmm1 = (0, 0, 0, time_delta)
         $vmovss         [time_delta],xmm1
         $vmovsd         xmm1,[.prev_update_time]                ; xmm1 = (0, prev_update_time)
         $vsubsd         xmm2,xmm0,xmm1                          ; xmm2 = (0, time - prev_update_time)
@@ -89,7 +113,7 @@ update_frame_stats:
         $vmovsd         [.prev_update_time],xmm0
         $mov            eax,[.frame]
         $vxorpd         xmm1,xmm1,xmm1
-        $vcvtsi2sd      xmm1,xmm1,eax                        ; xmm1 = (0, frame)
+        $vcvtsi2sd      xmm1,xmm1,eax                           ; xmm1 = (0, frame)
         $vdivsd         xmm0,xmm1,xmm2                          ; xmm0 = (0, frame / (time - prev_update_time))
         $vdivsd         xmm1,xmm2,xmm1
         $vmulsd         xmm1,xmm1,[.k_1000000_0]
@@ -103,11 +127,20 @@ update_frame_stats:
         $ret
 ;========================================================================
 align 32
+wait_for_gpu:
+        $push           rdi
+        $mov            edi,[fence_value]
+        $comcall        [cmdqueue],ID3D12CommandQueue,Signal,edi
+        $pop            rdi
+        $ret
+;========================================================================
+align 32
 init:
         $push           rdi rsi rbx
         frame
     virtual at size@frame
     align 32
+    .funcretbuf rb 128
     .k_stack_size = $-$$
     end virtual
         $sub            rsp,.k_stack_size
@@ -145,84 +178,73 @@ init:
         $js             .error
         ; debug layer
         $invoke         D3D12GetDebugInterface,IID_ID3D12Debug,dbgi
-        $mov            rcx,[dbgi]
-        $test           rcx,rcx
-        $jz             @f
-        $mov            rax,[rcx]
-        $fastcall       [rax+ID3D12Debug.EnableDebugLayer],rcx
+        $test           eax,eax
+        $js             @f
+        $comcall        [dbgi],ID3D12Debug,EnableDebugLayer
     @@: ; device
         $invoke         D3D12CreateDevice,NULL,D3D_FEATURE_LEVEL_11_1,IID_ID3D12Device,device
         $test           eax,eax
         $js             .error
-        $mov            rdi,[device]
-        $mov            rsi,[rdi]
+        $mov            rdi,[device]                            ; rdi = [device]
+        $mov            rsi,[rdi]                               ; rsi = [rdi] ([device] virtual table)
         ; command queue
-        $fastcall       [rsi+ID3D12Device.CreateCommandQueue],rdi,cmdqueue_desc,IID_ID3D12CommandQueue,cmdqueue
+        $comcallv       rdi,rsi,ID3D12Device,CreateCommandQueue,cmdqueue_desc,IID_ID3D12CommandQueue,cmdqueue
         $test           eax,eax
         $js             .error
         ; command allocator
-        $fastcall       [rsi+ID3D12Device.CreateCommandAllocator],rdi,D3D12_COMMAND_LIST_TYPE_DIRECT,IID_ID3D12CommandAllocator,cmdallocator
+        $comcallv       rdi,rsi,ID3D12Device,CreateCommandAllocator,D3D12_COMMAND_LIST_TYPE_DIRECT,IID_ID3D12CommandAllocator,cmdallocator
         $test           eax,eax
         $js             .error
         ; swap chain
         $mov            rax,[win_handle]
         $mov            [swapchain_desc.OutputWindow],rax
-        $mov            rcx,[dxgifactory]
-        $mov            rax,[rcx]
-        $fastcall       [rax+IDXGIFactory.CreateSwapChain],rcx,[cmdqueue],swapchain_desc,swapchain
+        $comcall        [dxgifactory],IDXGIFactory,CreateSwapChain,[cmdqueue],swapchain_desc,swapchain
         $test           eax,eax
         $js             .error
         ; descriptor increment size
-        $fastcall       [rsi+ID3D12Device.GetDescriptorHandleIncrementSize],rdi,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        $comcallv       rdi,rsi,ID3D12Device,GetDescriptorHandleIncrementSize,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
         $mov            [rtv_inc_size],eax
-        $fastcall       [rsi+ID3D12Device.GetDescriptorHandleIncrementSize],rdi,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+        $comcallv       rdi,rsi,ID3D12Device,GetDescriptorHandleIncrementSize,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
         $mov            [cbv_srv_uav_inc_size],eax
         ; RTV descriptor heap
-        $fastcall       [rsi+ID3D12Device.CreateDescriptorHeap],rdi,rtv_heap_desc,IID_ID3D12DescriptorHeap,rtv_heap
+        $comcallv       rdi,rsi,ID3D12Device,CreateDescriptorHeap,rtv_heap_desc,IID_ID3D12DescriptorHeap,rtv_heap
         $test           eax,eax
         $js             .error
-        $mov            rcx,[rtv_heap]
-        $mov            rax,[rcx]
-        $fastcall       [rax+ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart],rcx,retbuf
+        $lea            rdx,[.funcretbuf+rsp]
+        $comcall        [rtv_heap],ID3D12DescriptorHeap,GetCPUDescriptorHandleForHeapStart,rdx
         $mov            rax,[rax]
         $mov            [rtv_heap_start],rax
         ; RTV descriptors
         $xor            ebx,ebx
     .for_each_swap_buffer:
-        $mov            rcx,[swapchain]
-        $mov            rax,[rcx]
         $lea            r9,[swap_buffer+rbx*8]
-        $fastcall       [rax+IDXGISwapChain.GetBuffer],rcx,ebx,IID_ID3D12Resource,r9
+        $comcall        [swapchain],IDXGISwapChain,GetBuffer,ebx,IID_ID3D12Resource,r9
         $test           eax,eax
         $js             .error
         $mov            r9d,ebx
         $imul           r9d,[rtv_inc_size]
         $add            r9,[rtv_heap_start]
-        $fastcall       [rsi+ID3D12Device.CreateRenderTargetView],rdi,[swap_buffer+rbx*8],NULL,r9
+        $comcallv       rdi,rsi,ID3D12Device,CreateRenderTargetView,[swap_buffer+rbx*8],NULL,r9
         $add            ebx,1
         $cmp            ebx,k_swap_buffer_count
         $jb             .for_each_swap_buffer
         ; fence
-        $fastcall       [rsi+ID3D12Device.CreateFence],rdi,0,D3D12_FENCE_FLAG_NONE,IID_ID3D12Fence,fence
+        $comcallv       rdi,rsi,ID3D12Device,CreateFence,0,D3D12_FENCE_FLAG_NONE,IID_ID3D12Fence,fence
         $test           eax,eax
         $js             .error
         $invoke         CreateEventEx,NULL,NULL,0,EVENT_ALL_ACCESS
         $test           rax,rax
         $jz             .error
         ; create command list
-        $fastcall       [rsi+ID3D12Device.CreateCommandList],rdi,0,D3D12_COMMAND_LIST_TYPE_DIRECT,[cmdallocator],NULL,\
+        $comcallv       rdi,rsi,ID3D12Device,CreateCommandList,0,D3D12_COMMAND_LIST_TYPE_DIRECT,[cmdallocator],NULL,\
                         IID_ID3D12GraphicsCommandList,cmdlist
         $test           eax,eax
         $js             .error
         ; close and execute command list
-        $mov            rcx,[cmdlist]
-        $mov            rax,[rcx]
-        $fastcall       [rax+ID3D12GraphicsCommandList.Close],rcx
+        $comcall        [cmdlist],ID3D12GraphicsCommandList,Close
         $test           eax,eax
         $js             .error
-        $mov            rcx,[cmdqueue]
-        $mov            rax,[rcx]
-        $fastcall       [rax+ID3D12CommandQueue.ExecuteCommandLists],rcx,1,cmdlist
+        $comcall        [cmdqueue],ID3D12CommandQueue,ExecuteCommandLists,1,cmdlist
         $test           eax,eax
         $js             .error
 
@@ -348,8 +370,6 @@ swap_buffer dq k_swap_buffer_count dup (0)
 fence dq 0
 fence_value dd 1,0
 fence_event dq 0
-
-retbuf rb 128
 
 align 4
 rtv_inc_size dd 0
