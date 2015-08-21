@@ -240,6 +240,19 @@ interface ID3D12GraphicsCommandList,\
     EndEvent,\
     ExecuteIndirect
 
+interface ID3D12Fence,\
+    QueryInterface,\
+    AddRef,\
+    Release,\
+    GetPrivateData,\
+    SetPrivateData,\
+    SetPrivateDataInterface,\
+    SetName,\
+    GetDevice,\
+    GetCompletedValue,\
+    SetEventOnCompletion,\
+    Signal
+
 ; D3D12 debug layer
 
 interface ID3D12Debug,\

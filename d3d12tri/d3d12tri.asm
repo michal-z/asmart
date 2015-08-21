@@ -6,6 +6,7 @@ include '../highlight_inst.inc'
 include '../d3d12.inc'
 
 EVENT_ALL_ACCESS = $000f0000+$00100000+$3
+INFINITE = -1
 
 macro $comcall handle,interface,proc,[arg]
  { common
@@ -30,6 +31,10 @@ macro $comcallv handle,vtable,interface,proc,[arg]
     \{ call [vtable+interface#.#proc] \}
     fastcall ,handle,arg
     purge call }
+
+prologue@proc equ static_rsp_prologue
+epilogue@proc equ static_rsp_epilogue
+close@proc equ static_rsp_close
 
 section '.text' code readable executable
 program_section = 'code'
@@ -72,13 +77,17 @@ supports_avx2:
 ;========================================================================
 align 32
 get_time:
-        $sub            rsp,24
+    .k_stack_size = 7*8
+        $sub            rsp,.k_stack_size
         $mov            rax,[.perf_freq]
         $test           rax,rax
         $jnz            @f
-        $invoke         QueryPerformanceFrequency,.perf_freq
-        $invoke         QueryPerformanceCounter,.first_perf_counter
-    @@: $invoke         QueryPerformanceCounter,.perf_counter
+        $mov            rcx,.perf_freq
+        $call           [QueryPerformanceFrequency]
+        $mov            rcx,.first_perf_counter
+        $call           [QueryPerformanceCounter]
+    @@: $mov            rcx,.perf_counter
+        $call           [QueryPerformanceCounter]
         $mov            rcx,[.perf_counter]
         $sub            rcx,[.first_perf_counter]
         $mov            rdx,[.perf_freq]
@@ -86,12 +95,13 @@ get_time:
         $vcvtsi2sd      xmm1,xmm0,rcx
         $vcvtsi2sd      xmm2,xmm0,rdx
         $vdivsd         xmm0,xmm1,xmm2
-        $add            rsp,24
+        $add            rsp,.k_stack_size
         $ret
 ;========================================================================
 align 32
 update_frame_stats:
-        $sub            rsp,24
+    .k_stack_size = 7*8
+        $sub            rsp,.k_stack_size
         $mov            rax,[.prev_time]
         $test           rax,rax
         $jnz            @f
@@ -117,45 +127,76 @@ update_frame_stats:
         $vdivsd         xmm0,xmm1,xmm2                          ; xmm0 = (0, frame / (time - prev_update_time))
         $vdivsd         xmm1,xmm2,xmm1
         $vmulsd         xmm1,xmm1,[.k_1000000_0]
-        $vcvtsd2si      r10,xmm0
-        $vcvtsd2si      r11,xmm1
         $mov            [.frame],0
-        $cinvoke        wsprintf,win_title,win_title_fmt,r10,r11
-        $invoke         SetWindowText,[win_handle],win_title
+        $mov            rcx,win_title
+        $mov            rdx,win_title_fmt
+        $vcvtsd2si      r8,xmm0
+        $vcvtsd2si      r9,xmm1
+        $call           [wsprintf]
+        $mov            rcx,[win_handle]
+        $mov            edx,win_title
+        $call           [SetWindowText]
     @@: $add            [.frame],1
-        $add            rsp,24
+        $add            rsp,.k_stack_size
         $ret
 ;========================================================================
 align 32
 wait_for_gpu:
+    .k_stack_size = 6*8
         $push           rdi
-        $mov            edi,[fence_value]
-        $comcall        [cmdqueue],ID3D12CommandQueue,Signal,edi
+        $sub            rsp,.k_stack_size
+        $mov            rdi,[fence_value]
+        $mov            rcx,[cmdqueue]
+        $mov            rdx,[fence]
+        $mov            r8,rdi
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12CommandQueue.Signal]
+        $add            [fence_value],1
+        $mov            rcx,[fence]
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12Fence.GetCompletedValue]
+        $cmp            rax,rdi
+        $jnb            @f
+        $mov            rcx,[fence]
+        $mov            rdx,rdi
+        $mov            r8,[fence_event]
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12Fence.SetEventOnCompletion]
+        $mov            rcx,[fence_event]
+        $mov            rdx,INFINITE
+        $call           [WaitForSingleObject]
+    @@: $add            rsp,.k_stack_size
         $pop            rdi
         $ret
 ;========================================================================
 align 32
 init:
-        $push           rdi rsi rbx
-        frame
-    virtual at size@frame
-    align 32
-    .funcretbuf rb 128
-    .k_stack_size = $-$$
+    virtual at 0
+    .funcshadow: rq 4
+    .funcparam: rq 16
+    .funcretbuf: rb 32
+    .k_stack_size = $
     end virtual
+        $push           rdi rsi rbx
         $sub            rsp,.k_stack_size
         $call           supports_avx2
         $test           eax,eax
         $jz             .error_no_avx2
         ; window class
-        $invoke         GetModuleHandle,0
+        $xor            ecx,ecx
+        $call           [GetModuleHandle]
         $mov            [win_class.hInstance],rax
-        $invoke         LoadIcon,0,IDI_APPLICATION
+        $xor            ecx,ecx
+        $mov            edx,IDI_APPLICATION
+        $call           [LoadIcon]
         $mov            [win_class.hIcon],rax
         $mov            [win_class.hIconSm],rax
-        $invoke         LoadCursor,0,IDC_ARROW
+        $xor            ecx,ecx
+        $mov            edx,IDC_ARROW
+        $call           [LoadCursor]
         $mov            [win_class.hCursor],rax
-        $invoke         RegisterClassEx,win_class
+        $mov            rcx,win_class
+        $call           [RegisterClassEx]
         $test           eax,eax
         $jz             .error
         ; window
@@ -163,90 +204,173 @@ init:
         $mov            [win_rect.top],0
         $mov            [win_rect.right],k_win_width
         $mov            [win_rect.bottom],k_win_height
-        $invoke         AdjustWindowRect,win_rect,k_win_style,0
+        $mov            rcx,win_rect
+        $mov            edx,k_win_style
+        $xor            r8d,r8d
+        $call           [AdjustWindowRect]
         $mov            r10d,[win_rect.right]
         $mov            r11d,[win_rect.bottom]
         $sub            r10d,[win_rect.left]
         $sub            r11d,[win_rect.top]
-        $invoke         CreateWindowEx,0,win_title,win_title,WS_VISIBLE+k_win_style,CW_USEDEFAULT,CW_USEDEFAULT,r10d,r11d,0,0,[win_class.hInstance],0
+        $xor            ecx,ecx
+        $mov            rdx,win_title
+        $mov            r8,rdx
+        $mov            r9d,WS_VISIBLE+k_win_style
+        $mov            eax,CW_USEDEFAULT
+        $mov            [.funcparam+$00+rsp],eax
+        $mov            [.funcparam+$08+rsp],eax
+        $mov            [.funcparam+$10+rsp],r10d
+        $mov            [.funcparam+$18+rsp],r11d
+        $mov            [.funcparam+$20+rsp],ecx
+        $mov            [.funcparam+$28+rsp],ecx
+        $mov            rax,[win_class.hInstance]
+        $mov            [.funcparam+$30+rsp],rax
+        $mov            [.funcparam+$38+rsp],ecx
+        $call           [CreateWindowEx]
         $mov            [win_handle],rax
         $test           rax,rax
         $jz             .error
         ; DXGI factory
-        $invoke         CreateDXGIFactory1,IID_IDXGIFactory,dxgifactory
+        $mov            rcx,IID_IDXGIFactory
+        $mov            rdx,dxgifactory
+        $call           [CreateDXGIFactory1]
         $test           eax,eax
         $js             .error
         ; debug layer
-        $invoke         D3D12GetDebugInterface,IID_ID3D12Debug,dbgi
+        $mov            rcx,IID_ID3D12Debug
+        $mov            rdx,dbgi
+        $call           [D3D12GetDebugInterface]
         $test           eax,eax
         $js             @f
-        $comcall        [dbgi],ID3D12Debug,EnableDebugLayer
+        $mov            rcx,[dbgi]
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12Debug.EnableDebugLayer]
     @@: ; device
-        $invoke         D3D12CreateDevice,NULL,D3D_FEATURE_LEVEL_11_1,IID_ID3D12Device,device
+        $xor            ecx,ecx
+        $mov            edx,D3D_FEATURE_LEVEL_11_1
+        $mov            r8,IID_ID3D12Device
+        $mov            r9,device
+        $call           [D3D12CreateDevice]
         $test           eax,eax
         $js             .error
         $mov            rdi,[device]                            ; rdi = [device]
         $mov            rsi,[rdi]                               ; rsi = [rdi] ([device] virtual table)
         ; command queue
-        $comcallv       rdi,rsi,ID3D12Device,CreateCommandQueue,cmdqueue_desc,IID_ID3D12CommandQueue,cmdqueue
+        $mov            rcx,rdi
+        $mov            rdx,cmdqueue_desc
+        $mov            r8,IID_ID3D12CommandQueue
+        $mov            r9,cmdqueue
+        $call           [rsi+ID3D12Device.CreateCommandQueue]
         $test           eax,eax
         $js             .error
         ; command allocator
-        $comcallv       rdi,rsi,ID3D12Device,CreateCommandAllocator,D3D12_COMMAND_LIST_TYPE_DIRECT,IID_ID3D12CommandAllocator,cmdallocator
+        $mov            rcx,rdi
+        $mov            edx,D3D12_COMMAND_LIST_TYPE_DIRECT
+        $mov            r8,IID_ID3D12CommandAllocator
+        $mov            r9,cmdallocator
+        $call           [rsi+ID3D12Device.CreateCommandAllocator]
         $test           eax,eax
         $js             .error
         ; swap chain
         $mov            rax,[win_handle]
         $mov            [swapchain_desc.OutputWindow],rax
-        $comcall        [dxgifactory],IDXGIFactory,CreateSwapChain,[cmdqueue],swapchain_desc,swapchain
+        $mov            rcx,[dxgifactory]
+        $mov            rdx,[cmdqueue]
+        $mov            r8,swapchain_desc
+        $mov            r9,swapchain
+        $mov            rax,[rcx]
+        $call           [rax+IDXGIFactory.CreateSwapChain]
         $test           eax,eax
         $js             .error
         ; descriptor increment size
-        $comcallv       rdi,rsi,ID3D12Device,GetDescriptorHandleIncrementSize,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        $mov            rcx,rdi
+        $mov            edx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        $call           [rsi+ID3D12Device.GetDescriptorHandleIncrementSize]
         $mov            [rtv_inc_size],eax
-        $comcallv       rdi,rsi,ID3D12Device,GetDescriptorHandleIncrementSize,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+        $mov            rcx,rdi
+        $mov            edx,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+        $call           [rsi+ID3D12Device.GetDescriptorHandleIncrementSize]
         $mov            [cbv_srv_uav_inc_size],eax
         ; RTV descriptor heap
-        $comcallv       rdi,rsi,ID3D12Device,CreateDescriptorHeap,rtv_heap_desc,IID_ID3D12DescriptorHeap,rtv_heap
+        $mov            rcx,rdi
+        $mov            rdx,rtv_heap_desc
+        $mov            r8,IID_ID3D12DescriptorHeap
+        $mov            r9,rtv_heap
+        $call           [rsi+ID3D12Device.CreateDescriptorHeap]
         $test           eax,eax
         $js             .error
+        $mov            rcx,[rtv_heap]
         $lea            rdx,[.funcretbuf+rsp]
-        $comcall        [rtv_heap],ID3D12DescriptorHeap,GetCPUDescriptorHandleForHeapStart,rdx
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart]
         $mov            rax,[rax]
         $mov            [rtv_heap_start],rax
         ; RTV descriptors
         $xor            ebx,ebx
     .for_each_swap_buffer:
+        $mov            rcx,[swapchain]
+        $mov            edx,ebx
+        $mov            r8,IID_ID3D12Resource
         $lea            r9,[swap_buffer+rbx*8]
-        $comcall        [swapchain],IDXGISwapChain,GetBuffer,ebx,IID_ID3D12Resource,r9
+        $mov            rax,[rcx]
+        $call           [rax+IDXGISwapChain.GetBuffer]
         $test           eax,eax
         $js             .error
+        $mov            rcx,rdi
+        $mov            rdx,[swap_buffer+rbx*8]
+        $xor            r8d,r8d
         $mov            r9d,ebx
         $imul           r9d,[rtv_inc_size]
         $add            r9,[rtv_heap_start]
-        $comcallv       rdi,rsi,ID3D12Device,CreateRenderTargetView,[swap_buffer+rbx*8],NULL,r9
+        $call           [rsi+ID3D12Device.CreateRenderTargetView]
         $add            ebx,1
         $cmp            ebx,k_swap_buffer_count
         $jb             .for_each_swap_buffer
         ; fence
-        $comcallv       rdi,rsi,ID3D12Device,CreateFence,0,D3D12_FENCE_FLAG_NONE,IID_ID3D12Fence,fence
+        $mov            rcx,rdi
+        $xor            edx,edx
+        $mov            r8d,D3D12_FENCE_FLAG_NONE
+        $mov            r9,IID_ID3D12Fence
+        $mov            rax,fence
+        $mov            [.funcparam+$00+rsp],rax
+        $call           [rsi+ID3D12Device.CreateFence]
         $test           eax,eax
         $js             .error
-        $invoke         CreateEventEx,NULL,NULL,0,EVENT_ALL_ACCESS
+        $xor            ecx,ecx
+        $xor            edx,edx
+        $xor            r8d,r8d
+        $mov            r9d,EVENT_ALL_ACCESS
+        $call           [CreateEventEx]
         $test           rax,rax
         $jz             .error
+        $mov            [fence_event],rax
         ; create command list
-        $comcallv       rdi,rsi,ID3D12Device,CreateCommandList,0,D3D12_COMMAND_LIST_TYPE_DIRECT,[cmdallocator],NULL,\
-                        IID_ID3D12GraphicsCommandList,cmdlist
+        $mov            rcx,rdi
+        $xor            edx,edx
+        $mov            r8d,D3D12_COMMAND_LIST_TYPE_DIRECT
+        $mov            r9,[cmdallocator]
+        $mov            qword [.funcparam+$00+rsp],0
+        $mov            rax,IID_ID3D12GraphicsCommandList
+        $mov            [.funcparam+$08+rsp],rax
+        $mov            rax,cmdlist
+        $mov            [.funcparam+$10+rsp],rax
+        $call           [rsi+ID3D12Device.CreateCommandList]
         $test           eax,eax
         $js             .error
         ; close and execute command list
-        $comcall        [cmdlist],ID3D12GraphicsCommandList,Close
+        $mov            rcx,[cmdlist]
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12GraphicsCommandList.Close]
         $test           eax,eax
         $js             .error
-        $comcall        [cmdqueue],ID3D12CommandQueue,ExecuteCommandLists,1,cmdlist
+        $mov            rcx,[cmdqueue]
+        $mov            edx,1
+        $mov            r8,cmdlist
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
         $test           eax,eax
         $js             .error
+        $call           wait_for_gpu
 
         $mov            eax,1
         $jmp            .return
@@ -259,18 +383,19 @@ init:
         $xor            eax,eax
     .return:
         $add            rsp,.k_stack_size
-        endf
         $pop            rbx rsi rdi
         $ret
 ;========================================================================
 align 32
-deinit:
+proc deinit
         $ret
+endp
 ;========================================================================
 align 32
 update:
         $sub            rsp,24
         $call           update_frame_stats
+        $call           wait_for_gpu
         $add            rsp,24
         $ret
 ;========================================================================
@@ -296,10 +421,7 @@ start:
         $invoke         ExitProcess,0
 ;========================================================================
 align 32
-winproc:
-        $push           rbp
-        $mov            rbp,rsp
-        $and            rsp,-32
+proc winproc
         $cmp            edx,WM_KEYDOWN
         $je             .keydown
         $cmp            edx,WM_DESTROY
@@ -316,9 +438,8 @@ winproc:
         $invoke         PostQuitMessage,0
         $xor            eax,eax
     .return:
-        $mov            rsp,rbp
-        $pop            rbp
         $ret
+endp
 ;========================================================================
 section '.data' data readable writeable
 program_section = 'data'
@@ -368,7 +489,7 @@ rtv_heap dq 0
 rtv_heap_start dq 0
 swap_buffer dq k_swap_buffer_count dup (0)
 fence dq 0
-fence_value dd 1,0
+fence_value dq 1
 fence_event dq 0
 
 align 4
@@ -410,7 +531,7 @@ import kernel32,\
     QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
     CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
     WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo',\
-    CreateEventEx,'CreateEventExA'
+    CreateEventEx,'CreateEventExA',Sleep,'Sleep'
 
 import user32,\
     wsprintf,'wsprintfA',RegisterClassEx,'RegisterClassExA',\
