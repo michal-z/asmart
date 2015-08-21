@@ -8,34 +8,6 @@ include '../d3d12.inc'
 EVENT_ALL_ACCESS = $000f0000+$00100000+$3
 INFINITE = -1
 
-macro $comcall handle,interface,proc,[arg]
- { common
-    assert defined interface#.com.interface ; must be a COM interface
-    macro call dummy
-    \{ if handle eqtype rcx | handle eqtype 0
-        local ..handle
-        label ..handle at handle
-        mov rax,[..handle]
-       else
-        mov rcx,handle
-        mov rax,[rcx]
-       end if
-       call [rax+interface#.#proc] \}
-    fastcall ,rcx,arg
-    purge call }
-
-macro $comcallv handle,vtable,interface,proc,[arg]
- { common
-    assert defined interface#.com.interface ; must be a COM interface
-    macro call dummy
-    \{ call [vtable+interface#.#proc] \}
-    fastcall ,handle,arg
-    purge call }
-
-prologue@proc equ static_rsp_prologue
-epilogue@proc equ static_rsp_epilogue
-close@proc equ static_rsp_close
-
 section '.text' code readable executable
 program_section = 'code'
 ;========================================================================
@@ -375,7 +347,11 @@ init:
         $mov            eax,1
         $jmp            .return
     .error_no_avx2:
-        $invoke         MessageBox,NULL,no_avx2_message,no_avx2_caption,0
+        $xor            ecx,ecx
+        $mov            rdx,no_avx2_message
+        $mov            r8,no_avx2_caption
+        $xor            r9d,r9d
+        $call           [MessageBox]
         $xor            eax,eax
         $jmp            .return
     .error:
@@ -401,15 +377,26 @@ update:
 ;========================================================================
 align 32
 start:
-        $and            rsp,-32
+    virtual at 0
+    .funcshadow: rq 4
+    .funcparam: rq 1
+    .k_stack_size = $+16
+    end virtual
+        $sub            rsp,.k_stack_size
         $call           init
         $test           eax,eax
         $jz             .quit
     .main_loop:
-        $invoke         PeekMessage,win_msg,NULL,0,0,PM_REMOVE
+        $mov            rcx,win_msg
+        $xor            edx,edx
+        $xor            r8d,r8d
+        $xor            r9d,r9d
+        $mov            dword [.funcparam+$00+rsp],PM_REMOVE
+        $call           [PeekMessage]
         $test           eax,eax
         $jz             .update
-        $invoke         DispatchMessage,win_msg
+        $mov            rcx,win_msg
+        $call           [DispatchMessage]
         $cmp            [win_msg.message],WM_QUIT
         $je             .quit
         $jmp            .main_loop
@@ -418,28 +405,32 @@ start:
         $jmp            .main_loop
     .quit:
         $call           deinit
-        $invoke         ExitProcess,0
+        $xor            ecx,ecx
+        $call           [ExitProcess]
 ;========================================================================
 align 32
-proc winproc
+winproc:
+        $sub            rsp,40
         $cmp            edx,WM_KEYDOWN
         $je             .keydown
         $cmp            edx,WM_DESTROY
         $je             .destroy
-        $invoke         DefWindowProc,rcx,rdx,r8,r9
+        $call           [DefWindowProc]
         $jmp            .return
     .keydown:
         $cmp            r8d,VK_ESCAPE
         $jne            .return
-        $invoke         PostQuitMessage,0
+        $xor            ecx,ecx
+        $call           [PostQuitMessage]
         $xor            eax,eax
         $jmp            .return
     .destroy:
-        $invoke         PostQuitMessage,0
+        $xor            ecx,ecx
+        $call           [PostQuitMessage]
         $xor            eax,eax
     .return:
+        $add            rsp,40
         $ret
-endp
 ;========================================================================
 section '.data' data readable writeable
 program_section = 'data'
