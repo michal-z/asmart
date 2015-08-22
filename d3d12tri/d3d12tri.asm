@@ -1,7 +1,7 @@
 format PE64 GUI 4.0
 entry start
 
-include 'win64a.inc'
+include '../windows.inc'
 include '../highlight_inst.inc'
 include '../d3d12.inc'
 
@@ -172,10 +172,6 @@ init:
         $test           eax,eax
         $jz             .error
         ; window
-        $mov            [win_rect.left],0
-        $mov            [win_rect.top],0
-        $mov            [win_rect.right],k_win_width
-        $mov            [win_rect.bottom],k_win_height
         $mov            rcx,win_rect
         $mov            edx,k_win_style
         $xor            r8d,r8d
@@ -363,9 +359,8 @@ init:
         $ret
 ;========================================================================
 align 32
-proc deinit
+deinit:
         $ret
-endp
 ;========================================================================
 align 32
 update:
@@ -447,9 +442,9 @@ align 8
 win_handle dq 0
 win_title db 'Direct3D 12 Triangle', 64 dup (0)
 win_title_fmt db '[%d fps  %d us] Direct3D 12 Triangle',0
-win_msg MSG
-win_class WNDCLASSEX sizeof.WNDCLASSEX,0,winproc,0,0,NULL,NULL,NULL,COLOR_BTNFACE+1,NULL,win_title,NULL
-win_rect RECT
+win_msg MSG 0,0,0,0,0,<0,0>
+win_class WNDCLASSEX 0,winproc,0,0,0,0,0,0,0,win_title,0
+win_rect RECT 0,0,k_win_width,k_win_height
 
 no_avx2_caption db 'Not supported CPU',0
 no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
@@ -493,7 +488,7 @@ align 8
 cmdqueue_desc D3D12_COMMAND_QUEUE_DESC D3D12_COMMAND_LIST_TYPE_DIRECT,0,D3D12_COMMAND_QUEUE_FLAG_NONE,0
 align 8
 swapchain_desc DXGI_SWAP_CHAIN_DESC <k_win_width,k_win_height,<0,0>,DXGI_FORMAT_R8G8B8A8_UNORM,0,0>,<1,0>,DXGI_USAGE_RENDER_TARGET_OUTPUT,\
-                                    k_swap_buffer_count,0,NULL,1,DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,0,0
+                                    k_swap_buffer_count,0,1,DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,0
 align 8
 rtv_heap_desc D3D12_DESCRIPTOR_HEAP_DESC D3D12_DESCRIPTOR_HEAP_TYPE_RTV,k_swap_buffer_count,D3D12_DESCRIPTOR_HEAP_FLAG_NONE,0
 
