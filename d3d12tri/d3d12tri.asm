@@ -508,28 +508,96 @@ IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a
 ;========================================================================
 section '.idata' import data readable writeable
 
-library kernel32,'kernel32.dll',user32,'user32.dll',d3d12,'d3d12.dll',dxgi,'dxgi.dll'
+dd 0,0,0,rva _kernel32,rva _kernel32_table
+dd 0,0,0,rva _user32,rva _user32_table
+dd 0,0,0,rva _dxgi,rva _dxgi_table
+dd 0,0,0,rva _d3d12,rva _d3d12_table
+dd 0,0,0,0,0
 
-import kernel32,\
-    GetModuleHandle,'GetModuleHandleA',ExitProcess,'ExitProcess',\
-    WaitForSingleObject,'WaitForSingleObject',ReleaseSemaphore,'ReleaseSemaphore',\
-    ExitThread,'ExitThread',QueryPerformanceFrequency,'QueryPerformanceFrequency',\
-    QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
-    CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
-    WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo',\
-    CreateEventEx,'CreateEventExA',Sleep,'Sleep'
+_kernel32_table:
+ExitProcess dq rva _ExitProcess
+GetModuleHandle dq rva _GetModuleHandle
+WaitForSingleObject dq rva _WaitForSingleObject
+QueryPerformanceFrequency dq rva _QueryPerformanceFrequency
+QueryPerformanceCounter dq rva _QueryPerformanceCounter
+CloseHandle dq rva _CloseHandle
+CreateEventEx dq rva _CreateEventEx
+dq 0
 
-import user32,\
-    wsprintf,'wsprintfA',RegisterClassEx,'RegisterClassExA',\
-    CreateWindowEx,'CreateWindowExA',DefWindowProc,'DefWindowProcA',\
-    PeekMessage,'PeekMessageA',DispatchMessage,'DispatchMessageA',\
-    LoadCursor,'LoadCursorA',LoadIcon,'LoadIconA',\
-    SetWindowText,'SetWindowTextA',SetRect,'SetRect',AdjustWindowRect,'AdjustWindowRect',\
-    GetDC,'GetDC',ReleaseDC,'ReleaseDC',PostQuitMessage,'PostQuitMessage',MessageBox,'MessageBoxA'
+_user32_table:
+wsprintf dq rva _wsprintf
+RegisterClassEx dq rva _RegisterClassEx
+CreateWindowEx dq rva _CreateWindowEx
+DefWindowProc dq rva _DefWindowProc
+PeekMessage dq rva _PeekMessage
+DispatchMessage dq rva _DispatchMessage
+LoadCursor dq rva _LoadCursor
+LoadIcon dq rva _LoadIcon
+SetWindowText dq rva _SetWindowText
+AdjustWindowRect dq rva _AdjustWindowRect
+PostQuitMessage dq rva _PostQuitMessage
+MessageBox dq rva _MessageBox
+dq 0
 
-import dxgi,\
-    CreateDXGIFactory1,'CreateDXGIFactory1'
+_dxgi_table:
+CreateDXGIFactory1 dq rva _CreateDXGIFactory1
+dq 0
 
-import d3d12,\
-    D3D12CreateDevice,'D3D12CreateDevice',D3D12GetDebugInterface,'D3D12GetDebugInterface'
+_d3d12_table:
+D3D12CreateDevice dq rva _D3D12CreateDevice
+D3D12GetDebugInterface dq rva _D3D12GetDebugInterface
+dq 0
+
+_kernel32 db 'kernel32.dll',0
+_user32 db 'user32.dll',0
+_dxgi db 'dxgi.dll',0
+_d3d12 db 'd3d12.dll',0
+
+_ExitProcess dw 0
+db 'ExitProcess',0
+_GetModuleHandle dw 0
+db 'GetModuleHandleA',0
+_WaitForSingleObject dw 0
+db 'WaitForSingleObject',0
+_QueryPerformanceFrequency dw 0
+db 'QueryPerformanceFrequency',0
+_QueryPerformanceCounter dw 0
+db 'QueryPerformanceCounter',0
+_CloseHandle dw 0
+db 'CloseHandle',0
+_CreateEventEx dw 0
+db 'CreateEventExA',0
+
+_wsprintf dw 0
+db 'wsprintfA',0
+_RegisterClassEx dw 0
+db 'RegisterClassExA',0
+_CreateWindowEx dw 0
+db 'CreateWindowExA',0
+_DefWindowProc dw 0
+db 'DefWindowProcA',0
+_PeekMessage dw 0
+db 'PeekMessageA',0
+_DispatchMessage dw 0
+db 'DispatchMessageA',0
+_LoadCursor dw 0
+db 'LoadCursorA',0
+_LoadIcon dw 0
+db 'LoadIconA',0
+_SetWindowText dw 0
+db 'SetWindowTextA',0
+_AdjustWindowRect dw 0
+db 'AdjustWindowRect',0
+_PostQuitMessage dw 0
+db 'PostQuitMessage',0
+_MessageBox dw 0
+db 'MessageBoxA',0
+
+_CreateDXGIFactory1 dw 0
+db 'CreateDXGIFactory1',0
+
+_D3D12CreateDevice dw 0
+db 'D3D12CreateDevice',0
+_D3D12GetDebugInterface dw 0
+db 'D3D12GetDebugInterface',0
 ;========================================================================
