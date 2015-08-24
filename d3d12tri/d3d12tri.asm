@@ -5,18 +5,17 @@ include '../windows.inc'
 include '../highlight_inst.inc'
 include '../d3d12.inc'
 
+macro   emit [inst] {
+    forward
+        inst }
+
+macro   barrier         cmdlist,vtable,res,sbefore,safter {
+        $mov            [resource_barrier.Transition.pResource],res
+        $mov            [resource_barrier.Transition.StateBefore],sbefore
+        $mov            [resource_barrier.Transition.StateAfter],safter
+        emit            <$mov rcx,cmdlist>,<$mov edx,1>,<$mov r8,resource_barrier>,<$call [vtable+ID3D12GraphicsCommandList.ResourceBarrier]> }
+
 section '.text' code readable executable
-;========================================================================
-macro iaca_begin
-{
-        $mov            ebx,111
-        db              $64,$67,$90
-}
-macro iaca_end
-{
-        $mov            ebx,222
-        db              $64,$67,$90
-}
 ;========================================================================
 align 32
 supports_avx2:
@@ -146,51 +145,24 @@ generate_gpu_commands:
     end virtual
         $push           rdi rsi
         $sub            rsp,.k_stack_size
-        $mov            rcx,[cmdallocator]
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12CommandAllocator.Reset]
         $mov            rdi,[cmdlist]                           ; rdi = [cmdlist]
         $mov            rsi,[rdi]                               ; rsi = [rdi] ([cmdlist] vtable)
-        $mov            rcx,rdi
-        $mov            rdx,[cmdallocator]
-        $xor            r8d,r8d
-        $call           [rsi+ID3D12GraphicsCommandList.Reset]
-        $mov            rcx,rdi
-        $mov            edx,1
-        $mov            r8,viewport
-        $call           [rsi+ID3D12GraphicsCommandList.RSSetViewports]
-        $mov            rcx,rdi
-        $mov            edx,1
-        $mov            r8,scissor_rect
-        $call           [rsi+ID3D12GraphicsCommandList.RSSetScissorRects]
-        $mov            eax,[swap_buffer_index]
-        $mov            rdx,[swap_buffer+rax*8]
-        $mov            [resource_barrier.Transition.pResource],rdx
-        $mov            [resource_barrier.Transition.StateBefore],D3D12_RESOURCE_STATE_PRESENT
-        $mov            [resource_barrier.Transition.StateAfter],D3D12_RESOURCE_STATE_RENDER_TARGET
-        $mov            rcx,rdi
-        $mov            edx,1
-        $mov            r8,resource_barrier
-        $call           [rsi+ID3D12GraphicsCommandList.ResourceBarrier]
-        $mov            rcx,rdi
-        $mov            edx,[rtv_inc_size]
-        $imul           edx,[swap_buffer_index]
-        $add            rdx,[rtv_heap_start]
-        $mov            r8,clear_color
-        $xor            r9d,r9d
-        $mov            qword [.funcparam5+rsp],0
-        $call           [rsi+ID3D12GraphicsCommandList.ClearRenderTargetView]
-        $mov            eax,[swap_buffer_index]
-        $mov            rdx,[swap_buffer+rax*8]
-        $mov            [resource_barrier.Transition.pResource],rdx
-        $mov            [resource_barrier.Transition.StateBefore],D3D12_RESOURCE_STATE_RENDER_TARGET
-        $mov            [resource_barrier.Transition.StateAfter],D3D12_RESOURCE_STATE_PRESENT
-        $mov            rcx,rdi
-        $mov            edx,1
-        $mov            r8,resource_barrier
-        $call           [rsi+ID3D12GraphicsCommandList.ResourceBarrier]
-        $mov            rcx,rdi
-        $call           [rsi+ID3D12GraphicsCommandList.Close]
+        emit            <$mov rcx,[cmdallocator]>,<$mov rax,[rcx]>,<$call [rax+ID3D12CommandAllocator.Reset]>
+        emit            <$mov rcx,rdi>,<$mov rdx,[cmdallocator]>,<$xor r8d,r8d>,<$call [rsi+ID3D12GraphicsCommandList.Reset]>
+        emit            <$mov rcx,rdi>,<$mov edx,1>,<$mov r8,viewport>,<$call [rsi+ID3D12GraphicsCommandList.RSSetViewports]>
+        emit            <$mov rcx,rdi>,<$mov edx,1>,<$mov r8,scissor_rect>,<$call [rsi+ID3D12GraphicsCommandList.RSSetScissorRects]>
+
+        emit            <$mov eax,[swap_buffer_index]>,<$mov rax,[swap_buffer+rax*8]>
+        barrier         rdi,rsi,rax,D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET
+
+        emit            <$mov edx,[rtv_inc_size]>,<$imul edx,[swap_buffer_index]>,<$add rdx,[rtv_heap_start]>
+        emit            <$mov rcx,rdi>,<$mov r8,clear_color>,<$xor r9d,r9d>,<$mov qword [.funcparam5+rsp],0>,\
+                        <$call [rsi+ID3D12GraphicsCommandList.ClearRenderTargetView]>
+
+        emit            <$mov eax,[swap_buffer_index]>,<$mov rax,[swap_buffer+rax*8]>
+        barrier         rdi,rsi,rax,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_PRESENT
+
+        emit            <$mov rcx,rdi>,<$call [rsi+ID3D12GraphicsCommandList.Close]>
         $add            rsp,.k_stack_size
         $pop            rsi rdi
         $ret
@@ -213,93 +185,47 @@ init:
         $push           rdi rsi rbx
         $sub            rsp,.k_stack_size
         $call           supports_avx2
-        $test           eax,eax
-        $jz             .error_no_avx2
+        emit            <$test eax,eax>,<$jz .error_no_avx2>
         ; window class
-        $xor            ecx,ecx
-        $call           [GetModuleHandle]
+        emit            <$xor ecx,ecx>,<$call [GetModuleHandle]>
         $mov            [win_class.hInstance],rax
-        $xor            ecx,ecx
-        $mov            edx,IDI_APPLICATION
-        $call           [LoadIcon]
+        emit            <$xor ecx,ecx>,<$mov edx,IDI_APPLICATION>,<$call [LoadIcon]>
         $mov            [win_class.hIcon],rax
         $mov            [win_class.hIconSm],rax
-        $xor            ecx,ecx
-        $mov            edx,IDC_ARROW
-        $call           [LoadCursor]
+        emit            <$xor ecx,ecx>,<$mov edx,IDC_ARROW>,<$call [LoadCursor]>
         $mov            [win_class.hCursor],rax
-        $mov            rcx,win_class
-        $call           [RegisterClassEx]
-        $test           eax,eax
-        $jz             .error
+        emit            <$mov rcx,win_class>,<$call [RegisterClassEx]>
+        emit            <$test eax,eax>,<$jz .error>
         ; window
-        $mov            rcx,win_rect
-        $mov            edx,k_win_style
-        $xor            r8d,r8d
-        $call           [AdjustWindowRect]
-        $mov            r10d,[win_rect.right]
-        $mov            r11d,[win_rect.bottom]
-        $sub            r10d,[win_rect.left]
-        $sub            r11d,[win_rect.top]
-        $xor            ecx,ecx
-        $mov            rdx,win_title
-        $mov            r8,rdx
-        $mov            r9d,WS_VISIBLE+k_win_style
-        $mov            eax,CW_USEDEFAULT
-        $mov            [.funcparam5+rsp],eax
-        $mov            [.funcparam6+rsp],eax
-        $mov            [.funcparam7+rsp],r10d
-        $mov            [.funcparam8+rsp],r11d
-        $mov            [.funcparam9+rsp],ecx
-        $mov            [.funcparam10+rsp],ecx
-        $mov            rax,[win_class.hInstance]
-        $mov            [.funcparam11+rsp],rax
-        $mov            [.funcparam12+rsp],ecx
-        $call           [CreateWindowEx]
+        emit            <$mov rcx,win_rect>,<$mov edx,k_win_style>,<$xor r8d,r8d>,<$call [AdjustWindowRect]>
+        emit            <$mov r10d,[win_rect.right]>,<$mov r11d,[win_rect.bottom]>,<$sub r10d,[win_rect.left]>,<$sub r11d,[win_rect.top]>
+        emit            <$xor ecx,ecx>,<$mov rdx,win_title>,<$mov r8,rdx>,<$mov r9d,WS_VISIBLE+k_win_style>,<$mov eax,CW_USEDEFAULT>,\
+                        <$mov [.funcparam5+rsp],eax>,<$mov [.funcparam6+rsp],eax>,<$mov [.funcparam7+rsp],r10d>,<$mov [.funcparam8+rsp],r11d>,\
+                        <$mov [.funcparam9+rsp],ecx>,<$mov [.funcparam10+rsp],ecx>,<$mov rax,[win_class.hInstance]>,<$mov [.funcparam11+rsp],rax>,\
+                        <$mov [.funcparam12+rsp],ecx>,<$call [CreateWindowEx]>
         $mov            [win_handle],rax
-        $test           rax,rax
-        $jz             .error
+        emit            <$test rax,rax>,<$jz .error>
         ; DXGI factory
-        $mov            rcx,IID_IDXGIFactory
-        $mov            rdx,dxgifactory
-        $call           [CreateDXGIFactory1]
-        $test           eax,eax
-        $js             .error
+        emit            <$mov rcx,IID_IDXGIFactory>,<$mov rdx,dxgifactory>,<$call [CreateDXGIFactory1]>
+        emit            <$test eax,eax>,<$js .error>
         ; debug layer
-        $mov            rcx,IID_ID3D12Debug
-        $mov            rdx,dbgi
-        $call           [D3D12GetDebugInterface]
+        emit            <$mov rcx,IID_ID3D12Debug>,<$mov rdx,dbgi>,<$call [D3D12GetDebugInterface]>
         $test           eax,eax
         $js             @f
-        $mov            rcx,[dbgi]
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12Debug.EnableDebugLayer]
+        emit            <$mov rcx,[dbgi]>,<$mov rax,[rcx]>,<$call [rax+ID3D12Debug.EnableDebugLayer]>
     @@: ; device
-        $xor            ecx,ecx
-        $mov            edx,D3D_FEATURE_LEVEL_11_1
-        $mov            r8,IID_ID3D12Device
-        $mov            r9,device
-        $call           [D3D12CreateDevice]
-        $test           eax,eax
-        $js             .error
+        emit            <$xor ecx,ecx>,<$mov edx,D3D_FEATURE_LEVEL_11_1>,<$mov r8,IID_ID3D12Device>,<$mov r9,device>,<$call [D3D12CreateDevice]>
+        emit            <$test eax,eax>,<$js .error>
         $mov            rdi,[device]                            ; rdi = [device]
         $mov            rsi,[rdi]                               ; rsi = [rdi] ([device] virtual table)
         ; command queue
-        $mov            rcx,rdi
-        $mov            rdx,cmdqueue_desc
-        $mov            r8,IID_ID3D12CommandQueue
-        $mov            r9,cmdqueue
-        $call           [rsi+ID3D12Device.CreateCommandQueue]
-        $test           eax,eax
-        $js             .error
+        emit            <$mov rcx,rdi>,<$mov rdx,cmdqueue_desc>,<$mov r8,IID_ID3D12CommandQueue>,<$mov r9,cmdqueue>,\
+                        <$call [rsi+ID3D12Device.CreateCommandQueue]>
+        emit            <$test eax,eax>,<$js .error>
         ; command allocator
-        $mov            rcx,rdi
-        $mov            edx,D3D12_COMMAND_LIST_TYPE_DIRECT
-        $mov            r8,IID_ID3D12CommandAllocator
-        $mov            r9,cmdallocator
-        $call           [rsi+ID3D12Device.CreateCommandAllocator]
-        $test           eax,eax
-        $js             .error
+        emit            <$mov rcx,rdi>,<$mov edx,D3D12_COMMAND_LIST_TYPE_DIRECT>,<$mov r8,IID_ID3D12CommandAllocator>,<$mov r9,cmdallocator>,\
+                        <$call [rsi+ID3D12Device.CreateCommandAllocator]>
+        emit            <$test eax,eax>,<$js .error>
         ; swap chain
         $mov            rax,[win_handle]
         $mov            [swapchain_desc.OutputWindow],rax
@@ -503,21 +429,6 @@ winproc:
     .return:
         $add            rsp,40
         $ret
-
-struc test x
-{
-    .x dd ?
-    .  rb 32
-    virtual at .
-    .a_0 dd 1
-    end virtual
-
-    virtual at .
-    .b_0 dq 2
-    end virtual
-}
-xxx test
-mov [xxx.b_0],rax
 ;========================================================================
 section '.data' data readable writeable
 
@@ -667,8 +578,7 @@ db 'CloseHandle',0
 _CreateEventEx dw 0
 db 'CreateEventExA',0
 
-_wsprintf dw 0
-db 'wsprintfA',0
+emit <_wsprintf dw 0>,<db 'wsprintfA',0>
 _RegisterClassEx dw 0
 db 'RegisterClassExA',0
 _CreateWindowEx dw 0
