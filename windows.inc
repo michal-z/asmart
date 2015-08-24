@@ -1,5 +1,5 @@
 
-; Windows structures
+; structures
 
 struc POINT p0,p1
 {
@@ -42,7 +42,11 @@ struc RECT p0,p1,p2,p3
     .bottom dd p3
 }
 
-; Windows constants
+; constants
+
+EVENT_ALL_ACCESS = 000f0000h+00100000h+3h
+
+INFINITE = -1
 
 IDC_ARROW       = 32512
 

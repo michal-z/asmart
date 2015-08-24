@@ -5,11 +5,7 @@ include '../windows.inc'
 include '../highlight_inst.inc'
 include '../d3d12.inc'
 
-EVENT_ALL_ACCESS = $000f0000+$00100000+$3
-INFINITE = -1
-
 section '.text' code readable executable
-program_section = 'code'
 ;========================================================================
 macro iaca_begin
 {
@@ -142,10 +138,75 @@ wait_for_gpu:
         $ret
 ;========================================================================
 align 32
+generate_gpu_commands:
+    virtual at 0
+    .funcparam1_4: rq 4
+    .funcparam5: rq 1
+    .k_stack_size = $
+    end virtual
+        $push           rdi rsi
+        $sub            rsp,.k_stack_size
+        $mov            rcx,[cmdallocator]
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12CommandAllocator.Reset]
+        $mov            rdi,[cmdlist]                           ; rdi = [cmdlist]
+        $mov            rsi,[rdi]                               ; rsi = [rdi] ([cmdlist] vtable)
+        $mov            rcx,rdi
+        $mov            rdx,[cmdallocator]
+        $xor            r8d,r8d
+        $call           [rsi+ID3D12GraphicsCommandList.Reset]
+        $mov            rcx,rdi
+        $mov            edx,1
+        $mov            r8,viewport
+        $call           [rsi+ID3D12GraphicsCommandList.RSSetViewports]
+        $mov            rcx,rdi
+        $mov            edx,1
+        $mov            r8,scissor_rect
+        $call           [rsi+ID3D12GraphicsCommandList.RSSetScissorRects]
+        $mov            eax,[swap_buffer_index]
+        $mov            rdx,[swap_buffer+rax*8]
+        $mov            [resource_barrier.Transition.pResource],rdx
+        $mov            [resource_barrier.Transition.StateBefore],D3D12_RESOURCE_STATE_PRESENT
+        $mov            [resource_barrier.Transition.StateAfter],D3D12_RESOURCE_STATE_RENDER_TARGET
+        $mov            rcx,rdi
+        $mov            edx,1
+        $mov            r8,resource_barrier
+        $call           [rsi+ID3D12GraphicsCommandList.ResourceBarrier]
+        $mov            rcx,rdi
+        $mov            edx,[rtv_inc_size]
+        $imul           edx,[swap_buffer_index]
+        $add            rdx,[rtv_heap_start]
+        $mov            r8,clear_color
+        $xor            r9d,r9d
+        $mov            qword [.funcparam5+rsp],0
+        $call           [rsi+ID3D12GraphicsCommandList.ClearRenderTargetView]
+        $mov            eax,[swap_buffer_index]
+        $mov            rdx,[swap_buffer+rax*8]
+        $mov            [resource_barrier.Transition.pResource],rdx
+        $mov            [resource_barrier.Transition.StateBefore],D3D12_RESOURCE_STATE_RENDER_TARGET
+        $mov            [resource_barrier.Transition.StateAfter],D3D12_RESOURCE_STATE_PRESENT
+        $mov            rcx,rdi
+        $mov            edx,1
+        $mov            r8,resource_barrier
+        $call           [rsi+ID3D12GraphicsCommandList.ResourceBarrier]
+        $mov            rcx,rdi
+        $call           [rsi+ID3D12GraphicsCommandList.Close]
+        $add            rsp,.k_stack_size
+        $pop            rsi rdi
+        $ret
+;========================================================================
+align 32
 init:
     virtual at 0
-    .funcshadow: rq 4
-    .funcparam: rq 16
+    .funcparam1_4: rq 4
+    .funcparam5: rq 1
+    .funcparam6: rq 1
+    .funcparam7: rq 1
+    .funcparam8: rq 1
+    .funcparam9: rq 1
+    .funcparam10: rq 1
+    .funcparam11: rq 1
+    .funcparam12: rq 1
     .funcretbuf: rb 32
     .k_stack_size = $
     end virtual
@@ -185,15 +246,15 @@ init:
         $mov            r8,rdx
         $mov            r9d,WS_VISIBLE+k_win_style
         $mov            eax,CW_USEDEFAULT
-        $mov            [.funcparam+$00+rsp],eax
-        $mov            [.funcparam+$08+rsp],eax
-        $mov            [.funcparam+$10+rsp],r10d
-        $mov            [.funcparam+$18+rsp],r11d
-        $mov            [.funcparam+$20+rsp],ecx
-        $mov            [.funcparam+$28+rsp],ecx
+        $mov            [.funcparam5+rsp],eax
+        $mov            [.funcparam6+rsp],eax
+        $mov            [.funcparam7+rsp],r10d
+        $mov            [.funcparam8+rsp],r11d
+        $mov            [.funcparam9+rsp],ecx
+        $mov            [.funcparam10+rsp],ecx
         $mov            rax,[win_class.hInstance]
-        $mov            [.funcparam+$30+rsp],rax
-        $mov            [.funcparam+$38+rsp],ecx
+        $mov            [.funcparam11+rsp],rax
+        $mov            [.funcparam12+rsp],ecx
         $call           [CreateWindowEx]
         $mov            [win_handle],rax
         $test           rax,rax
@@ -300,7 +361,7 @@ init:
         $mov            r8d,D3D12_FENCE_FLAG_NONE
         $mov            r9,IID_ID3D12Fence
         $mov            rax,fence
-        $mov            [.funcparam+$00+rsp],rax
+        $mov            [.funcparam5+rsp],rax
         $call           [rsi+ID3D12Device.CreateFence]
         $test           eax,eax
         $js             .error
@@ -317,11 +378,11 @@ init:
         $xor            edx,edx
         $mov            r8d,D3D12_COMMAND_LIST_TYPE_DIRECT
         $mov            r9,[cmdallocator]
-        $mov            qword [.funcparam+$00+rsp],0
+        $mov            qword [.funcparam5+rsp],0
         $mov            rax,IID_ID3D12GraphicsCommandList
-        $mov            [.funcparam+$08+rsp],rax
+        $mov            [.funcparam6+rsp],rax
         $mov            rax,cmdlist
-        $mov            [.funcparam+$10+rsp],rax
+        $mov            [.funcparam7+rsp],rax
         $call           [rsi+ID3D12Device.CreateCommandList]
         $test           eax,eax
         $js             .error
@@ -339,7 +400,7 @@ init:
         $test           eax,eax
         $js             .error
         $call           wait_for_gpu
-
+        ; success
         $mov            eax,1
         $jmp            .return
     .error_no_avx2:
@@ -364,17 +425,33 @@ deinit:
 ;========================================================================
 align 32
 update:
-        $sub            rsp,24
+    .k_stack_size = 7*8
+        $sub            rsp,.k_stack_size
         $call           update_frame_stats
+        $call           generate_gpu_commands
+        $mov            rcx,[cmdqueue]
+        $mov            edx,1
+        $mov            r8,cmdlist
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
+        $mov            rcx,[swapchain]
+        $xor            edx,edx
+        $mov            r8d,DXGI_PRESENT_RESTART
+        $mov            rax,[rcx]
+        $call           [rax+IDXGISwapChain.Present]
+        $mov            eax,[swap_buffer_index]
+        $add            eax,1
+        $and            eax,$03
+        $mov            [swap_buffer_index],eax
         $call           wait_for_gpu
-        $add            rsp,24
+        $add            rsp,.k_stack_size
         $ret
 ;========================================================================
 align 32
 start:
     virtual at 0
-    .funcshadow: rq 4
-    .funcparam: rq 1
+    .funcparam1_4: rq 4
+    .funcparam5: rq 1
     .k_stack_size = $+16
     end virtual
         $sub            rsp,.k_stack_size
@@ -386,7 +463,7 @@ start:
         $xor            edx,edx
         $xor            r8d,r8d
         $xor            r9d,r9d
-        $mov            dword [.funcparam+$00+rsp],PM_REMOVE
+        $mov            dword [.funcparam5+rsp],PM_REMOVE
         $call           [PeekMessage]
         $test           eax,eax
         $jz             .update
@@ -426,12 +503,26 @@ winproc:
     .return:
         $add            rsp,40
         $ret
+
+struc test x
+{
+    .x dd ?
+    .  rb 32
+    virtual at .
+    .a_0 dd 1
+    end virtual
+
+    virtual at .
+    .b_0 dq 2
+    end virtual
+}
+xxx test
+mov [xxx.b_0],rax
 ;========================================================================
 section '.data' data readable writeable
-program_section = 'data'
 
-k_win_width = 1024
-k_win_height = 1024
+k_win_width equ 1024
+k_win_height equ 1024
 k_win_widthf equ 1024.0
 k_win_heightf equ 1024.0
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
@@ -481,7 +572,12 @@ fence_event dq 0
 align 4
 rtv_inc_size dd 0
 cbv_srv_uav_inc_size dd 0
+swap_buffer_index dd 0
+clear_color dd 0.0,0.2,0.4,1.0
+
+align 8
 viewport D3D12_VIEWPORT 0.0,0.0,k_win_widthf,k_win_heightf,0.0,1.0
+align 8
 scissor_rect D3D12_RECT 0,0,k_win_width,k_win_height
 
 align 8
@@ -492,6 +588,9 @@ swapchain_desc DXGI_SWAP_CHAIN_DESC <k_win_width,k_win_height,<0,0>,DXGI_FORMAT_
 align 8
 rtv_heap_desc D3D12_DESCRIPTOR_HEAP_DESC D3D12_DESCRIPTOR_HEAP_TYPE_RTV,k_swap_buffer_count,D3D12_DESCRIPTOR_HEAP_FLAG_NONE,0
 
+align 8
+resource_barrier D3D12_RESOURCE_BARRIER D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,D3D12_RESOURCE_BARRIER_FLAG_NONE,\
+                 <0,D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,0,0>
 
 align 8
 IID_IDXGIFactory GUID 0x7b7166ec,0x21c7,0x44ae,0xb2,0x1a,0xc9,0xae,0x32,0x1a,0xe3,0x69
