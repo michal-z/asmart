@@ -328,6 +328,24 @@ ID3D12Fence.SetEventOnCompletion rq 1
 ID3D12Fence.Signal rq 1
 end virtual
 
+virtual at 0
+ID3D12Resource.QueryInterface rq 1
+ID3D12Resource.AddRef rq 1
+ID3D12Resource.Release rq 1
+ID3D12Resource.GetPrivateData rq 1
+ID3D12Resource.SetPrivateData rq 1
+ID3D12Resource.SetPrivateDataInterface rq 1
+ID3D12Resource.SetName rq 1
+ID3D12Resource.GetDevice rq 1
+ID3D12Resource.Map rq 1
+ID3D12Resource.Unmap rq 1
+ID3D12Resource.GetDesc rq 1
+ID3D12Resource.GetGPUVirtualAddress rq 1
+ID3D12Resource.WriteToSubresource rq 1
+ID3D12Resource.ReadFromSubresource rq 1
+ID3D12Resource.GetHeapProperties rq 1
+end virtual
+
 ; D3D12 debug layer
 
 virtual at 0

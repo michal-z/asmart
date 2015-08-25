@@ -230,9 +230,7 @@ init:
         emit            <$test eax,eax>,<$js .error>
         emit            <$mov rcx,rdi>,<$mov rdx,[swap_buffer+rbx*8]>,<$xor r8d,r8d>,<$mov r9d,ebx>,<$imul r9d,[rtv_inc_size]>,<$add r9,[rtv_heap_start]>,\
                         <$call [rsi+ID3D12Device.CreateRenderTargetView]>
-        $add            ebx,1
-        $cmp            ebx,k_swap_buffer_count
-        $jb             .for_each_swap_buffer
+        emit            <$add ebx,1>,<$cmp ebx,4>,<$jb .for_each_swap_buffer>
         ; fence
         emit            <$mov rcx,rdi>,<$xor edx,edx>,<$mov r8d,D3D12_FENCE_FLAG_NONE>,<$mov r9,IID_ID3D12Fence>,<$mov rax,fence>,\
                         <$mov [.funcparam5+rsp],rax>,<$call [rsi+ID3D12Device.CreateFence]>
@@ -256,8 +254,7 @@ init:
         $jmp            .return
     .error_no_avx2:
         emit            <$xor ecx,ecx>,<$mov rdx,_no_avx2_message>,<$mov r8,_no_avx2_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
-        $xor            eax,eax
-        $jmp            .return
+        emit            <$xor eax,eax>,<$jmp .return>
     .error:
         emit            <$xor ecx,ecx>,<$mov rdx,_init_err_message>,<$mov r8,_init_err_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
         $xor            eax,eax
@@ -268,6 +265,39 @@ init:
 ;========================================================================
 align 32
 deinit:
+    .k_stack_size = 6*8
+        $push           rbx
+        $sub            rsp,.k_stack_size
+        $call           wait_for_gpu
+        emit            <$mov rcx,[cmdlist]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12GraphicsCommandList.Release]>
+    @@: emit            <$mov rcx,[fence]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Fence.Release]>
+    @@: emit            <$mov rcx,[rtv_heap]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12DescriptorHeap.Release]>
+    @@:
+        $xor            ebx,ebx
+    .for_each_swap_buffer:
+        emit            <$mov rcx,[swap_buffer+rbx*8]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Resource.Release]>
+    @@: emit            <$add ebx,1>,<$cmp ebx,4>,<$jb .for_each_swap_buffer>
+
+        emit            <$mov rcx,[swapchain]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+IDXGISwapChain.Release]>
+    @@: emit            <$mov rcx,[dxgifactory]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+IDXGIFactory.Release]>
+    @@: emit            <$mov rcx,[cmdallocator]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12CommandAllocator.Release]>
+    @@: emit            <$mov rcx,[cmdqueue]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12CommandQueue.Release]>
+    @@: emit            <$mov rcx,[dbgi]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Debug.Release]>
+    @@: emit            <$mov rcx,[device]>,<$test rcx,rcx>,<$jz @f>
+        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Device.Release]>
+    @@: emit            <$mov rcx,[fence_event]>,<$test rcx,rcx>,<$jz @f>
+        $call           [CloseHandle]
+    @@: $add            rsp,.k_stack_size
+        $pop            rbx
         $ret
 ;========================================================================
 align 32
@@ -345,8 +375,6 @@ k_win_widthf equ 1024.0
 k_win_heightf equ 1024.0
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
-k_swap_buffer_count = 4
-
 align 8
 win_handle dq 0
 win_title db 'Direct3D 12 Triangle', 64 dup (0)
@@ -384,7 +412,7 @@ cmdallocator dq 0
 cmdlist dq 0
 rtv_heap dq 0
 rtv_heap_start dq 0
-swap_buffer dq k_swap_buffer_count dup (0)
+swap_buffer dq 0,0,0,0
 fence dq 0
 fence_value dq 1
 fence_event dq 0
@@ -404,9 +432,9 @@ align 8
 cmdqueue_desc D3D12_COMMAND_QUEUE_DESC D3D12_COMMAND_LIST_TYPE_DIRECT,0,D3D12_COMMAND_QUEUE_FLAG_NONE,0
 align 8
 swapchain_desc DXGI_SWAP_CHAIN_DESC <k_win_width,k_win_height,<0,0>,DXGI_FORMAT_R8G8B8A8_UNORM,0,0>,<1,0>,DXGI_USAGE_RENDER_TARGET_OUTPUT,\
-                                    k_swap_buffer_count,0,1,DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,0
+                                    4,0,1,DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,0
 align 8
-rtv_heap_desc D3D12_DESCRIPTOR_HEAP_DESC D3D12_DESCRIPTOR_HEAP_TYPE_RTV,k_swap_buffer_count,D3D12_DESCRIPTOR_HEAP_FLAG_NONE,0
+rtv_heap_desc D3D12_DESCRIPTOR_HEAP_DESC D3D12_DESCRIPTOR_HEAP_TYPE_RTV,4,D3D12_DESCRIPTOR_HEAP_FLAG_NONE,0
 
 align 8
 resource_barrier D3D12_RESOURCE_BARRIER D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,D3D12_RESOURCE_BARRIER_FLAG_NONE,\
