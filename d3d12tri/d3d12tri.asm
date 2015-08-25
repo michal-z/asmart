@@ -49,12 +49,9 @@ get_time:
         $mov            rax,[.perf_freq]
         $test           rax,rax
         $jnz            @f
-        $mov            rcx,.perf_freq
-        $call           [QueryPerformanceFrequency]
-        $mov            rcx,.first_perf_counter
-        $call           [QueryPerformanceCounter]
-    @@: $mov            rcx,.perf_counter
-        $call           [QueryPerformanceCounter]
+        emit            <$mov rcx,.perf_freq>,<$call [QueryPerformanceFrequency]>
+        emit            <$mov rcx,.first_perf_counter>,<$call [QueryPerformanceCounter]>
+    @@: emit            <$mov rcx,.perf_counter>,<$call [QueryPerformanceCounter]>
         $mov            rcx,[.perf_counter]
         $sub            rcx,[.first_perf_counter]
         $mov            rdx,[.perf_freq]
@@ -95,14 +92,8 @@ update_frame_stats:
         $vdivsd         xmm1,xmm2,xmm1
         $vmulsd         xmm1,xmm1,[.k_1000000_0]
         $mov            [.frame],0
-        $mov            rcx,win_title
-        $mov            rdx,win_title_fmt
-        $vcvtsd2si      r8,xmm0
-        $vcvtsd2si      r9,xmm1
-        $call           [wsprintf]
-        $mov            rcx,[win_handle]
-        $mov            edx,win_title
-        $call           [SetWindowText]
+        emit            <$mov rcx,win_title>,<$mov rdx,win_title_fmt>,<$vcvtsd2si r8,xmm0>,<$vcvtsd2si r9,xmm1>,<$call [wsprintf]>
+        emit            <$mov rcx,[win_handle]>,<$mov rdx,win_title>,<$call [SetWindowText]>
     @@: $add            [.frame],1
         $add            rsp,.k_stack_size
         $ret
@@ -113,25 +104,13 @@ wait_for_gpu:
         $push           rdi
         $sub            rsp,.k_stack_size
         $mov            rdi,[fence_value]
-        $mov            rcx,[cmdqueue]
-        $mov            rdx,[fence]
-        $mov            r8,rdi
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12CommandQueue.Signal]
+        emit            <$mov rcx,[cmdqueue]>,<$mov rdx,[fence]>,<$mov r8,rdi>,<$mov rax,[rcx]>,<$call [rax+ID3D12CommandQueue.Signal]>
         $add            [fence_value],1
-        $mov            rcx,[fence]
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12Fence.GetCompletedValue]
+        emit            <$mov rcx,[fence]>,<$mov rax,[rcx]>,<$call [rax+ID3D12Fence.GetCompletedValue]>
         $cmp            rax,rdi
         $jnb            @f
-        $mov            rcx,[fence]
-        $mov            rdx,rdi
-        $mov            r8,[fence_event]
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12Fence.SetEventOnCompletion]
-        $mov            rcx,[fence_event]
-        $mov            rdx,INFINITE
-        $call           [WaitForSingleObject]
+        emit            <$mov rcx,[fence]>,<$mov rdx,rdi>,<$mov r8,[fence_event]>,<$mov rax,[rcx]>,<$call [rax+ID3D12Fence.SetEventOnCompletion]>
+        emit            <$mov rcx,[fence_event]>,<$mov rdx,INFINITE>,<$call [WaitForSingleObject]>
     @@: $add            rsp,.k_stack_size
         $pop            rdi
         $ret
@@ -210,8 +189,7 @@ init:
         emit            <$test eax,eax>,<$js .error>
         ; debug layer
         emit            <$mov rcx,IID_ID3D12Debug>,<$mov rdx,dbgi>,<$call [D3D12GetDebugInterface]>
-        $test           eax,eax
-        $js             @f
+        emit            <$test eax,eax>,<$js @f>
         emit            <$mov rcx,[dbgi]>,<$mov rax,[rcx]>,<$call [rax+ID3D12Debug.EnableDebugLayer]>
     @@: ; device
         emit            <$xor ecx,ecx>,<$mov edx,D3D_FEATURE_LEVEL_11_1>,<$mov r8,IID_ID3D12Device>,<$mov r9,device>,<$call [D3D12CreateDevice]>
@@ -227,114 +205,57 @@ init:
                         <$call [rsi+ID3D12Device.CreateCommandAllocator]>
         emit            <$test eax,eax>,<$js .error>
         ; swap chain
-        $mov            rax,[win_handle]
-        $mov            [swapchain_desc.OutputWindow],rax
-        $mov            rcx,[dxgifactory]
-        $mov            rdx,[cmdqueue]
-        $mov            r8,swapchain_desc
-        $mov            r9,swapchain
-        $mov            rax,[rcx]
-        $call           [rax+IDXGIFactory.CreateSwapChain]
-        $test           eax,eax
-        $js             .error
+        emit            <$mov rax,[win_handle]>,<$mov [swapchain_desc.OutputWindow],rax>
+        emit            <$mov rcx,[dxgifactory]>,<$mov rdx,[cmdqueue]>,<$mov r8,swapchain_desc>,<$mov r9,swapchain>,<$mov rax,[rcx]>,\
+                        <$call [rax+IDXGIFactory.CreateSwapChain]>
+        emit            <$test eax,eax>,<$js .error>
         ; descriptor increment size
-        $mov            rcx,rdi
-        $mov            edx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
-        $call           [rsi+ID3D12Device.GetDescriptorHandleIncrementSize]
+        emit            <$mov rcx,rdi>,<$mov edx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV>,<$call [rsi+ID3D12Device.GetDescriptorHandleIncrementSize]>
         $mov            [rtv_inc_size],eax
-        $mov            rcx,rdi
-        $mov            edx,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-        $call           [rsi+ID3D12Device.GetDescriptorHandleIncrementSize]
+        emit            <$mov rcx,rdi>,<$mov edx,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>,<$call [rsi+ID3D12Device.GetDescriptorHandleIncrementSize]>
         $mov            [cbv_srv_uav_inc_size],eax
         ; RTV descriptor heap
-        $mov            rcx,rdi
-        $mov            rdx,rtv_heap_desc
-        $mov            r8,IID_ID3D12DescriptorHeap
-        $mov            r9,rtv_heap
-        $call           [rsi+ID3D12Device.CreateDescriptorHeap]
-        $test           eax,eax
-        $js             .error
-        $mov            rcx,[rtv_heap]
-        $lea            rdx,[.funcretbuf+rsp]
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart]
+        emit            <$mov rcx,rdi>,<$mov rdx,rtv_heap_desc>,<$mov r8,IID_ID3D12DescriptorHeap>,<$mov r9,rtv_heap>,\
+                        <$call [rsi+ID3D12Device.CreateDescriptorHeap]>
+        emit            <$test eax,eax>,<$js .error>
+        emit            <$mov rcx,[rtv_heap]>,<$lea rdx,[.funcretbuf+rsp]>,<$mov rax,[rcx]>,\
+                        <$call [rax+ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart]>
         $mov            rax,[rax]
         $mov            [rtv_heap_start],rax
         ; RTV descriptors
         $xor            ebx,ebx
     .for_each_swap_buffer:
-        $mov            rcx,[swapchain]
-        $mov            edx,ebx
-        $mov            r8,IID_ID3D12Resource
-        $lea            r9,[swap_buffer+rbx*8]
-        $mov            rax,[rcx]
-        $call           [rax+IDXGISwapChain.GetBuffer]
-        $test           eax,eax
-        $js             .error
-        $mov            rcx,rdi
-        $mov            rdx,[swap_buffer+rbx*8]
-        $xor            r8d,r8d
-        $mov            r9d,ebx
-        $imul           r9d,[rtv_inc_size]
-        $add            r9,[rtv_heap_start]
-        $call           [rsi+ID3D12Device.CreateRenderTargetView]
+        emit            <$mov rcx,[swapchain]>,<$mov edx,ebx>,<$mov r8,IID_ID3D12Resource>,<$lea r9,[swap_buffer+rbx*8]>,<$mov rax,[rcx]>,\
+                        <$call [rax+IDXGISwapChain.GetBuffer]>
+        emit            <$test eax,eax>,<$js .error>
+        emit            <$mov rcx,rdi>,<$mov rdx,[swap_buffer+rbx*8]>,<$xor r8d,r8d>,<$mov r9d,ebx>,<$imul r9d,[rtv_inc_size]>,<$add r9,[rtv_heap_start]>,\
+                        <$call [rsi+ID3D12Device.CreateRenderTargetView]>
         $add            ebx,1
         $cmp            ebx,k_swap_buffer_count
         $jb             .for_each_swap_buffer
         ; fence
-        $mov            rcx,rdi
-        $xor            edx,edx
-        $mov            r8d,D3D12_FENCE_FLAG_NONE
-        $mov            r9,IID_ID3D12Fence
-        $mov            rax,fence
-        $mov            [.funcparam5+rsp],rax
-        $call           [rsi+ID3D12Device.CreateFence]
-        $test           eax,eax
-        $js             .error
-        $xor            ecx,ecx
-        $xor            edx,edx
-        $xor            r8d,r8d
-        $mov            r9d,EVENT_ALL_ACCESS
-        $call           [CreateEventEx]
-        $test           rax,rax
-        $jz             .error
+        emit            <$mov rcx,rdi>,<$xor edx,edx>,<$mov r8d,D3D12_FENCE_FLAG_NONE>,<$mov r9,IID_ID3D12Fence>,<$mov rax,fence>,\
+                        <$mov [.funcparam5+rsp],rax>,<$call [rsi+ID3D12Device.CreateFence]>
+        emit            <$test eax,eax>,<$js .error>
+        emit            <$xor ecx,ecx>,<$xor edx,edx>,<$xor r8d,r8d>,<$mov r9d,EVENT_ALL_ACCESS>,<$call [CreateEventEx]>
+        emit            <$test rax,rax>,<$jz .error>
         $mov            [fence_event],rax
         ; create command list
-        $mov            rcx,rdi
-        $xor            edx,edx
-        $mov            r8d,D3D12_COMMAND_LIST_TYPE_DIRECT
-        $mov            r9,[cmdallocator]
-        $mov            qword [.funcparam5+rsp],0
-        $mov            rax,IID_ID3D12GraphicsCommandList
-        $mov            [.funcparam6+rsp],rax
-        $mov            rax,cmdlist
-        $mov            [.funcparam7+rsp],rax
-        $call           [rsi+ID3D12Device.CreateCommandList]
-        $test           eax,eax
-        $js             .error
+        emit            <$mov rcx,rdi>,<$xor edx,edx>,<$mov r8d,D3D12_COMMAND_LIST_TYPE_DIRECT>,<$mov r9,[cmdallocator]>,<$mov qword [.funcparam5+rsp],0>,\
+                        <$mov rax,IID_ID3D12GraphicsCommandList>,<$mov [.funcparam6+rsp],rax>,<$mov rax,cmdlist>,<$mov [.funcparam7+rsp],rax>,\
+                        <$call [rsi+ID3D12Device.CreateCommandList]>
+        emit            <$test eax,eax>,<$js .error>
         ; close and execute command list
-        $mov            rcx,[cmdlist]
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12GraphicsCommandList.Close]
-        $test           eax,eax
-        $js             .error
-        $mov            rcx,[cmdqueue]
-        $mov            edx,1
-        $mov            r8,cmdlist
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
-        $test           eax,eax
-        $js             .error
+        emit            <$mov rcx,[cmdlist]>,<$mov rax,[rcx]>,<$call [rax+ID3D12GraphicsCommandList.Close]>
+        emit            <$test eax,eax>,<$js .error>
+        emit            <$mov rcx,[cmdqueue]>,<$mov edx,1>,<$mov r8,cmdlist>,<$mov rax,[rcx]>,<$call [rax+ID3D12CommandQueue.ExecuteCommandLists]>
+        emit            <$test eax,eax>,<$js .error>
         $call           wait_for_gpu
         ; success
         $mov            eax,1
         $jmp            .return
     .error_no_avx2:
-        $xor            ecx,ecx
-        $mov            rdx,no_avx2_message
-        $mov            r8,no_avx2_caption
-        $xor            r9d,r9d
-        $call           [MessageBox]
+        emit            <$xor ecx,ecx>,<$mov rdx,no_avx2_message>,<$mov r8,no_avx2_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
         $xor            eax,eax
         $jmp            .return
     .error:
@@ -355,16 +276,9 @@ update:
         $sub            rsp,.k_stack_size
         $call           update_frame_stats
         $call           generate_gpu_commands
-        $mov            rcx,[cmdqueue]
-        $mov            edx,1
-        $mov            r8,cmdlist
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
-        $mov            rcx,[swapchain]
-        $xor            edx,edx
-        $mov            r8d,DXGI_PRESENT_RESTART
-        $mov            rax,[rcx]
-        $call           [rax+IDXGISwapChain.Present]
+        emit            <$mov rcx,[cmdqueue]>,<$mov edx,1>,<$mov r8,cmdlist>,<$mov rax,[rcx]>,<$call [rax+ID3D12CommandQueue.ExecuteCommandLists]>
+        emit            <$mov rcx,[swapchain]>,<$xor edx,edx>,<$mov r8d,DXGI_PRESENT_RESTART>,<$mov rax,[rcx]>,<$call [rax+IDXGISwapChain.Present]>
+        ; increment swap buffer index
         $mov            eax,[swap_buffer_index]
         $add            eax,1
         $and            eax,$03
@@ -382,19 +296,12 @@ start:
     end virtual
         $sub            rsp,.k_stack_size
         $call           init
-        $test           eax,eax
-        $jz             .quit
+        emit            <$test eax,eax>,<$jz .quit>
     .main_loop:
-        $mov            rcx,win_msg
-        $xor            edx,edx
-        $xor            r8d,r8d
-        $xor            r9d,r9d
-        $mov            dword [.funcparam5+rsp],PM_REMOVE
-        $call           [PeekMessage]
+        emit            <$mov rcx,win_msg>,<$xor edx,edx>,<$xor r8d,r8d>,<$xor r9d,r9d>,<$mov dword [.funcparam5+rsp],PM_REMOVE>,<$call [PeekMessage]>
         $test           eax,eax
         $jz             .update
-        $mov            rcx,win_msg
-        $call           [DispatchMessage]
+        emit            <$mov rcx,win_msg>,<$call [DispatchMessage]>
         $cmp            [win_msg.message],WM_QUIT
         $je             .quit
         $jmp            .main_loop
@@ -403,8 +310,7 @@ start:
         $jmp            .main_loop
     .quit:
         $call           deinit
-        $xor            ecx,ecx
-        $call           [ExitProcess]
+        emit            <$xor ecx,ecx>,<$call [ExitProcess]>
 ;========================================================================
 align 32
 winproc:
@@ -418,13 +324,11 @@ winproc:
     .keydown:
         $cmp            r8d,VK_ESCAPE
         $jne            .return
-        $xor            ecx,ecx
-        $call           [PostQuitMessage]
+        emit            <$xor ecx,ecx>,<$call [PostQuitMessage]>
         $xor            eax,eax
         $jmp            .return
     .destroy:
-        $xor            ecx,ecx
-        $call           [PostQuitMessage]
+        emit            <$xor ecx,ecx>,<$call [PostQuitMessage]>
         $xor            eax,eax
     .return:
         $add            rsp,40
@@ -563,50 +467,29 @@ _user32 db 'user32.dll',0
 _dxgi db 'dxgi.dll',0
 _d3d12 db 'd3d12.dll',0
 
-_ExitProcess dw 0
-db 'ExitProcess',0
-_GetModuleHandle dw 0
-db 'GetModuleHandleA',0
-_WaitForSingleObject dw 0
-db 'WaitForSingleObject',0
-_QueryPerformanceFrequency dw 0
-db 'QueryPerformanceFrequency',0
-_QueryPerformanceCounter dw 0
-db 'QueryPerformanceCounter',0
-_CloseHandle dw 0
-db 'CloseHandle',0
-_CreateEventEx dw 0
-db 'CreateEventExA',0
+emit <_ExitProcess dw 0>,<db 'ExitProcess',0>
+emit <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
+emit <_WaitForSingleObject dw 0>,<db 'WaitForSingleObject',0>
+emit <_QueryPerformanceFrequency dw 0>,<db 'QueryPerformanceFrequency',0>
+emit <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
+emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
+emit <_CreateEventEx dw 0>,<db 'CreateEventExA',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
-_RegisterClassEx dw 0
-db 'RegisterClassExA',0
-_CreateWindowEx dw 0
-db 'CreateWindowExA',0
-_DefWindowProc dw 0
-db 'DefWindowProcA',0
-_PeekMessage dw 0
-db 'PeekMessageA',0
-_DispatchMessage dw 0
-db 'DispatchMessageA',0
-_LoadCursor dw 0
-db 'LoadCursorA',0
-_LoadIcon dw 0
-db 'LoadIconA',0
-_SetWindowText dw 0
-db 'SetWindowTextA',0
-_AdjustWindowRect dw 0
-db 'AdjustWindowRect',0
-_PostQuitMessage dw 0
-db 'PostQuitMessage',0
-_MessageBox dw 0
-db 'MessageBoxA',0
+emit <_RegisterClassEx dw 0>,<db 'RegisterClassExA',0>
+emit <_CreateWindowEx dw 0>,<db 'CreateWindowExA',0>
+emit <_DefWindowProc dw 0>,<db 'DefWindowProcA',0>
+emit <_PeekMessage dw 0>,<db 'PeekMessageA',0>
+emit <_DispatchMessage dw 0>,<db 'DispatchMessageA',0>
+emit <_LoadCursor dw 0>,<db 'LoadCursorA',0>
+emit <_LoadIcon dw 0>,<db 'LoadIconA',0>
+emit <_SetWindowText dw 0>,<db 'SetWindowTextA',0>
+emit <_AdjustWindowRect dw 0>,<db 'AdjustWindowRect',0>
+emit <_PostQuitMessage dw 0>,<db 'PostQuitMessage',0>
+emit <_MessageBox dw 0>,<db 'MessageBoxA',0>
 
-_CreateDXGIFactory1 dw 0
-db 'CreateDXGIFactory1',0
+emit <_CreateDXGIFactory1 dw 0>,<db 'CreateDXGIFactory1',0>
 
-_D3D12CreateDevice dw 0
-db 'D3D12CreateDevice',0
-_D3D12GetDebugInterface dw 0
-db 'D3D12GetDebugInterface',0
+emit <_D3D12CreateDevice dw 0>,<db 'D3D12CreateDevice',0>
+emit <_D3D12GetDebugInterface dw 0>,<db 'D3D12GetDebugInterface',0>
 ;========================================================================
