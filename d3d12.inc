@@ -76,6 +76,33 @@ D3D12_RESOURCE_BARRIER_FLAG_END_ONLY   = 0x2
 
 D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES = 0xffffffff
 
+D3D12_DESCRIPTOR_RANGE_TYPE_SRV     = 0
+D3D12_DESCRIPTOR_RANGE_TYPE_UAV     = ( D3D12_DESCRIPTOR_RANGE_TYPE_SRV + 1 )
+D3D12_DESCRIPTOR_RANGE_TYPE_CBV     = ( D3D12_DESCRIPTOR_RANGE_TYPE_UAV + 1 )
+D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER = ( D3D12_DESCRIPTOR_RANGE_TYPE_CBV + 1 )
+
+D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE = 0
+D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS  = ( D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE + 1 )
+D3D12_ROOT_PARAMETER_TYPE_CBV              = ( D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS + 1 )
+D3D12_ROOT_PARAMETER_TYPE_SRV              = ( D3D12_ROOT_PARAMETER_TYPE_CBV + 1 )
+D3D12_ROOT_PARAMETER_TYPE_UAV              = ( D3D12_ROOT_PARAMETER_TYPE_SRV + 1 )
+
+D3D12_SHADER_VISIBILITY_ALL      = 0
+D3D12_SHADER_VISIBILITY_VERTEX   = 1
+D3D12_SHADER_VISIBILITY_HULL     = 2
+D3D12_SHADER_VISIBILITY_DOMAIN   = 3
+D3D12_SHADER_VISIBILITY_GEOMETRY = 4
+D3D12_SHADER_VISIBILITY_PIXEL    = 5
+
+D3D12_ROOT_SIGNATURE_FLAG_NONE                               = 0
+D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT = 0x1
+D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS     = 0x2
+D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS       = 0x4
+D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS     = 0x8
+D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS   = 0x10
+D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS      = 0x20
+D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT                = 0x40
+
 struc D3D12_VIEWPORT p0,p1,p2,p3,p4,p5
 {
     .TopLeftX dd p0
@@ -128,20 +155,92 @@ struc D3D12_RESOURCE_BARRIER p0,p1,p2
 {
     .Type       dd                                p0
     .Flags      dd                                p1
-
     virtual
     .Transition D3D12_RESOURCE_TRANSITION_BARRIER p2
     end virtual
-
     virtual
-    .Aliasing D3D12_RESOURCE_ALIASING_BARRIER ?,?
+    .Aliasing   D3D12_RESOURCE_ALIASING_BARRIER   ?,?
     end virtual
-
     virtual
-    .UAV D3D12_RESOURCE_UAV_BARRIER ?
+    .UAV        D3D12_RESOURCE_UAV_BARRIER        ?
     end virtual
-
                 rb 24
+}
+
+struc D3D12_DESCRIPTOR_RANGE p0,p1,p2,p3,p4
+{
+    .RangeType                         dd p0
+    .NumDescriptors                    dd p1
+    .BaseShaderRegister                dd p2
+    .RegisterSpace                     dd p3
+    .OffsetInDescriptorsFromTableStart dd p4
+}
+
+struc D3D12_ROOT_DESCRIPTOR_TABLE p0,p1
+{
+    .NumDescriptorRanges dd p0
+                         dd ?
+    .pDescriptorRanges   dq p1
+}
+
+struc D3D12_ROOT_CONSTANTS p0,p1,p2
+{
+    .ShaderRegister dd p0
+    .RegisterSpace  dd p1
+    .Num32BitValues dd p2
+}
+
+struc D3D12_ROOT_DESCRIPTOR p0,p1
+{
+    .ShaderRegister dd p0
+    .RegisterSpace  dd p1
+}
+
+struc D3D12_ROOT_PARAMETER p0,p1,p2
+{
+    .ParameterType    dd                          p0
+                      dd                          ?
+    virtual
+    .DescriptorTable  D3D12_ROOT_DESCRIPTOR_TABLE p1
+    end virtual
+    virtual
+    .Constants        D3D12_ROOT_CONSTANTS        ?,?,?
+    end virtual
+    virtual
+    .Descriptor       D3D12_ROOT_DESCRIPTOR       ?,?
+    end virtual
+                      rb 16
+    .ShaderVisibility dd                          p2
+                      dd                          ?
+}
+
+struc D3D12_STATIC_SAMPLER_DESC p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12
+{
+    .Filter           dd p0
+    .AddressU         dd p1
+    .AddressV         dd p2
+    .AddressW         dd p3
+    .MipLODBias       dd p4
+    .MaxAnisotropy    dd p5
+    .ComparisonFunc   dd p6
+    .BorderColor      dd p7
+    .MinLOD           dd p8
+    .MaxLOD           dd p9
+    .ShaderRegister   dd p10
+    .RegisterSpace    dd p11
+    .ShaderVisibility dd p12
+}
+
+struc D3D12_ROOT_SIGNATURE_DESC p0,p1,p2,p3,p4
+{
+    .NumParameters     dd p0
+                       dd ?
+    .pParameters       dq p1
+    .NumStaticSamplers dd p2
+                       dd ?
+    .pStaticSamplers   dq p3
+    .Flags             dd p4
+                       dd ?
 }
 
 virtual at 0

@@ -5,15 +5,18 @@ include '../windows.inc'
 include '../highlight_inst.inc'
 include '../d3d12.inc'
 
-macro   emit [inst] {
+macro emit [inst]
+{
     forward
-        inst }
-
-macro   barrier         cmdlist,vtable,res,sbefore,safter {
+        inst
+}
+macro barrier cmdlist,vtable,res,sbefore,safter
+{
         $mov            [resource_barrier.Transition.pResource],res
         $mov            [resource_barrier.Transition.StateBefore],sbefore
         $mov            [resource_barrier.Transition.StateAfter],safter
-        emit            <$mov rcx,cmdlist>,<$mov edx,1>,<$mov r8,resource_barrier>,<$call [vtable+ID3D12GraphicsCommandList.ResourceBarrier]> }
+        emit            <$mov rcx,cmdlist>,<$mov edx,1>,<$mov r8,resource_barrier>,<$call [vtable+ID3D12GraphicsCommandList.ResourceBarrier]>
+}
 
 section '.text' code readable executable
 ;========================================================================
@@ -21,7 +24,7 @@ align 32
 check_cpu:
         $mov            eax,1
         $cpuid
-        $and            ecx,$018000000                          ; check OSXSAVE,AVX
+        $and            ecx,$018000000                          ; check OSXSAVE,AVX (018001000 for AVX2)
         $cmp            ecx,$018000000
         $jne            .not_supported
         ;$mov            eax,7
@@ -493,6 +496,7 @@ dq 0
 _d3d12_table:
 D3D12CreateDevice dq rva _D3D12CreateDevice
 D3D12GetDebugInterface dq rva _D3D12GetDebugInterface
+D3D12SerializeRootSignature dq rva _D3D12SerializeRootSignature
 dq 0
 
 _kernel32 db 'kernel32.dll',0
@@ -525,4 +529,5 @@ emit <_CreateDXGIFactory1 dw 0>,<db 'CreateDXGIFactory1',0>
 
 emit <_D3D12CreateDevice dw 0>,<db 'D3D12CreateDevice',0>
 emit <_D3D12GetDebugInterface dw 0>,<db 'D3D12GetDebugInterface',0>
+emit <_D3D12SerializeRootSignature dw 0>,< db 'D3D12SerializeRootSignature',0>
 ;========================================================================
