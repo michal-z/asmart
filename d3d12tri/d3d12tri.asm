@@ -18,18 +18,18 @@ macro   barrier         cmdlist,vtable,res,sbefore,safter {
 section '.text' code readable executable
 ;========================================================================
 align 32
-supports_avx2:
+check_cpu:
         $mov            eax,1
         $cpuid
-        $and            ecx,$018001000                          ; check OSXSAVE,AVX,FMA
-        $cmp            ecx,$018001000
+        $and            ecx,$018000000                          ; check OSXSAVE,AVX
+        $cmp            ecx,$018000000
         $jne            .not_supported
-        $mov            eax,7
-        $xor            ecx,ecx
-        $cpuid
-        $and            ebx,$20                                 ; check AVX2
-        $cmp            ebx,$20
-        $jne            .not_supported
+        ;$mov            eax,7
+        ;$xor            ecx,ecx
+        ;$cpuid
+        ;$and            ebx,$20                                 ; check AVX2
+        ;$cmp            ebx,$20
+        ;$jne            .not_supported
         $xor            ecx,ecx
         $xgetbv
         $and            eax,$06                                 ; check OS support
@@ -163,8 +163,8 @@ init:
     end virtual
         $push           rdi rsi rbx
         $sub            rsp,.k_stack_size
-        $call           supports_avx2
-        emit            <$test eax,eax>,<$jz .error_no_avx2>
+        $call           check_cpu
+        emit            <$test eax,eax>,<$jz .error_cpu>
         ; window class
         emit            <$xor ecx,ecx>,<$call [GetModuleHandle]>
         $mov            [win_class.hInstance],rax
@@ -252,11 +252,11 @@ init:
         ; success
         $mov            eax,1
         $jmp            .return
-    .error_no_avx2:
-        emit            <$xor ecx,ecx>,<$mov rdx,_no_avx2_message>,<$mov r8,_no_avx2_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
+    .error_cpu:
+        emit            <$xor ecx,ecx>,<$mov rdx,_err_cpu_message>,<$mov r8,_err_cpu_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
         emit            <$xor eax,eax>,<$jmp .return>
     .error:
-        emit            <$xor ecx,ecx>,<$mov rdx,_init_err_message>,<$mov r8,_init_err_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
+        emit            <$xor ecx,ecx>,<$mov rdx,_err_init_message>,<$mov r8,_err_init_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
         $xor            eax,eax
     .return:
         $add            rsp,.k_stack_size
@@ -268,9 +268,9 @@ deinit:
     .k_stack_size = 6*8
         $push           rbx
         $sub            rsp,.k_stack_size
-        $call           wait_for_gpu
         emit            <$mov rcx,[cmdlist]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12GraphicsCommandList.Release]>
+        $call           wait_for_gpu
+        emit            <$mov rcx,[cmdlist]>,<$mov rax,[rcx]>,<$call [rax+ID3D12GraphicsCommandList.Release]>
     @@: emit            <$mov rcx,[fence]>,<$test rcx,rcx>,<$jz @f>
         emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Fence.Release]>
     @@: emit            <$mov rcx,[rtv_heap]>,<$test rcx,rcx>,<$jz @f>
@@ -383,10 +383,10 @@ win_msg MSG 0,0,0,0,0,<0,0>
 win_class WNDCLASSEX 0,winproc,0,0,0,0,0,0,0,win_title,0
 win_rect RECT 0,0,k_win_width,k_win_height
 
-_init_err_caption db 'Initialization failure',0
-_init_err_message db 'Program requires hardware Direct3D 12 support (D3D_FEATURE_LEVEL_11_1).',0
-_no_avx2_caption db 'Not supported CPU',0
-_no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
+_err_init_caption db 'Initialization failure',0
+_err_init_message db 'Program requires hardware Direct3D 12 support (D3D_FEATURE_LEVEL_11_1).',0
+_err_cpu_caption db 'Not supported CPU',0
+_err_cpu_message db 'Your CPU does not support AVX, program will not run.',0
 
 align 8
 time dq 0
