@@ -255,11 +255,11 @@ init:
         $mov            eax,1
         $jmp            .return
     .error_no_avx2:
-        emit            <$xor ecx,ecx>,<$mov rdx,no_avx2_message>,<$mov r8,no_avx2_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
+        emit            <$xor ecx,ecx>,<$mov rdx,_no_avx2_message>,<$mov r8,_no_avx2_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
         $xor            eax,eax
         $jmp            .return
     .error:
-        ;$invoke
+        emit            <$xor ecx,ecx>,<$mov rdx,_init_err_message>,<$mov r8,_init_err_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
         $xor            eax,eax
     .return:
         $add            rsp,.k_stack_size
@@ -276,6 +276,7 @@ update:
         $sub            rsp,.k_stack_size
         $call           update_frame_stats
         $call           generate_gpu_commands
+        emit            <$test eax,eax>,<$js .return>
         emit            <$mov rcx,[cmdqueue]>,<$mov edx,1>,<$mov r8,cmdlist>,<$mov rax,[rcx]>,<$call [rax+ID3D12CommandQueue.ExecuteCommandLists]>
         emit            <$mov rcx,[swapchain]>,<$xor edx,edx>,<$mov r8d,DXGI_PRESENT_RESTART>,<$mov rax,[rcx]>,<$call [rax+IDXGISwapChain.Present]>
         ; increment swap buffer index
@@ -284,6 +285,7 @@ update:
         $and            eax,$03
         $mov            [swap_buffer_index],eax
         $call           wait_for_gpu
+    .return:
         $add            rsp,.k_stack_size
         $ret
 ;========================================================================
@@ -307,6 +309,7 @@ start:
         $jmp            .main_loop
     .update:
         $call           update
+        emit            <$test eax,eax>,<$js .quit>
         $jmp            .main_loop
     .quit:
         $call           deinit
@@ -352,8 +355,10 @@ win_msg MSG 0,0,0,0,0,<0,0>
 win_class WNDCLASSEX 0,winproc,0,0,0,0,0,0,0,win_title,0
 win_rect RECT 0,0,k_win_width,k_win_height
 
-no_avx2_caption db 'Not supported CPU',0
-no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
+_init_err_caption db 'Initialization failure',0
+_init_err_message db 'Program requires hardware Direct3D 12 support (D3D_FEATURE_LEVEL_11_1).',0
+_no_avx2_caption db 'Not supported CPU',0
+_no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
 
 align 8
 time dq 0
