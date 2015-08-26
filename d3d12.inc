@@ -103,6 +103,86 @@ D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS   = 0x10
 D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS      = 0x20
 D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT                = 0x40
 
+D3D_ROOT_SIGNATURE_VERSION_1 = 0x1
+
+D3D12_BLEND_ZERO             = 1
+D3D12_BLEND_ONE              = 2
+D3D12_BLEND_SRC_COLOR        = 3
+D3D12_BLEND_INV_SRC_COLOR    = 4
+D3D12_BLEND_SRC_ALPHA        = 5
+D3D12_BLEND_INV_SRC_ALPHA    = 6
+D3D12_BLEND_DEST_ALPHA       = 7
+D3D12_BLEND_INV_DEST_ALPHA   = 8
+D3D12_BLEND_DEST_COLOR       = 9
+D3D12_BLEND_INV_DEST_COLOR   = 10
+D3D12_BLEND_SRC_ALPHA_SAT    = 11
+D3D12_BLEND_BLEND_FACTOR     = 14
+D3D12_BLEND_INV_BLEND_FACTOR = 15
+D3D12_BLEND_SRC1_COLOR       = 16
+D3D12_BLEND_INV_SRC1_COLOR   = 17
+D3D12_BLEND_SRC1_ALPHA       = 18
+D3D12_BLEND_INV_SRC1_ALPHA   = 19
+
+D3D12_BLEND_OP_ADD          = 1
+D3D12_BLEND_OP_SUBTRACT     = 2
+D3D12_BLEND_OP_REV_SUBTRACT = 3
+D3D12_BLEND_OP_MIN          = 4
+D3D12_BLEND_OP_MAX          = 5
+
+D3D12_COLOR_WRITE_ENABLE_RED   = 1
+D3D12_COLOR_WRITE_ENABLE_GREEN = 2
+D3D12_COLOR_WRITE_ENABLE_BLUE  = 4
+D3D12_COLOR_WRITE_ENABLE_ALPHA = 8
+D3D12_COLOR_WRITE_ENABLE_ALL   = D3D12_COLOR_WRITE_ENABLE_RED+D3D12_COLOR_WRITE_ENABLE_GREEN+D3D12_COLOR_WRITE_ENABLE_BLUE+D3D12_COLOR_WRITE_ENABLE_ALPHA
+
+D3D12_LOGIC_OP_CLEAR         = 0
+D3D12_LOGIC_OP_SET           = ( D3D12_LOGIC_OP_CLEAR + 1 )
+D3D12_LOGIC_OP_COPY          = ( D3D12_LOGIC_OP_SET + 1 )
+D3D12_LOGIC_OP_COPY_INVERTED = ( D3D12_LOGIC_OP_COPY + 1 )
+D3D12_LOGIC_OP_NOOP          = ( D3D12_LOGIC_OP_COPY_INVERTED + 1 )
+D3D12_LOGIC_OP_INVERT        = ( D3D12_LOGIC_OP_NOOP + 1 )
+D3D12_LOGIC_OP_AND           = ( D3D12_LOGIC_OP_INVERT + 1 )
+D3D12_LOGIC_OP_NAND          = ( D3D12_LOGIC_OP_AND + 1 )
+D3D12_LOGIC_OP_OR            = ( D3D12_LOGIC_OP_NAND + 1 )
+D3D12_LOGIC_OP_NOR           = ( D3D12_LOGIC_OP_OR + 1 )
+D3D12_LOGIC_OP_XOR           = ( D3D12_LOGIC_OP_NOR + 1 )
+D3D12_LOGIC_OP_EQUIV         = ( D3D12_LOGIC_OP_XOR + 1 )
+D3D12_LOGIC_OP_AND_REVERSE   = ( D3D12_LOGIC_OP_EQUIV + 1 )
+D3D12_LOGIC_OP_AND_INVERTED  = ( D3D12_LOGIC_OP_AND_REVERSE + 1 )
+D3D12_LOGIC_OP_OR_REVERSE    = ( D3D12_LOGIC_OP_AND_INVERTED + 1 )
+D3D12_LOGIC_OP_OR_INVERTED   = ( D3D12_LOGIC_OP_OR_REVERSE + 1 )
+
+D3D12_FILL_MODE_WIREFRAME = 2
+D3D12_FILL_MODE_SOLID     = 3
+
+D3D12_CULL_MODE_NONE  = 1
+D3D12_CULL_MODE_FRONT = 2
+D3D12_CULL_MODE_BACK  = 3
+
+D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF = 0
+D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON  = 1
+
+D3D12_COMPARISON_FUNC_NEVER         = 1
+D3D12_COMPARISON_FUNC_LESS          = 2
+D3D12_COMPARISON_FUNC_EQUAL         = 3
+D3D12_COMPARISON_FUNC_LESS_EQUAL    = 4
+D3D12_COMPARISON_FUNC_GREATER       = 5
+D3D12_COMPARISON_FUNC_NOT_EQUAL     = 6
+D3D12_COMPARISON_FUNC_GREATER_EQUAL = 7
+D3D12_COMPARISON_FUNC_ALWAYS        = 8
+
+D3D12_DEPTH_WRITE_MASK_ZERO = 0
+D3D12_DEPTH_WRITE_MASK_ALL  = 1
+
+D3D12_STENCIL_OP_KEEP     = 1
+D3D12_STENCIL_OP_ZERO     = 2
+D3D12_STENCIL_OP_REPLACE  = 3
+D3D12_STENCIL_OP_INCR_SAT = 4
+D3D12_STENCIL_OP_DECR_SAT = 5
+D3D12_STENCIL_OP_INVERT   = 6
+D3D12_STENCIL_OP_INCR     = 7
+D3D12_STENCIL_OP_DECR     = 8
+
 struc D3D12_VIEWPORT p0,p1,p2,p3,p4,p5
 {
     .TopLeftX dd p0
@@ -155,16 +235,15 @@ struc D3D12_RESOURCE_BARRIER p0,p1,p2
 {
     .Type       dd                                p0
     .Flags      dd                                p1
-    virtual
     .Transition D3D12_RESOURCE_TRANSITION_BARRIER p2
-    end virtual
-    virtual
+
+    virtual at .Transition
     .Aliasing   D3D12_RESOURCE_ALIASING_BARRIER   ?,?
     end virtual
-    virtual
+
+    virtual at .Transition
     .UAV        D3D12_RESOURCE_UAV_BARRIER        ?
     end virtual
-                rb 24
 }
 
 struc D3D12_DESCRIPTOR_RANGE p0,p1,p2,p3,p4
@@ -200,16 +279,16 @@ struc D3D12_ROOT_PARAMETER p0,p1,p2
 {
     .ParameterType    dd                          p0
                       dd                          ?
-    virtual
     .DescriptorTable  D3D12_ROOT_DESCRIPTOR_TABLE p1
-    end virtual
-    virtual
+
+    virtual at .DescriptorTable
     .Constants        D3D12_ROOT_CONSTANTS        ?,?,?
     end virtual
-    virtual
+
+    virtual at .DescriptorTable
     .Descriptor       D3D12_ROOT_DESCRIPTOR       ?,?
     end virtual
-                      rb 16
+
     .ShaderVisibility dd                          p2
                       dd                          ?
 }
@@ -242,6 +321,109 @@ struc D3D12_ROOT_SIGNATURE_DESC p0,p1,p2,p3,p4
     .Flags             dd p4
                        dd ?
 }
+
+struc D3D12_SHADER_BYTECODE p0,p1
+{
+    .pShaderBytecode dq p0
+    .BytecodeLength  dq p1
+}
+
+struc D3D12_SO_DECLARATION_ENTRY p0,p1,p2,p3,p4,p5
+{
+    .Stream         dd p0
+                    dd ?
+    .SemanticName   dq p1
+    .SemanticIndex  dd p2
+    .StartComponent db p3
+    .ComponentCount db p4
+    .OutputSlot     db p5
+                    db ?
+}
+
+struc D3D12_STREAM_OUTPUT_DESC p0,p1,p2,p3,p4
+{
+    .pSODeclaration   dq p0
+    .NumEntries       dd p1
+                      dd ?
+    .pBufferStrides   dq p2
+    .NumStrides       dd p3
+    .RasterizedStream dd p4
+}
+
+struc D3D12_RENDER_TARGET_BLEND_DESC p0=0,p1=0,\
+                                     p2=D3D12_BLEND_ONE,p3=D3D12_BLEND_ZERO,p4=D3D12_BLEND_OP_ADD,\
+                                     p5=D3D12_BLEND_ONE,p6=D3D12_BLEND_ZERO,p7=D3D12_BLEND_OP_ADD,\
+                                     p8=D3D12_LOGIC_OP_NOOP,p9=255
+{
+    .BlendEnable           dd p0
+    .LogicOpEnable         dd p1
+    .SrcBlend              dd p2
+    .DestBlend             dd p3
+    .BlendOp               dd p4
+    .SrcBlendAlpha         dd p5
+    .DestBlendAlpha        dd p6
+    .BlendOpAlpha          dd p7
+    .LogicOp               dd p8
+    .RenderTargetWriteMask db p9
+                           rb 3
+}
+
+struc D3D12_BLEND_DESC p0=0,p1=0,p2
+{
+    .AlphaToCoverageEnable  dd                             p0
+    .IndependentBlendEnable dd                             p1
+    .RenderTarget0          D3D12_RENDER_TARGET_BLEND_DESC p2
+    .RenderTarget1          D3D12_RENDER_TARGET_BLEND_DESC
+    .RenderTarget2          D3D12_RENDER_TARGET_BLEND_DESC
+    .RenderTarget3          D3D12_RENDER_TARGET_BLEND_DESC
+    .RenderTarget4          D3D12_RENDER_TARGET_BLEND_DESC
+    .RenderTarget5          D3D12_RENDER_TARGET_BLEND_DESC
+    .RenderTarget6          D3D12_RENDER_TARGET_BLEND_DESC
+    .RenderTarget7          D3D12_RENDER_TARGET_BLEND_DESC
+}
+
+struc D3D12_RASTERIZER_DESC p0=D3D12_FILL_MODE_SOLID,p1=D3D12_CULL_MODE_BACK,p2=0,p3=0,p4=0,p5=0,p6=1,p7=0,p8=0,\
+                            p9=0,p10=D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+{
+    .FillMode              dd p0
+    .CullMode              dd p1
+    .FrontCounterClockwise dd p2
+    .DepthBias             dd p3
+    .DepthBiasClamp        dd p4
+    .SlopeScaledDepthBias  dd p5
+    .DepthClipEnable       dd p6
+    .MultisampleEnable     dd p7
+    .AntialiasedLineEnable dd p8
+    .ForcedSampleCount     dd p9
+    .ConservativeRaster    dd p10
+}
+
+struc D3D12_DEPTH_STENCILOP_DESC p0=D3D12_STENCIL_OP_KEEP,p1=D3D12_STENCIL_OP_KEEP,p2=D3D12_STENCIL_OP_KEEP,p3=D3D12_COMPARISON_FUNC_ALWAYS
+{
+    .StencilFailOp      dd p0
+    .StencilDepthFailOp dd p1
+    .StencilPassOp      dd p2
+    .StencilFunc        dd p3
+}
+
+struc D3D12_DEPTH_STENCIL_DESC p0=1,p1=D3D12_DEPTH_WRITE_MASK_ALL,p2=D3D12_COMPARISON_FUNC_LESS,p3=0,p4=255,p5=255,p6,p7
+{
+    .DepthEnable      dd                         p0
+    .DepthWriteMask   dd                         p1
+    .DepthFunc        dd                         p2
+    .StencilEnable    dd                         p3
+    .StencilReadMask  db                         p4
+    .StencilWriteMask db                         p5
+                      rb 2
+    .FrontFace        D3D12_DEPTH_STENCILOP_DESC p6
+    .BackFace         D3D12_DEPTH_STENCILOP_DESC p7
+}
+
+virtual at 0
+IUnknown.QueryInterface rq 1
+IUnknown.AddRef rq 1
+IUnknown.Release rq 1
+end virtual
 
 virtual at 0
 ID3D12Device.QueryInterface rq 1
@@ -443,6 +625,25 @@ ID3D12Resource.GetGPUVirtualAddress rq 1
 ID3D12Resource.WriteToSubresource rq 1
 ID3D12Resource.ReadFromSubresource rq 1
 ID3D12Resource.GetHeapProperties rq 1
+end virtual
+
+virtual at 0
+ID3DBlob.QueryInterface rq 1
+ID3DBlob.AddRef rq 1
+ID3DBlob.Release rq 1
+ID3DBlob.GetBufferPointer rq 1
+ID3DBlob.GetBufferSize rq 1
+end virtual
+
+virtual at 0
+ID3D12RootSignature.QueryInterface rq 1
+ID3D12RootSignature.AddRef rq 1
+ID3D12RootSignature.Release rq 1
+ID3D12RootSignature.GetPrivateData rq 1
+ID3D12RootSignature.SetPrivateData rq 1
+ID3D12RootSignature.SetPrivateDataInterface rq 1
+ID3D12RootSignature.SetName rq 1
+ID3D12RootSignature.GetDevice rq 1
 end virtual
 
 ; D3D12 debug layer
