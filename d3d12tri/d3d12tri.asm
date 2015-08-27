@@ -287,8 +287,8 @@ init:
     @@: ; device
         $xor            ecx,ecx
         $mov            edx,D3D_FEATURE_LEVEL_11_1
-        $mov            r8,IID_ID3D12Device
-        $mov            r9,device
+        $lea            r8,[IID_ID3D12Device]
+        $lea            r9,[device]
         $call           [D3D12CreateDevice]
         $test           eax,eax
         $js             .error
@@ -447,10 +447,19 @@ init:
         $mov            eax,1
         $jmp            .return
     .error_cpu:
-        emit            <$xor ecx,ecx>,<$mov rdx,_err_cpu_message>,<$mov r8,_err_cpu_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
-        emit            <$xor eax,eax>,<$jmp .return>
+        $xor            ecx,ecx
+        $mov            rdx,_err_cpu_message
+        $mov            r8,_err_cpu_caption
+        $xor            r9d,r9d
+        $call           [MessageBox]
+        $xor            eax,eax
+        $jmp            .return
     .error:
-        emit            <$xor ecx,ecx>,<$mov rdx,_err_init_message>,<$mov r8,_err_init_caption>,<$xor r9d,r9d>,<$call [MessageBox]>
+        $xor            ecx,ecx
+        $mov            rdx,_err_init_message
+        $mov            r8,_err_init_caption
+        $xor            r9d,r9d
+        $call           [MessageBox]
         $xor            eax,eax
     .return:
         $add            rsp,.k_stack_size
@@ -462,35 +471,31 @@ deinit:
     .k_stack_size = 6*8
         $push           rbx
         $sub            rsp,.k_stack_size
-        emit            <$mov rcx,[cmdlist]>,<$test rcx,rcx>,<$jz @f>
+        $mov            rcx,[cmdlist]
+        $test           rcx,rcx
+        $jz             @f
         $call           wait_for_gpu
-        emit            <$mov rcx,[cmdlist]>,<$mov rax,[rcx]>,<$call [rax+ID3D12GraphicsCommandList.Release]>
-    @@: emit            <$mov rcx,[fence]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Fence.Release]>
-    @@: emit            <$mov rcx,[rtv_heap]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12DescriptorHeap.Release]>
-    @@:
+    @@: release_comobj  [cmdlist]
+        release_comobj  [fence]
+        release_comobj  [rtv_heap]
+
         $xor            ebx,ebx
     .for_each_swap_buffer:
-        emit            <$mov rcx,[swap_buffer+rbx*8]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Resource.Release]>
-    @@: emit            <$add ebx,1>,<$cmp ebx,4>,<$jb .for_each_swap_buffer>
+        release_comobj  [swap_buffer+rbx*8]
+        $add            ebx,1
+        $cmp            ebx,4
+        $jb             .for_each_swap_buffer
 
-        emit            <$mov rcx,[swapchain]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+IDXGISwapChain.Release]>
-    @@: emit            <$mov rcx,[dxgifactory]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+IDXGIFactory.Release]>
-    @@: emit            <$mov rcx,[cmdallocator]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12CommandAllocator.Release]>
-    @@: emit            <$mov rcx,[cmdqueue]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12CommandQueue.Release]>
-    @@: emit            <$mov rcx,[dbgi]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Debug.Release]>
-    @@: emit            <$mov rcx,[root_signature]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12RootSignature.Release]>
-    @@: emit            <$mov rcx,[device]>,<$test rcx,rcx>,<$jz @f>
-        emit            <$mov rax,[rcx]>,<$call [rax+ID3D12Device.Release]>
-    @@: emit            <$mov rcx,[fence_event]>,<$test rcx,rcx>,<$jz @f>
+        release_comobj  [swapchain]
+        release_comobj  [dxgifactory]
+        release_comobj  [cmdallocator]
+        release_comobj  [cmdqueue]
+        release_comobj  [dbgi]
+        release_comobj  [root_signature]
+        release_comobj  [device]
+        $mov            rcx,[fence_event]
+        $test           rcx,rcx
+        $jz             @f
         $call           [CloseHandle]
     @@: $add            rsp,.k_stack_size
         $pop            rbx
@@ -502,9 +507,18 @@ update:
         $sub            rsp,.k_stack_size
         $call           update_frame_stats
         $call           generate_gpu_commands
-        emit            <$test eax,eax>,<$js .return>
-        emit            <$mov rcx,[cmdqueue]>,<$mov edx,1>,<$mov r8,cmdlist>,<$mov rax,[rcx]>,<$call [rax+ID3D12CommandQueue.ExecuteCommandLists]>
-        emit            <$mov rcx,[swapchain]>,<$xor edx,edx>,<$mov r8d,DXGI_PRESENT_RESTART>,<$mov rax,[rcx]>,<$call [rax+IDXGISwapChain.Present]>
+        $test           eax,eax
+        $js             .return
+        $mov            rcx,[cmdqueue]
+        $mov            edx,1
+        $mov            r8,cmdlist
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
+        $mov            rcx,[swapchain]
+        $xor            edx,edx
+        $mov            r8d,DXGI_PRESENT_RESTART
+        $mov            rax,[rcx]
+        $call           [rax+IDXGISwapChain.Present]
         ; increment swap buffer index
         $mov            eax,[swap_buffer_index]
         $add            eax,1
@@ -524,22 +538,31 @@ start:
     end virtual
         $sub            rsp,.k_stack_size
         $call           init
-        emit            <$test eax,eax>,<$jz .quit>
+        $test           eax,eax
+        $jz             .quit
     .main_loop:
-        emit            <$mov rcx,win_msg>,<$xor edx,edx>,<$xor r8d,r8d>,<$xor r9d,r9d>,<$mov dword [.funcparam5+rsp],PM_REMOVE>,<$call [PeekMessage]>
+        $mov            rcx,win_msg
+        $xor            edx,edx
+        $xor            r8d,r8d
+        $xor            r9d,r9d
+        $mov            dword [.funcparam5+rsp],PM_REMOVE
+        $call           [PeekMessage]
         $test           eax,eax
         $jz             .update
-        emit            <$mov rcx,win_msg>,<$call [DispatchMessage]>
+        $mov            rcx,win_msg
+        $call           [DispatchMessage]
         $cmp            [win_msg.message],WM_QUIT
         $je             .quit
         $jmp            .main_loop
     .update:
         $call           update
-        emit            <$test eax,eax>,<$js .quit>
+        $test           eax,eax
+        $js             .quit
         $jmp            .main_loop
     .quit:
         $call           deinit
-        emit            <$xor ecx,ecx>,<$call [ExitProcess]>
+        $xor            ecx,ecx
+        $call           [ExitProcess]
 ;========================================================================
 align 32
 winproc:
@@ -553,11 +576,13 @@ winproc:
     .keydown:
         $cmp            r8d,VK_ESCAPE
         $jne            .return
-        emit            <$xor ecx,ecx>,<$call [PostQuitMessage]>
+        $xor            ecx,ecx
+        $call           [PostQuitMessage]
         $xor            eax,eax
         $jmp            .return
     .destroy:
-        emit            <$xor ecx,ecx>,<$call [PostQuitMessage]>
+        $xor            ecx,ecx
+        $call           [PostQuitMessage]
         $xor            eax,eax
     .return:
         $add            rsp,40
