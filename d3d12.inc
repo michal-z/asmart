@@ -183,6 +183,22 @@ D3D12_STENCIL_OP_INVERT   = 6
 D3D12_STENCIL_OP_INCR     = 7
 D3D12_STENCIL_OP_DECR     = 8
 
+D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA   = 0
+D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA = 1
+
+D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED   = 0
+D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF     = 1
+D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF = 2
+
+D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED = 0
+D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT     = 1
+D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE      = 2
+D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE  = 3
+D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH     = 4
+
+D3D12_PIPELINE_STATE_FLAG_NONE       = 0
+D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG = 0x1
+
 struc D3D12_VIEWPORT p0,p1,p2,p3,p4,p5
 {
     .TopLeftX dd p0
@@ -417,6 +433,30 @@ struc D3D12_DEPTH_STENCIL_DESC p0=1,p1=D3D12_DEPTH_WRITE_MASK_ALL,p2=D3D12_COMPA
                       rb 2
     .FrontFace        D3D12_DEPTH_STENCILOP_DESC p6
     .BackFace         D3D12_DEPTH_STENCILOP_DESC p7
+}
+
+struc D3D12_INPUT_ELEMENT_DESC p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0
+{
+    .SemanticName         dq p0
+    .SemanticIndex        dd p1
+    .Format               dd p2
+    .InputSlot            dd p3
+    .AlignedByteOffset    dd p4
+    .InputSlotClass       dd p5
+    .InstanceDataStepRate dd p6
+}
+
+struc D3D12_INPUT_LAYOUT_DESC p0=0,p1=0
+{
+    .pInputElementDescs dq p0
+    .NumElements        dd p1
+                        dd ?
+}
+
+struc D3D12_CACHED_PIPELINE_STATE p0=0,p1=0
+{
+    .pCachedBlob           dq p0
+    .CachedBlobSizeInBytes dq p1
 }
 
 virtual at 0

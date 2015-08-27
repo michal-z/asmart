@@ -612,7 +612,6 @@ _err_cpu_message db 'Your CPU does not support AVX extension, program will not r
 align 8
 resource_barrier1 D3D12_RESOURCE_BARRIER D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,D3D12_RESOURCE_BARRIER_FLAG_NONE,\
                  <0,D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,0,0>
-
 align 8
 blend_desc D3D12_BLEND_DESC
 
