@@ -124,6 +124,77 @@ update_frame_stats:
         $ret
 ;========================================================================
 align 32
+load_binary_file:
+    virtual at 0
+    .funcparam1_4: rq 4
+    .funcparam5: rq 1
+    .funcparam6: rq 1
+    .funcparam7: rq 1
+    .bytes_read dd ?
+    dd ?
+    .k_stack_size = $
+    end virtual
+        $push           rdi rsi rbx
+        $sub            rsp,.k_stack_size
+        $xor            esi,esi                                 ; file handle
+        $xor            edi,edi                                 ; memory pointer
+        $mov            edx,GENERIC_READ
+        $xor            r8d,r8d
+        $xor            r9d,r9d
+        $mov            dword [.funcparam5+rsp],OPEN_EXISTING
+        $mov            dword [.funcparam6+rsp],FILE_ATTRIBUTE_NORMAL
+        $mov            qword [.funcparam7+rsp],r9
+        $call           [CreateFile]
+        $cmp            rax,INVALID_HANDLE_VALUE
+        $je             .error
+        $mov            rsi,rax
+        $mov            rcx,rsi
+        $xor            edx,edx
+        $call           [GetFileSize]
+        $cmp            eax,INVALID_FILE_SIZE
+        $je             .error
+        $mov            ebx,eax
+        $mov            rcx,[def_heap]
+        $xor            edx,edx
+        $mov            r8d,ebx
+        $call           [HeapAlloc]
+        $test           rax,rax
+        $jz             .error
+        $mov            rdi,rax
+        $mov            rcx,rsi
+        $mov            rdx,rdi
+        $mov            r8d,ebx
+        $lea            r9,[.bytes_read+rsp]
+        $mov            qword [.funcparam5+rsp],0
+        $call           [ReadFile]
+        $test           eax,eax
+        $jz             .error
+        $cmp            [.bytes_read+rsp],ebx
+        $jne            .error
+        $mov            rcx,rsi
+        $call           [CloseHandle]
+        $mov            rax,rdi
+        $mov            edx,ebx
+        $jmp            .done
+    .error:
+        $test           rsi,rsi
+        $jz             @f
+        $mov            rcx,rsi
+        $call           [CloseHandle]
+    @@: $test           rdi,rdi
+        $jz             @f
+        $mov            rcx,[def_heap]
+        $xor            edx,edx
+        $mov            r8,rdi
+        $call           [HeapFree]
+    @@: $xor            eax,eax
+        $xor            edx,edx
+    .done:
+        $add            rsp,.k_stack_size
+        $pop            rbx rsi rdi
+        $ret
+;========================================================================
+align 32
 wait_for_gpu:
     .k_stack_size = 6*8
         $push           rdi
@@ -160,7 +231,8 @@ generate_gpu_commands:
     virtual at 0
     .funcparam1_4: rq 4
     .funcparam5: rq 1
-    .k_stack_size = $
+    .rtv_handle dq ?
+    .k_stack_size = $+24
     end virtual
         $push           rdi rsi
         $sub            rsp,.k_stack_size
@@ -171,8 +243,11 @@ generate_gpu_commands:
         $call           [rax+ID3D12CommandAllocator.Reset]
         $mov            rcx,rdi
         $mov            rdx,[cmdallocator]
-        $xor            r8d,r8d
+        $mov            r8,[pso]
         $call           [rsi+ID3D12GraphicsCommandList.Reset]
+        $mov            rcx,rdi
+        $mov            rdx,[root_signature]
+        $call           [rsi+ID3D12GraphicsCommandList.SetGraphicsRootSignature]
         $mov            rcx,rdi
         $mov            edx,1
         $mov            r8,viewport
@@ -189,11 +264,29 @@ generate_gpu_commands:
         $mov            edx,[rtv_inc_size]
         $imul           edx,[swap_buffer_index]
         $add            rdx,[rtv_heap_start]
+        $mov            [.rtv_handle+rsp],rdx
         $mov            rcx,rdi
         $mov            r8,clear_color
         $xor            r9d,r9d
         $mov            qword [.funcparam5+rsp],0
         $call           [rsi+ID3D12GraphicsCommandList.ClearRenderTargetView]
+
+        $mov            rcx,rdi
+        $mov            edx,1
+        $lea            r8,[.rtv_handle+rsp]
+        $mov            r9d,1
+        $mov            qword [.funcparam5+rsp],0
+        $call           [rsi+ID3D12GraphicsCommandList.OMSetRenderTargets]
+
+        $mov            rcx,rdi
+        $mov            edx,D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+        $call           [rsi+ID3D12GraphicsCommandList.IASetPrimitiveTopology]
+        $mov            rcx,rdi
+        $mov            edx,3
+        $mov            r8d,1
+        $xor            r9d,r9d
+        $mov            dword [.funcparam5+rsp],0
+        $call           [rsi+ID3D12GraphicsCommandList.DrawInstanced]
 
         $mov            eax,[swap_buffer_index]
         $mov            rax,[swap_buffer+rax*8]
@@ -225,6 +318,11 @@ init:
         $call           check_cpu
         $test           eax,eax
         $jz             .error_cpu
+        ; process heap
+        $call           [GetProcessHeap]
+        $mov            [def_heap],rax
+        $test           rax,rax
+        $jz             .error
         ; window class
         $xor            ecx,ecx
         $call           [GetModuleHandle]
@@ -442,6 +540,28 @@ init:
         $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
         $test           eax,eax
         $js             .error
+        ; PSO
+        $mov            rax,[root_signature]
+        $mov            [pso_desc.pRootSignature],rax
+        $mov            rcx,_vs_triangle
+        $call           load_binary_file
+        $test           rax,rax
+        $jz             .error
+        $mov            [pso_desc.VS.pShaderBytecode],rax
+        $mov            [pso_desc.VS.BytecodeLength],rdx
+        $mov            rcx,_ps_triangle
+        $call           load_binary_file
+        $test           rax,rax
+        $jz             .error
+        $mov            [pso_desc.PS.pShaderBytecode],rax
+        $mov            [pso_desc.PS.BytecodeLength],rdx
+        $mov            rcx,rdi
+        $lea            rdx,[pso_desc]
+        $lea            r8,[IID_ID3D12PipelineState]
+        $lea            r9,[pso]
+        $call           [rsi+ID3D12Device.CreateGraphicsPipelineState]
+        $test           eax,eax
+        $js             .error
         ; success
         $call           wait_for_gpu
         $mov            eax,1
@@ -491,6 +611,7 @@ deinit:
         release_comobj  [cmdallocator]
         release_comobj  [cmdqueue]
         release_comobj  [dbgi]
+        release_comobj  [pso]
         release_comobj  [root_signature]
         release_comobj  [device]
         $mov            rcx,[fence_event]
@@ -590,8 +711,8 @@ winproc:
 ;========================================================================
 section '.data' data readable writeable
 
-k_win_width equ 1024
-k_win_height equ 1024
+k_win_width = 1024
+k_win_height = 1024
 k_win_widthf equ 1024.0
 k_win_heightf equ 1024.0
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
@@ -609,12 +730,12 @@ _err_init_message db 'Program requires hardware Direct3D 12 support (D3D_FEATURE
 _err_cpu_caption db 'Not supported CPU',0
 _err_cpu_message db 'Your CPU does not support AVX extension, program will not run.',0
 
+_vs_triangle db 'data/vs_triangle.cso',0
+_ps_triangle db 'data/ps_triangle.cso',0
+
 align 8
 resource_barrier1 D3D12_RESOURCE_BARRIER D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,D3D12_RESOURCE_BARRIER_FLAG_NONE,\
                  <0,D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,0,0>
-align 8
-blend_desc D3D12_BLEND_DESC
-
 align 8
 time dq 0
 time_delta dd 0,0
@@ -645,6 +766,8 @@ fence_value dq 1
 fence_event dq 0
 root_signature dq 0
 d3dblob dq 0
+def_heap dq 0
+pso dq 0
 
 align 4
 rtv_inc_size dd 0
@@ -672,6 +795,9 @@ align 8
 root_signature_desc D3D12_ROOT_SIGNATURE_DESC 0,0,0,0,D3D12_ROOT_SIGNATURE_FLAG_NONE
 
 align 8
+pso_desc D3D12_GRAPHICS_PIPELINE_STATE_DESC
+
+align 8
 IID_IDXGIFactory GUID 0x7b7166ec,0x21c7,0x44ae,0xb2,0x1a,0xc9,0xae,0x32,0x1a,0xe3,0x69
 IID_IDXGISwapChain GUID 0x310d36a0,0xd2e7,0x4c0a,0xaa,0x04,0x6a,0x9d,0x23,0xb8,0x88,0x6a
 IID_ID3D12Device GUID 0x189819f1,0x1db6,0x4b57,0xbe,0x54,0x18,0x21,0x33,0x9b,0x85,0xf7
@@ -684,6 +810,7 @@ IID_ID3D12DescriptorHeap GUID 0x8efb471d,0x616c,0x4f49,0x90,0xf7,0x12,0x7b,0xb7,
 IID_ID3D12Resource GUID 0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad
 IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a,0x76
 IID_ID3D12RootSignature GUID 0xc54a6b66,0x72df,0x4ee8,0x8b,0xe5,0xa9,0x46,0xa1,0x42,0x92,0x14
+IID_ID3D12PipelineState GUID 0x765a30f3,0xf624,0x4c6f,0xa8,0x28,0xac,0xe9,0x48,0x62,0x24,0x45
 ;========================================================================
 section '.idata' import data readable writeable
 
@@ -701,6 +828,13 @@ QueryPerformanceFrequency dq rva _QueryPerformanceFrequency
 QueryPerformanceCounter dq rva _QueryPerformanceCounter
 CloseHandle dq rva _CloseHandle
 CreateEventEx dq rva _CreateEventEx
+GetProcessHeap dq rva _GetProcessHeap
+HeapAlloc dq rva _HeapAlloc
+HeapFree dq rva _HeapFree
+CreateFile dq rva _CreateFile
+ReadFile dq rva _ReadFile
+GetFileSize dq rva _GetFileSize
+
 dq 0
 
 _user32_table:
@@ -740,6 +874,12 @@ emit <_QueryPerformanceFrequency dw 0>,<db 'QueryPerformanceFrequency',0>
 emit <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
 emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
 emit <_CreateEventEx dw 0>,<db 'CreateEventExA',0>
+emit <_GetProcessHeap dw 0>,<db 'GetProcessHeap',0>
+emit <_HeapAlloc dw 0>,<db 'HeapAlloc',0>
+emit <_HeapFree dw 0>,<db 'HeapFree',0>
+emit <_CreateFile dw 0>,<db 'CreateFileA',0>
+emit <_ReadFile dw 0>,<db 'ReadFile',0>
+emit <_GetFileSize dw 0>,<db 'GetFileSize',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
 emit <_RegisterClassEx dw 0>,<db 'RegisterClassExA',0>
