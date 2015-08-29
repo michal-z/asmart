@@ -42,6 +42,7 @@ macro free ptr
         $mov            rcx,[def_heap]
         $xor            edx,edx
         $mov            r8,ptr
+        $call           [HeapFree]
 }
 
 section '.text' code readable executable
@@ -533,20 +534,6 @@ init:
         $call           [rsi+ID3D12Device.CreateCommandList]
         $test           eax,eax
         $js             .error
-        ; close and execute command list
-        $mov            rcx,[cmdlist]
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12GraphicsCommandList.Close]
-        $test           eax,eax
-        $js             .error
-
-        $mov            rcx,[cmdqueue]
-        $mov            edx,1
-        $mov            r8,cmdlist
-        $mov            rax,[rcx]
-        $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
-        $test           eax,eax
-        $js             .error
         ; PSO
         $mov            rax,[root_signature]
         $mov            [pso_desc.pRootSignature],rax
@@ -571,6 +558,20 @@ init:
         free            [pso_desc.VS.pShaderBytecode]
         free            [pso_desc.PS.pShaderBytecode]
         $test           ebx,ebx
+        $js             .error
+        ; close and execute command list
+        $mov            rcx,[cmdlist]
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12GraphicsCommandList.Close]
+        $test           eax,eax
+        $js             .error
+
+        $mov            rcx,[cmdqueue]
+        $mov            edx,1
+        $mov            r8,cmdlist
+        $mov            rax,[rcx]
+        $call           [rax+ID3D12CommandQueue.ExecuteCommandLists]
+        $test           eax,eax
         $js             .error
         ; success
         $call           wait_for_gpu
