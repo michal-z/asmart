@@ -30,6 +30,19 @@ macro release_comobj obj
         $mov            obj,0
     @@:
 }
+macro alloc size
+{
+        $mov            rcx,[def_heap]
+        $xor            edx,edx
+        $mov            r8d,size
+        $call           [HeapAlloc]
+}
+macro free ptr
+{
+        $mov            rcx,[def_heap]
+        $xor            edx,edx
+        $mov            r8,ptr
+}
 
 section '.text' code readable executable
 ;========================================================================
@@ -154,10 +167,7 @@ load_binary_file:
         $cmp            eax,INVALID_FILE_SIZE
         $je             .error
         $mov            ebx,eax
-        $mov            rcx,[def_heap]
-        $xor            edx,edx
-        $mov            r8d,ebx
-        $call           [HeapAlloc]
+        alloc           ebx
         $test           rax,rax
         $jz             .error
         $mov            rdi,rax
@@ -183,10 +193,7 @@ load_binary_file:
         $call           [CloseHandle]
     @@: $test           rdi,rdi
         $jz             @f
-        $mov            rcx,[def_heap]
-        $xor            edx,edx
-        $mov            r8,rdi
-        $call           [HeapFree]
+        free            rdi
     @@: $xor            eax,eax
         $xor            edx,edx
     .done:
@@ -560,7 +567,10 @@ init:
         $lea            r8,[IID_ID3D12PipelineState]
         $lea            r9,[pso]
         $call           [rsi+ID3D12Device.CreateGraphicsPipelineState]
-        $test           eax,eax
+        $mov            ebx,eax
+        free            [pso_desc.VS.pShaderBytecode]
+        free            [pso_desc.PS.pShaderBytecode]
+        $test           ebx,ebx
         $js             .error
         ; success
         $call           wait_for_gpu
