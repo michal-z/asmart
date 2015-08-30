@@ -3,6 +3,9 @@ entry start
 include 'win64a.inc'
 include '../highlight_inst.inc'
 
+$invoke fix invoke
+$cinvoke fix cinvoke
+
 DIB_RGB_COLORS = 0
 INFINITE = -1
 
