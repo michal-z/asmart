@@ -431,8 +431,7 @@ update:
 align 32
 start:
     virtual at 0
-    .funcparam1_4: rq 4
-    .funcparam5: rq 1
+    rq 5
     .k_stack_size = $+16
     end virtual
         $sub            rsp,.k_stack_size
@@ -440,7 +439,8 @@ start:
         $test           eax,eax
         $jz             .quit
     .main_loop:
-        $invoke         PeekMessage,win_msg,eax,eax,eax,dword PM_REMOVE
+        $xor            r10d,r10d
+        $invoke         PeekMessage,win_msg,r10d,r10d,r10d,dword PM_REMOVE
         $test           eax,eax
         $jz             .update
         $invoke         DispatchMessage,win_msg
