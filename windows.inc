@@ -179,6 +179,8 @@ macro $fastcall proc,[arg]
          if ~ param eq rcx
           lea rcx,[param]
          end if
+        else if param eq 0
+         xor ecx,ecx
         else if size@param = 8
          if ~ param eq rcx
           mov rcx,param
@@ -222,6 +224,8 @@ macro $fastcall proc,[arg]
          if ~ param eq rdx
           lea rdx,[param]
          end if
+        else if param eq 0
+         xor edx,edx
         else if size@param = 8
          if ~ param eq rdx
           mov rdx,param
@@ -265,6 +269,8 @@ macro $fastcall proc,[arg]
          if ~ param eq r8
           lea r8,[param]
          end if
+        else if param eq 0
+         xor r8d,r8d
         else if size@param = 8
          if ~ param eq r8
           mov r8,param
@@ -308,6 +314,8 @@ macro $fastcall proc,[arg]
          if ~ param eq r9
           lea r9,[param]
          end if
+        else if param eq 0
+         xor r9d,r9d
         else if size@param = 8
          if ~ param eq r9
           mov r9,param
@@ -331,16 +339,32 @@ macro $fastcall proc,[arg]
           mov [rsp+(counter-1)*8],rax
          else if param eqtype [0] | param eqtype byte [0]
           if size@param = 8
-           mov rax,param
+           if param eq 0
+            xor eax,eax
+           else
+            mov rax,param
+           end if
            mov [rsp+(counter-1)*8],rax
           else if size@param = 4
-           mov eax,param
+           if param eq 0
+            xor eax,eax
+           else
+            mov eax,param
+           end if
            mov [rsp+(counter-1)*8],eax
           else if size@param = 2
-           mov ax,param
+           if param eq 0
+            xor eax,eax
+           else
+            mov ax,param
+           end if
            mov [rsp+(counter-1)*8],ax
           else
-           mov al,param
+           if param eq 0
+            xor eax,eax
+           else
+            mov al,param
+           end if
            mov [rsp+(counter-1)*8],al
           end if
          else if size@param = 8
@@ -350,7 +374,11 @@ macro $fastcall proc,[arg]
            load opcode byte from origin+1
           end virtual
           if opcode = 0B8h
-           mov rax,param
+           if param eq 0
+            xor eax,eax
+           else
+            mov rax,param
+           end if
            mov [rsp+(counter-1)*8],rax
           else
            mov qword [rsp+(counter-1)*8],param

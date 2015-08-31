@@ -370,7 +370,7 @@ struc D3D12_STATIC_SAMPLER_DESC p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12
     .ShaderVisibility dd p12
 }
 
-struc D3D12_ROOT_SIGNATURE_DESC p0,p1,p2,p3,p4
+struc D3D12_ROOT_SIGNATURE_DESC p0=0,p1=0,p2=0,p3=0,p4=D3D12_ROOT_SIGNATURE_FLAG_NONE
 {
     .NumParameters     dd p0
                        dd ?
