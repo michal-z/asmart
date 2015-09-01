@@ -600,7 +600,7 @@ deinit:
 
         $xor            ebx,ebx
     .for_each_swap_buffer:
-        $comrelease  [swap_buffer+rbx*8]
+        $comrelease     [swap_buffer+rbx*8]
         $add            ebx,1
         $cmp            ebx,4
         $jb             .for_each_swap_buffer
@@ -732,9 +732,6 @@ _vs_triangle db 'data/vs_triangle.cso',0
 _ps_triangle db 'data/ps_triangle.cso',0
 
 align 8
-resource_barrier1 D3D12_RESOURCE_BARRIER D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,D3D12_RESOURCE_BARRIER_FLAG_NONE,\
-                 <0,D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,0,0>
-align 8
 time dq 0
 time_delta dd 0,0
 
@@ -832,7 +829,6 @@ HeapFree dq rva _HeapFree
 CreateFile dq rva _CreateFile
 ReadFile dq rva _ReadFile
 GetFileSize dq rva _GetFileSize
-
 dq 0
 
 _user32_table:
