@@ -141,44 +141,44 @@ nearest_object:
 align 32
 cast_ray:
     .k_stack_size = 10*32+16
-        $push rsi
-        $sub rsp,.k_stack_size
-        $vmovaps ymm6,[k_1_0]
-        $vmovaps [rsp+$000],ymm0                        ; [rsp+$000] = ray_org_x
-        $vmovaps [rsp+$020],ymm1                        ; [rsp+$020] = ray_org_y
-        $vmovaps [rsp+$040],ymm2                        ; [rsp+$040] = ray_org_z
-        $vmovaps [rsp+$0c0],ymm6                        ; [rsp+$0c0] = distance
-        $vmovaps [rsp+$060],ymm3                        ; [rsp+$060] = ray_dir_x
-        $vmovaps [rsp+$080],ymm4                        ; [rsp+$080] = ray_dir_y
-        $vmovaps [rsp+$0a0],ymm5                        ; [rsp+$0a0] = ray_dir_z
-        $mov esi,128
+        $push           rsi
+        $sub            rsp,.k_stack_size
+        $vmovaps        ymm6,[k_1_0]
+        $vmovaps        [rsp+$000],ymm0                        ; [rsp+$000] = ray_org_x
+        $vmovaps        [rsp+$020],ymm1                        ; [rsp+$020] = ray_org_y
+        $vmovaps        [rsp+$040],ymm2                        ; [rsp+$040] = ray_org_z
+        $vmovaps        [rsp+$0c0],ymm6                        ; [rsp+$0c0] = distance
+        $vmovaps        [rsp+$060],ymm3                        ; [rsp+$060] = ray_dir_x
+        $vmovaps        [rsp+$080],ymm4                        ; [rsp+$080] = ray_dir_y
+        $vmovaps        [rsp+$0a0],ymm5                        ; [rsp+$0a0] = ray_dir_z
+        $mov            esi,128
     align 32
     .march:
-        $vfmadd231ps ymm0,ymm6,ymm3
-        $vfmadd231ps ymm1,ymm6,ymm4
-        $vfmadd231ps ymm2,ymm6,ymm5
-        $vmovaps [rsp+$0e0],ymm0                        ; [rsp+$0e0] = pos_x
-        $vmovaps [rsp+$100],ymm1                        ; [rsp+$100] = pos_y
-        $vmovaps [rsp+$120],ymm2                        ; [rsp+$120] = pos_z
-        $call nearest_distance
-        $vmovaps ymm6,[rsp+$0c0]                        ; ymm6 = distance
-        $vcmpltps ymm7,ymm0,[k_hit_distance]            ; ymm7 = nearest_distance() < k_hit_distance
-        $vcmpgtps ymm8,ymm6,[k_view_distance]           ; ymm8 = distance > k_view_distance
-        $vorps ymm7,ymm7,ymm8
-        $vmovmskps eax,ymm7
-        $cmp eax,$ff
-        $je .march_end
-        $vandnps ymm0,ymm7,ymm0
-        $vaddps ymm6,ymm6,ymm0
-        $vmovaps ymm0,[rsp+$000]                        ; ymm0 = ray_org_x
-        $vmovaps ymm1,[rsp+$020]                        ; ymm1 = ray_org_y
-        $vmovaps ymm2,[rsp+$040]                        ; ymm2 = ray_org_z
-        $vmovaps ymm3,[rsp+$060]                        ; ymm3 = ray_dir_x
-        $vmovaps ymm4,[rsp+$080]                        ; ymm4 = ray_dir_y
-        $vmovaps ymm5,[rsp+$0a0]                        ; ymm5 = ray_dir_z
-        $vmovaps [rsp+$0c0],ymm6                        ; distance = ymm6
-        $sub esi,1
-        $jnz .march
+        $vfmadd231ps    ymm0,ymm6,ymm3
+        $vfmadd231ps    ymm1,ymm6,ymm4
+        $vfmadd231ps    ymm2,ymm6,ymm5
+        $vmovaps        [rsp+$0e0],ymm0                        ; [rsp+$0e0] = pos_x
+        $vmovaps        [rsp+$100],ymm1                        ; [rsp+$100] = pos_y
+        $vmovaps        [rsp+$120],ymm2                        ; [rsp+$120] = pos_z
+        $call           nearest_distance
+        $vmovaps        ymm6,[rsp+$0c0]                        ; ymm6 = distance
+        $vcmpltps       ymm7,ymm0,[k_hit_distance]            ; ymm7 = nearest_distance() < k_hit_distance
+        $vcmpgtps       ymm8,ymm6,[k_view_distance]           ; ymm8 = distance > k_view_distance
+        $vorps          ymm7,ymm7,ymm8
+        $vmovmskps      eax,ymm7
+        $cmp            eax,$ff
+        $je             .march_end
+        $vandnps        ymm0,ymm7,ymm0
+        $vaddps         ymm6,ymm6,ymm0
+        $vmovaps        ymm0,[rsp+$000]                        ; ymm0 = ray_org_x
+        $vmovaps        ymm1,[rsp+$020]                        ; ymm1 = ray_org_y
+        $vmovaps        ymm2,[rsp+$040]                        ; ymm2 = ray_org_z
+        $vmovaps        ymm3,[rsp+$060]                        ; ymm3 = ray_dir_x
+        $vmovaps        ymm4,[rsp+$080]                        ; ymm4 = ray_dir_y
+        $vmovaps        ymm5,[rsp+$0a0]                        ; ymm5 = ray_dir_z
+        $vmovaps        [rsp+$0c0],ymm6                        ; distance = ymm6
+        $sub            esi,1
+        $jnz            .march
     .march_end:
         $vmovaps ymm0,[rsp+$0e0]                        ; ymm0 = pos_x
         $vmovaps ymm1,[rsp+$100]                        ; ymm1 = pos_y

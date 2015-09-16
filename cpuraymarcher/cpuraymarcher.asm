@@ -11,12 +11,17 @@ INFINITE = -1
 
 section '.text' code readable executable
 ;========================================================================
-macro iaca_begin
+macro $emit [inst]
+{
+    forward
+        inst
+}
+macro $iaca_begin
 {
         $mov ebx,111
         db $64,$67,$90
 }
-macro iaca_end
+macro $iaca_end
 {
         $mov ebx,222
         db $64,$67,$90
@@ -67,21 +72,21 @@ supports_avx2:
 ;========================================================================
 align 32
 get_time:
-        $sub rsp,24
-        $mov rax,[.perf_freq]
-        $test rax,rax
-        $jnz @f
-        $invoke QueryPerformanceFrequency,addr .perf_freq
-        $invoke QueryPerformanceCounter,addr .first_perf_counter
-    @@: $invoke QueryPerformanceCounter,addr .perf_counter
-        $mov rcx,[.perf_counter]
-        $sub rcx,[.first_perf_counter]
-        $mov rdx,[.perf_freq]
-        $vxorps xmm0,xmm0,xmm0
-        $vcvtsi2sd xmm1,xmm0,rcx
-        $vcvtsi2sd xmm2,xmm0,rdx
-        $vdivsd xmm0,xmm1,xmm2
-        $add rsp,24
+        $sub            rsp,24
+        $mov            rax,[.perf_freq]
+        $test           rax,rax
+        $jnz            @f
+        $invoke         QueryPerformanceFrequency,addr .perf_freq
+        $invoke         QueryPerformanceCounter,addr .first_perf_counter
+    @@: $invoke         QueryPerformanceCounter,addr .perf_counter
+        $mov            rcx,[.perf_counter]
+        $sub            rcx,[.first_perf_counter]
+        $mov            rdx,[.perf_freq]
+        $vxorps         xmm0,xmm0,xmm0
+        $vcvtsi2sd      xmm1,xmm0,rcx
+        $vcvtsi2sd      xmm2,xmm0,rdx
+        $vdivsd         xmm0,xmm1,xmm2
+        $add            rsp,24
         $ret
 ;========================================================================
 align 32
@@ -374,15 +379,42 @@ include 'cpuraymarcher_render.asm'
 ;========================================================================
 section '.idata' import data readable writeable
 
-library kernel32,'KERNEL32.DLL',user32,'USER32.DLL',gdi32,'GDI32.DLL'
+dd 0,0,0,rva _kernel32,rva _kernel32_table
+dd 0,0,0,rva _user32,rva _user32_table
+dd 0,0,0,rva _gdi32,rva _gdi32_table
+dd 0,0,0,0,0
 
-import kernel32,\
-    GetModuleHandle,'GetModuleHandleA',ExitProcess,'ExitProcess',\
-    WaitForSingleObject,'WaitForSingleObject',ReleaseSemaphore,'ReleaseSemaphore',\
-    ExitThread,'ExitThread',QueryPerformanceFrequency,'QueryPerformanceFrequency',\
-    QueryPerformanceCounter,'QueryPerformanceCounter',CreateSemaphore,'CreateSemaphoreA',\
-    CreateThread,'CreateThread',CloseHandle,'CloseHandle',\
-    WaitForMultipleObjects,'WaitForMultipleObjects',GetSystemInfo,'GetSystemInfo'
+_kernel32_table:
+GetModuleHandle dq rva _GetModuleHandleA
+ExitProcess dq rva _ExitProcess
+WaitForSingleObject dq rva _WaitForSingleObject
+ReleaseSemaphore dq rva _ReleaseSemaphore
+ExitThread dq rva _ExitThread
+QueryPerformanceFrequency dq rva _QueryPerformanceFrequency
+QueryPerformanceCounter dq rva _QueryPerformanceCounter
+CreateSemaphore dq rva _CreateSemaphoreA
+CreateThread dq rva _CreateThread
+CloseHandle dq rva _CloseHandle
+WaitForMultipleObjects dq rva _WaitForMultipleObjects
+GetSystemInfo dq rva _GetSystemInfo
+dq 0
+
+_kernel32 db 'kernel32.dll',0
+_user32 db 'user32.dll',0
+_gdi32 db 'gdi32.dll',0
+
+$emit <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
+$emit <_ExitProcess dw 0>,<db 'ExitProcess',0>
+$emit <_WaitForSingleObject dw 0>,<db 'WaitForSingleObject',0>
+$emit <_ReleaseSemaphore dw 0>,<db 'ReleaseSemaphore',0>
+$emit <_ExitThread dw 0>,<db 'ExitThread',0>
+$emit <_QueryPerformanceFrequency dw 0>,<db 'QueryPerformanceFrequency',0>
+$emit <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
+$emit <_CreateSemaphore dw 0>,<db 'CreateSemaphoreA',0>
+$emit <_CreateThread dw 0>,<db 'CreateThread',0>
+$emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
+$emit <_WaitForMultipleObjects dw 0>,<db 'WaitForMultipleObjects',0>
+$emit <_GetSystemInfo dw 0>,<db 'GetSystemInfo',0>
 
 import user32,\
     wsprintf,'wsprintfA',RegisterClassEx,'RegisterClassExA',\
