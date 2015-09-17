@@ -660,7 +660,7 @@ start:
         $test           eax,eax
         $jz             .quit
     .main_loop:
-        $mov            rcx,win_msg
+        $lea            rcx,[win_msg]
         $xor            edx,edx
         $xor            r8d,r8d
         $xor            r9d,r9d
@@ -668,7 +668,7 @@ start:
         $call           [PeekMessage]
         $test           eax,eax
         $jz             .update
-        $mov            rcx,win_msg
+        $lea            rcx,[win_msg]
         $call           [DispatchMessage]
         $cmp            [win_msg.message],WM_QUIT
         $je             .quit

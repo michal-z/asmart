@@ -3,8 +3,8 @@
 
 struc POINT p0,p1
 {
-  .x dd p0
-  .y dd p1
+    .x dd p0
+    .y dd p1
 }
 
 struc MSG p0,p1,p2,p3,p4,p5
@@ -42,6 +42,35 @@ struc RECT p0,p1,p2,p3
     .bottom dd p3
 }
 
+struc BITMAPINFOHEADER p0,p1,p2,p3,p4,p5,p6,p7,p8,p9
+{
+    .biSize          dd 40
+    .biWidth         dd p0
+    .biHeight        dd p1
+    .biPlanes        dw p2
+    .biBitCount      dw p3
+    .biCompression   dd p4
+    .biSizeImage     dd p5
+    .biXPelsPerMeter dd p6
+    .biYPelsPerMeter dd p7
+    .biClrUsed       dd p8
+    .biClrImportant  dd p9
+}
+
+struc SYSTEM_INFO
+{
+    .dwOemId                     dd ?
+    .dwPageSize                  dd ?
+    .lpMinimumApplicationAddress dq ?
+    .lpMaximumApplicationAddress dq ?
+    .dwActiveProcessorMask       dq ?
+    .dwNumberOfProcessors        dd ?
+    .dwProcessorType             dd ?
+    .dwAllocationGranularity     dd ?
+    .wProcessorLevel             dw ?
+    .wProcessorRevision          dw ?
+}
+
 ; constants
 
 EVENT_ALL_ACCESS = 000f0000h+00100000h+3h
@@ -51,6 +80,8 @@ INFINITE = 0xffffffff
 INVALID_HANDLE_VALUE = 0xffffffffffffffff
 
 INVALID_FILE_SIZE = 0xffffffff
+
+SRCCOPY = 0x00CC0020
 
 CREATE_NEW        = 1
 CREATE_ALWAYS     = 2
