@@ -1,0 +1,1 @@
+..\fasm\fasm.exe cpuraymarcher.asm
