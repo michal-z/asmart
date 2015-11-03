@@ -294,8 +294,7 @@ vsubps ymm2,ymm0,[rsp+$1c0]
 vmovaps ymm0,[rsp+$160]
 vmovaps ymm1,[rsp+$1a0]
 vsubps ymm0,ymm0,[rsp+$140]
-vsubps ymm1,ymm1,[rsp+$180]         ; (ymm0,ymm1,ymm2) = normal_vector
-}
+vsubps ymm1,ymm1,[rsp+$180] }       ; (ymm0,ymm1,ymm2) = normal_vector
 ;=============================================================================
 ; in: <ymm0,ymm1,ymm2> ray origin, <ymm3,ymm4,ymm5> ray direction
 ; out: <ymm0,ymm1,ymm2> rgb color
