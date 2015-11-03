@@ -28,62 +28,62 @@ k_funcparam11 = k_funcparam10 + 8
 k_funcparam12 = k_funcparam11 + 8
 
 struc POINT p0=0,p1=0 {
-    .x dd p0
-    .y dd p1 }
+.x dd p0
+.y dd p1 }
 
-struc MSG p0=0,p1=0,p2=0,p3=0,p4=0,p5=0 {
-    .hwnd    dq    p0
-    .message dd    p1,?
-    .wParam  dq    p2
-    .lParam  dq    p3
-    .time    dd    p4
-    .pt      POINT p5
-             dd    ? }
+struc MSG p0=0,p1=0,p2=0,p3=0,p4=0,p5=<0,0> {
+.hwnd    dq    p0
+.message dd    p1,?
+.wParam  dq    p2
+.lParam  dq    p3
+.time    dd    p4
+.pt      POINT p5
+         dd    ? }
 
 struc WNDCLASSEX p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0,p10=0 {
-    .cbSize        dd 80
-    .style         dd p0
-    .lpfnWndProc   dq p1
-    .cbClsExtra    dd p2
-    .cbWndExtra    dd p3
-    .hInstance     dq p4
-    .hIcon         dq p5
-    .hCursor       dq p6
-    .hbrBackground dq p7
-    .lpszMenuName  dq p8
-    .lpszClassName dq p9
-    .hIconSm       dq p10 }
+.cbSize        dd 80
+.style         dd p0
+.lpfnWndProc   dq p1
+.cbClsExtra    dd p2
+.cbWndExtra    dd p3
+.hInstance     dq p4
+.hIcon         dq p5
+.hCursor       dq p6
+.hbrBackground dq p7
+.lpszMenuName  dq p8
+.lpszClassName dq p9
+.hIconSm       dq p10 }
 
 struc RECT p0=0,p1=0,p2=0,p3=0 {
-    .left   dd p0
-    .top    dd p1
-    .right  dd p2
-    .bottom dd p3 }
+.left   dd p0
+.top    dd p1
+.right  dd p2
+.bottom dd p3 }
 
 struc BITMAPINFOHEADER p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0 {
-    .biSize          dd 40
-    .biWidth         dd p0
-    .biHeight        dd p1
-    .biPlanes        dw p2
-    .biBitCount      dw p3
-    .biCompression   dd p4
-    .biSizeImage     dd p5
-    .biXPelsPerMeter dd p6
-    .biYPelsPerMeter dd p7
-    .biClrUsed       dd p8
-    .biClrImportant  dd p9 }
+.biSize          dd 40
+.biWidth         dd p0
+.biHeight        dd p1
+.biPlanes        dw p2
+.biBitCount      dw p3
+.biCompression   dd p4
+.biSizeImage     dd p5
+.biXPelsPerMeter dd p6
+.biYPelsPerMeter dd p7
+.biClrUsed       dd p8
+.biClrImportant  dd p9 }
 
 struc SYSTEM_INFO p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0 {
-    .dwOemId                     dd p0
-    .dwPageSize                  dd p1
-    .lpMinimumApplicationAddress dq p2
-    .lpMaximumApplicationAddress dq p3
-    .dwActiveProcessorMask       dq p4
-    .dwNumberOfProcessors        dd p5
-    .dwProcessorType             dd p6
-    .dwAllocationGranularity     dd p7
-    .wProcessorLevel             dw p8
-    .wProcessorRevision          dw p9 }
+.dwOemId                     dd p0
+.dwPageSize                  dd p1
+.lpMinimumApplicationAddress dq p2
+.lpMaximumApplicationAddress dq p3
+.dwActiveProcessorMask       dq p4
+.dwNumberOfProcessors        dd p5
+.dwProcessorType             dd p6
+.dwAllocationGranularity     dd p7
+.wProcessorLevel             dw p8
+.wProcessorRevision          dw p9 }
 
 section '.text' code readable executable
 ;========================================================================
@@ -97,8 +97,7 @@ db $64,$67,$90 }
 
 macro iaca_end {
 mov ebx,222
-db $64,$67,$90
-}
+db $64,$67,$90 }
 ;=============================================================================
 program_section = 'code'
 include 'cpuraymarcher_render.inc'
@@ -547,7 +546,7 @@ win_handle dq 0
 win_hdc dq 0
 win_title db 'CPU Raymarcher', 64 dup 0
 win_title_fmt db '[%d fps  %d us] CPU Raymarcher',0
-win_msg MSG 0,0,0,0,0,<0,0>
+win_msg MSG
 win_class WNDCLASSEX 0,winproc,0,0,0,0,0,0,0,win_title,0
 win_rect RECT 0,0,k_win_width,k_win_height
 
@@ -555,7 +554,8 @@ no_avx2_caption db 'Not supported CPU',0
 no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
 
 align 8
-bmp_info BITMAPINFOHEADER k_win_width,k_win_height,1,32,0,k_win_width*k_win_height,0,0,0,0
+bmp_info BITMAPINFOHEADER k_win_width,k_win_height,1,32,0,\
+                          k_win_width*k_win_height,0,0,0,0
 dq 0,0,0,0
 
 align 8
