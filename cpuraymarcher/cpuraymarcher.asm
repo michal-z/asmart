@@ -1,19 +1,100 @@
 format PE64 GUI 4.0
 entry start
 
-include '../windows.inc'
-include '../highlight_inst.inc'
+INFINITE = 0xffffffff
+IDI_APPLICATION = 32512
+IDC_ARROW = 32512
+WS_VISIBLE = 010000000h
+WS_OVERLAPPED = 000000000h
+WS_CAPTION = 000C00000h
+WS_SYSMENU = 000080000h
+WS_VISIBLE = 010000000h
+WS_MINIMIZEBOX = 000020000h
+CW_USEDEFAULT = 80000000h
+SRCCOPY = 0x00CC0020
+PM_REMOVE = 0001h
+WM_QUIT = 0012h
+WM_KEYDOWN = 0100h
+WM_DESTROY = 0002h
+VK_ESCAPE = 01Bh
+
+k_funcparam5 = 32
+k_funcparam6 = k_funcparam5 + 8
+k_funcparam7 = k_funcparam6 + 8
+k_funcparam8 = k_funcparam7 + 8
+k_funcparam9 = k_funcparam8 + 8
+k_funcparam10 = k_funcparam9 + 8
+k_funcparam11 = k_funcparam10 + 8
+k_funcparam12 = k_funcparam11 + 8
+
+struc POINT p0=0,p1=0 {
+    .x dd p0
+    .y dd p1 }
+
+struc MSG p0=0,p1=0,p2=0,p3=0,p4=0,p5=0 {
+    .hwnd    dq    p0
+    .message dd    p1,?
+    .wParam  dq    p2
+    .lParam  dq    p3
+    .time    dd    p4
+    .pt      POINT p5
+             dd    ? }
+
+struc WNDCLASSEX p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0,p10=0 {
+    .cbSize        dd 80
+    .style         dd p0
+    .lpfnWndProc   dq p1
+    .cbClsExtra    dd p2
+    .cbWndExtra    dd p3
+    .hInstance     dq p4
+    .hIcon         dq p5
+    .hCursor       dq p6
+    .hbrBackground dq p7
+    .lpszMenuName  dq p8
+    .lpszClassName dq p9
+    .hIconSm       dq p10 }
+
+struc RECT p0=0,p1=0,p2=0,p3=0 {
+    .left   dd p0
+    .top    dd p1
+    .right  dd p2
+    .bottom dd p3 }
+
+struc BITMAPINFOHEADER p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0 {
+    .biSize          dd 40
+    .biWidth         dd p0
+    .biHeight        dd p1
+    .biPlanes        dw p2
+    .biBitCount      dw p3
+    .biCompression   dd p4
+    .biSizeImage     dd p5
+    .biXPelsPerMeter dd p6
+    .biYPelsPerMeter dd p7
+    .biClrUsed       dd p8
+    .biClrImportant  dd p9 }
+
+struc SYSTEM_INFO p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0 {
+    .dwOemId                     dd p0
+    .dwPageSize                  dd p1
+    .lpMinimumApplicationAddress dq p2
+    .lpMaximumApplicationAddress dq p3
+    .dwActiveProcessorMask       dq p4
+    .dwNumberOfProcessors        dd p5
+    .dwProcessorType             dd p6
+    .dwAllocationGranularity     dd p7
+    .wProcessorLevel             dw p8
+    .wProcessorRevision          dw p9 }
 
 section '.text' code readable executable
 ;========================================================================
 macro emit [inst] {
 forward
-inst
-}
+inst }
+
 macro iaca_begin {
 mov ebx,111
-db $64,$67,$90
-}
+db $64,$67,$90 }
+
 macro iaca_end {
 mov ebx,222
 db $64,$67,$90

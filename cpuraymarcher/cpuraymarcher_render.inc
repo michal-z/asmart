@@ -531,91 +531,91 @@ jmp .for_each_tile
 add rsp,24
 pop r15 r14 r13 r12 rbp rbx rdi rsi
 ret
-;========================================================================
+;=============================================================================
 ; Update global state. Runs in the main thread.
-;------------------------------------------------------------------------
 align 32
 update_state:
-        $sub            rsp,24
-        $vxorps         xmm0,xmm0,xmm0
-       ;$vcvtsd2ss      xmm0,xmm0,[time]
-        $vbroadcastss   ymm0,xmm0
-        $vmulps         ymm0,ymm0,[k_0_5]
-        $call           sincos
-        $vmovaps        ymm2,[k_camera_radius]
-        $vmulps         ymm0,ymm0,ymm2
-        $vmulps         ymm1,ymm1,ymm2
-        $vmovss         [eye_position+0],xmm0
-        $vmovss         [eye_position+8],xmm1
-        $vxorps         xmm0,xmm0,xmm0
-        $vcvtsd2ss      xmm0,xmm0,[time]
-        $vbroadcastss   ymm0,xmm0
-        $vmulps         ymm0,ymm0,[k_0_5]
-        $call           sincos
-        $vmovaps        ymm2,[k_sphere_radius]
-        $vmulps         ymm0,ymm0,ymm2
-        $vmulps         ymm1,ymm1,ymm2
-        $vmovaps        [object.param_x+$020],ymm1
-        $vmovaps        [object.param_z+$020],ymm0
-        $vxorps         ymm2,ymm2,ymm2
-        $vsubps         ymm0,ymm2,ymm0
-        $vsubps         ymm1,ymm2,ymm1
-        $vmovaps        [object.param_x+$040],ymm1
-        $vmovaps        [object.param_z+$040],ymm0
-        $vbroadcastss   ymm0,[eye_position+0]             ; ymm0 = eye x pos
-        $vbroadcastss   ymm3,[eye_focus+0]
-        $vbroadcastss   ymm1,[eye_position+4]             ; ymm1 = eye y pos
-        $vbroadcastss   ymm4,[eye_focus+4]
-        $vbroadcastss   ymm2,[eye_position+8]             ; ymm2 = eye z pos
-        $vbroadcastss   ymm5,[eye_focus+8]
-        $vsubps         ymm3,ymm0,ymm3
-        $vsubps         ymm4,ymm1,ymm4
-        $vsubps         ymm5,ymm2,ymm5
-        $vmulps         ymm6,ymm3,ymm3
-        $vmulps         ymm7,ymm4,ymm4
-        $vmulps         ymm8,ymm5,ymm5
-        $vaddps         ymm6,ymm6,ymm7
-        $vaddps         ymm6,ymm6,ymm8
-        $vrsqrtps       ymm6,ymm6
-        $vmulps         ymm3,ymm3,ymm6
-        $vmulps         ymm4,ymm4,ymm6
-        $vmulps         ymm5,ymm5,ymm6                          ; (ymm3,ymm4,ymm5) = normalized(iz)
-        $vmovaps        [eye_zaxis+$000],ymm3
-        $vmovaps        [eye_zaxis+$020],ymm4
-        $vmovaps        [eye_zaxis+$040],ymm5
-        $vxorps         ymm8,ymm8,ymm8
-        $vsubps         ymm8,ymm8,ymm3
-        $vxorps         ymm7,ymm7,ymm7
-        $vmovaps        ymm6,ymm5                              ; (ymm6,ymm7,ymm8) = ix
-        $vmulps         ymm9,ymm8,ymm8
-        $vmulps         ymm10,ymm6,ymm6
-        $vaddps         ymm9,ymm9,ymm10
-        $vrsqrtps       ymm9,ymm9
-        $vmulps         ymm6,ymm6,ymm9
-        $vmulps         ymm8,ymm8,ymm9                          ; (ymm6,ymm7,ymm8) = normalized(ix)
-        $vmovaps        [eye_xaxis+$000],ymm6
-        $vmovaps        [eye_xaxis+$020],ymm7
-        $vmovaps        [eye_xaxis+$040],ymm8
-        $vmulps         ymm9,ymm5,ymm7
-        $vmulps         ymm10,ymm3,ymm8
-        $vmulps         ymm11,ymm4,ymm6
-        $vfmsub231ps    ymm9,ymm4,ymm8
-        $vfmsub231ps    ymm10,ymm5,ymm6
-        $vfmsub231ps    ymm11,ymm3,ymm7                    ; (ymm9,ymm10,ymm11) = iy
-        $vmulps         ymm12,ymm9,ymm9
-        $vmulps         ymm13,ymm10,ymm10
-        $vmulps         ymm14,ymm11,ymm11
-        $vaddps         ymm12,ymm12,ymm13
-        $vaddps         ymm12,ymm12,ymm14
-        $vrsqrtps       ymm12,ymm12
-        $vmulps         ymm9,ymm9,ymm12
-        $vmulps         ymm10,ymm10,ymm12
-        $vmulps         ymm11,ymm11,ymm12                       ; (ymm9,ymm10,ymm11) = normalized(iy)
-        $vmovaps        [eye_yaxis+$000],ymm9
-        $vmovaps        [eye_yaxis+$020],ymm10
-        $vmovaps        [eye_yaxis+$040],ymm11
-        $add            rsp,24
-        $ret
+;-----------------------------------------------------------------------------
+sub rsp,24
+vxorps xmm0,xmm0,xmm0
+;$vcvtsd2ss xmm0,xmm0,[time]
+vbroadcastss ymm0,xmm0
+vmulps ymm0,ymm0,[k_0_5]
+call sincos
+vmovaps ymm2,[k_camera_radius]
+vmulps ymm0,ymm0,ymm2
+vmulps ymm1,ymm1,ymm2
+vmovss [eye_position+0],xmm0
+vmovss [eye_position+8],xmm1
+vxorps xmm0,xmm0,xmm0
+vcvtsd2ss xmm0,xmm0,[time]
+vbroadcastss ymm0,xmm0
+vmulps ymm0,ymm0,[k_0_5]
+call sincos
+vmovaps ymm2,[k_sphere_radius]
+vmulps ymm0,ymm0,ymm2
+vmulps ymm1,ymm1,ymm2
+vmovaps [object.param_x+$020],ymm1
+vmovaps [object.param_z+$020],ymm0
+vxorps ymm2,ymm2,ymm2
+vsubps ymm0,ymm2,ymm0
+vsubps ymm1,ymm2,ymm1
+vmovaps [object.param_x+$040],ymm1
+vmovaps [object.param_z+$040],ymm0
+vbroadcastss ymm0,[eye_position+0]             ; ymm0 = eye x pos
+vbroadcastss ymm3,[eye_focus+0]
+vbroadcastss ymm1,[eye_position+4]             ; ymm1 = eye y pos
+vbroadcastss ymm4,[eye_focus+4]
+vbroadcastss ymm2,[eye_position+8]             ; ymm2 = eye z pos
+vbroadcastss ymm5,[eye_focus+8]
+vsubps ymm3,ymm0,ymm3
+vsubps ymm4,ymm1,ymm4
+vsubps ymm5,ymm2,ymm5
+vmulps ymm6,ymm3,ymm3
+vmulps ymm7,ymm4,ymm4
+vmulps ymm8,ymm5,ymm5
+vaddps ymm6,ymm6,ymm7
+vaddps ymm6,ymm6,ymm8
+vrsqrtps ymm6,ymm6
+vmulps ymm3,ymm3,ymm6
+vmulps ymm4,ymm4,ymm6
+vmulps ymm5,ymm5,ymm6                    ; (ymm3,ymm4,ymm5) = normalized(iz)
+vmovaps [eye_zaxis+$000],ymm3
+vmovaps [eye_zaxis+$020],ymm4
+vmovaps [eye_zaxis+$040],ymm5
+vxorps ymm8,ymm8,ymm8
+vsubps ymm8,ymm8,ymm3
+vxorps ymm7,ymm7,ymm7
+vmovaps ymm6,ymm5                        ; (ymm6,ymm7,ymm8) = ix
+vmulps ymm9,ymm8,ymm8
+vmulps ymm10,ymm6,ymm6
+vaddps ymm9,ymm9,ymm10
+vrsqrtps ymm9,ymm9
+vmulps ymm6,ymm6,ymm9
+vmulps ymm8,ymm8,ymm9                    ; (ymm6,ymm7,ymm8) = normalized(ix)
+vmovaps [eye_xaxis+$000],ymm6
+vmovaps [eye_xaxis+$020],ymm7
+vmovaps [eye_xaxis+$040],ymm8
+vmulps ymm9,ymm5,ymm7
+vmulps ymm10,ymm3,ymm8
+vmulps ymm11,ymm4,ymm6
+vfmsub231ps ymm9,ymm4,ymm8
+vfmsub231ps ymm10,ymm5,ymm6
+vfmsub231ps ymm11,ymm3,ymm7              ; (ymm9,ymm10,ymm11) = iy
+vmulps ymm12,ymm9,ymm9
+vmulps ymm13,ymm10,ymm10
+vmulps ymm14,ymm11,ymm11
+vaddps ymm12,ymm12,ymm13
+vaddps ymm12,ymm12,ymm14
+vrsqrtps ymm12,ymm12
+vmulps ymm9,ymm9,ymm12
+vmulps ymm10,ymm10,ymm12
+vmulps ymm11,ymm11,ymm12                 ; (ymm9,ymm10,ymm11) = normalized(iy)
+vmovaps [eye_yaxis+$000],ymm9
+vmovaps [eye_yaxis+$020],ymm10
+vmovaps [eye_yaxis+$040],ymm11
+add rsp,24
+ret
 ;========================================================================
 else if program_section = 'data'
 
