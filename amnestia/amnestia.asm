@@ -16,6 +16,17 @@ WM_QUIT = 0012h
 WM_KEYDOWN = 0100h
 WM_DESTROY = 0002h
 VK_ESCAPE = 01Bh
+PFD_TYPE_RGBA = 0
+PFD_DOUBLEBUFFER = 0x00000001
+PFD_DRAW_TO_WINDOW = 0x00000004
+PFD_SUPPORT_OPENGL = 0x00000020
+WGL_CONTEXT_MAJOR_VERSION_ARB = 0x2091
+WGL_CONTEXT_MINOR_VERSION_ARB = 0x2092
+WGL_CONTEXT_FLAGS_ARB = 0x2094
+WGL_CONTEXT_PROFILE_MASK_ARB = 0x9126
+WGL_CONTEXT_ES_PROFILE_BIT_EXT = 0x0004
+WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB = 0x0002
+WGL_CONTEXT_CORE_PROFILE_BIT_ARB = 0x00000001
 
 k_funcparam5 = 32
 k_funcparam6 = k_funcparam5 + 8
@@ -26,38 +37,64 @@ k_funcparam10 = k_funcparam9 + 8
 k_funcparam11 = k_funcparam10 + 8
 k_funcparam12 = k_funcparam11 + 8
 
-struc POINT p0=0,p1=0 {
-.x dd p0
-.y dd p1 }
+struc POINT {
+.x dd 0
+.y dd 0 }
 
-struc MSG p0=0,p1=0,p2=0,p3=0,p4=0,p5=<0,0> {
-.hwnd    dq    p0
-.message dd    p1,?
-.wParam  dq    p2
-.lParam  dq    p3
-.time    dd    p4
-.pt      POINT p5
-         dd    ? }
+struc MSG {
+.hwnd    dq    0
+.message dd    0,0
+.wParam  dq    0
+.lParam  dq    0
+.time    dd    0
+.pt      POINT
+         dd    0 }
 
-struc WNDCLASSEX p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0,p10=0 {
-.cbSize        dd 80
-.style         dd p0
-.lpfnWndProc   dq p1
-.cbClsExtra    dd p2
-.cbWndExtra    dd p3
-.hInstance     dq p4
-.hIcon         dq p5
-.hCursor       dq p6
-.hbrBackground dq p7
-.lpszMenuName  dq p8
-.lpszClassName dq p9
-.hIconSm       dq p10 }
+struc WNDCLASS proc,name {
+.style         dd 0,0
+.lpfnWndProc   dq proc
+.cbClsExtra    dd 0
+.cbWndExtra    dd 0
+.hInstance     dq 0
+.hIcon         dq 0
+.hCursor       dq 0
+.hbrBackground dq 0
+.lpszMenuName  dq 0
+.lpszClassName dq name }
 
-struc RECT p0=0,p1=0,p2=0,p3=0 {
-.left   dd p0
-.top    dd p1
-.right  dd p2
-.bottom dd p3 }
+struc RECT l,t,r,b {
+.left   dd l
+.top    dd t
+.right  dd r
+.bottom dd b }
+
+struc PIXELFORMATDESCRIPTOR {
+.nSize           dw 40
+.nVersion        dw 1
+.dwFlags         dd PFD_DRAW_TO_WINDOW+PFD_SUPPORT_OPENGL+PFD_DOUBLEBUFFER
+.iPixelType      db PFD_TYPE_RGBA
+.cColorBits      db 32
+.cRedBits        db 0
+.cRedShift       db 0
+.cGreenBits      db 0
+.cGreenShift     db 0
+.cBlueBits       db 0
+.cBlueShift      db 0
+.cAlphaBits      db 0
+.cAlphaShift     db 0
+.cAccumBits      db 0
+.cAccumRedBits   db 0
+.cAccumGreenBits db 0
+.cAccumBlueBits  db 0
+.cAccumAlphaBits db 0
+.cDepthBits      db 24
+.cStencilBits    db 8
+.cAuxBuffers     db 0
+.iLayerType      db 0
+.bReserved       db 0
+.dwLayerMask     dd 0
+.dwVisibleMask   dd 0
+.dwDamageMask    dd 0 }
 
 section '.text' code readable executable
 ;========================================================================
@@ -91,10 +128,11 @@ call [QueryPerformanceCounter]
 mov rcx,[.perf_counter]
 sub rcx,[.first_perf_counter]
 mov rdx,[.perf_freq]
-vxorps xmm0,xmm0,xmm0
-vcvtsi2sd xmm1,xmm0,rcx
-vcvtsi2sd xmm2,xmm0,rdx
-vdivsd xmm0,xmm1,xmm2
+xorps xmm0,xmm0
+cvtsi2sd xmm0,rcx
+xorps xmm1,xmm1
+cvtsi2sd xmm1,rdx
+divsd xmm0,xmm1
 add rsp,.k_stack_size
 ret
 ;=============================================================================
@@ -107,33 +145,36 @@ mov rax,[.prev_time]
 test rax,rax
 jnz @f
 call get_time
-vmovsd [.prev_time],xmm0
-vmovsd [.prev_update_time],xmm0
+movsd [.prev_time],xmm0
+movsd [.prev_update_time],xmm0
   @@:
 call get_time                       ; xmm0 = (0,time)
-vmovsd [time],xmm0
-vsubsd xmm1,xmm0,[.prev_time]       ; xmm1 = (0,time_delta)
-vmovsd [.prev_time],xmm0
-vxorps xmm2,xmm2,xmm2
-vcvtsd2ss xmm1,xmm2,xmm1            ; xmm1 = (0,0,0,time_delta)
-vmovss [time_delta],xmm1
-vmovsd xmm1,[.prev_update_time]     ; xmm1 = (0,prev_update_time)
-vsubsd xmm2,xmm0,xmm1               ; xmm2 = (0,time-prev_update_time)
-vmovsd xmm3,[.k_1_0]                ; xmm3 = (0,1.0)
-vcomisd xmm2,xmm3
+movsd [time],xmm0
+movapd xmm1,xmm0
+subsd xmm1,[.prev_time]             ; xmm1 = (0,time_delta)
+movsd [.prev_time],xmm0
+xorpd xmm2,xmm2
+cvtsd2ss xmm1,xmm1                  ; xmm1 = (0,0,0,time_delta)
+movss [time_delta],xmm1
+movsd xmm1,[.prev_update_time]      ; xmm1 = (0,prev_update_time)
+movapd xmm2,xmm0
+subsd xmm2,xmm1                     ; xmm2 = (0,time-prev_update_time)
+movsd xmm3,[.k_1_0]                 ; xmm3 = (0,1.0)
+comisd xmm2,xmm3
 jb @f
-vmovsd [.prev_update_time],xmm0
+movsd [.prev_update_time],xmm0
 mov eax,[.frame]
-vxorpd xmm1,xmm1,xmm1
-vcvtsi2sd xmm1,xmm1,eax             ; xmm1 = (0,frame)
-vdivsd xmm0,xmm1,xmm2               ; xmm0 = (0,frame/(time-prev_update_time))
-vdivsd xmm1,xmm2,xmm1
-vmulsd xmm1,xmm1,[.k_1000000_0]
+xorpd xmm1,xmm1
+cvtsi2sd xmm1,eax                   ; xmm1 = (0,frame)
+movapd xmm3,xmm1
+divsd xmm1,xmm2                     ; xmm1 = (0,frame/(time-prev_update_time))
+divsd xmm2,xmm3                     ; xmm2 = (0,(time-prev_update_time)/frame)
+mulsd xmm2,[.k_1000000_0]
 mov [.frame],0
 lea rcx,[win_title]
 lea rdx,[win_title_fmt]
-vcvtsd2si r8,xmm0
-vcvtsd2si r9,xmm1
+cvtsd2si r8,xmm1
+cvtsd2si r9,xmm2
 call [wsprintf]
 mov rcx,[win_handle]
 lea rdx,[win_title]
@@ -157,16 +198,11 @@ xor ecx,ecx
 call [GetModuleHandle]
 mov [win_class.hInstance],rax
 xor ecx,ecx
-mov edx,IDI_APPLICATION
-call [LoadIcon]
-mov [win_class.hIcon],rax
-mov [win_class.hIconSm],rax
-xor ecx,ecx
 mov edx,IDC_ARROW
 call [LoadCursor]
 mov [win_class.hCursor],rax
 mov rcx,win_class
-call [RegisterClassEx]
+call [RegisterClass]
 test eax,eax
 jz .error
 ; window
@@ -196,6 +232,20 @@ call [CreateWindowEx]
 mov [win_handle],rax
 test rax,rax
 jz .error
+mov rcx,[win_handle]
+call [GetDC]
+mov [win_hdc],rax
+test rax,rax
+jz .error
+mov rcx,[win_hdc]
+lea rdx,[pfd]
+call [ChoosePixelFormat]
+mov rcx,[win_hdc]
+mov edx,eax
+lea r8,[pfd]
+call [SetPixelFormat]
+test eax,eax
+jz .error
 mov eax,1
 add rsp,.k_stack_size
 pop rsi
@@ -205,6 +255,52 @@ xor eax,eax
 add rsp,.k_stack_size
 pop rsi
 ret
+;  HGLRC hrc = state->wglCreateContext_(state->hdc);
+;  if (!hrc) return 0;
+;  if (!state->wglMakeCurrent_(state->hdc, hrc)) {
+;    state->wglDeleteContext_(hrc);
+;    return 0;
+;  }
+;
+;  if (!(state->wglCreateContextAttribsARB_ = (wglCreateContextAttribsARB_fn)os_load_gl_func("wglCreateContextAttribsARB"))) return 0;
+;
+;  int ctx_attribs[] = {
+;    WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
+;    WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+;    WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+;    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+;    0
+;  };
+;  state->hrc = state->wglCreateContextAttribsARB_(state->hdc, NULL, ctx_attribs);
+;
+;  if (!state->hrc) {
+;    state->wglDeleteContext_(hrc);
+;    return 0;
+;  }
+;  if (!state->wglMakeCurrent_(state->hdc, state->hrc)) {
+;    state->wglDeleteContext_(hrc);
+;    return 0;
+;  }
+;  state->wglDeleteContext_(hrc);
+;
+;  if (!(state->wglSwapIntervalEXT_ = (wglSwapIntervalEXT_fn)os_load_gl_func("wglSwapIntervalEXT"))) return 0;
+
+
+;  if (state->wglMakeCurrent_) {
+;    state->wglMakeCurrent_(NULL, NULL);
+;  }
+;  if (state->hrc) {
+;    state->wglDeleteContext_(state->hrc);
+;    state->hrc = NULL;
+;  }
+;  if (state->hdc) {
+;    ReleaseDC(state->hwnd, state->hdc);
+;    state->hdc = NULL;
+;  }
+;  if (state->opengl_dll) {
+;    FreeLibrary(state->opengl_dll);
+;    state->opengl_dll = NULL;
+;  }
 ;=============================================================================
 align 32
 deinit:
@@ -217,6 +313,8 @@ update:
   .k_stack_size = 7*8
 sub rsp,.k_stack_size
 call update_frame_stats
+mov ecx,1
+call [Sleep]
 add rsp,.k_stack_size
 ret
 ;=============================================================================
@@ -287,15 +385,17 @@ k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
 align 8
 win_handle dq 0
+win_hdc dq 0
 win_title db 'amnestia', 64 dup 0
 win_title_fmt db '[%d fps  %d us] amnestia',0
 win_msg MSG
-win_class WNDCLASSEX 0,winproc,0,0,0,0,0,0,0,win_title,0
+win_class WNDCLASS winproc,win_title
 win_rect RECT 0,0,k_win_width,k_win_height
 
 align 8
 time dq 0
-time_delta dd 0
+time_delta dd 0,0
+pfd PIXELFORMATDESCRIPTOR
 
 get_time.perf_counter dq 0
 get_time.perf_freq dq 0
@@ -306,6 +406,13 @@ update_frame_stats.prev_update_time dq 0
 update_frame_stats.frame dd 0,0
 update_frame_stats.k_1000000_0 dq 1000000.0
 update_frame_stats.k_1_0 dq 1.0
+
+align 8
+opengl_dll dq 0
+wglCreateContext dq 0
+wglDeleteContext dq 0
+wglGetProcAddress dq 0
+wglMakeCurrent dq 0
 ;========================================================================
 section '.idata' import data readable writeable
 
@@ -320,17 +427,19 @@ ExitProcess dq rva _ExitProcess
 QueryPerformanceFrequency dq rva _QueryPerformanceFrequency
 QueryPerformanceCounter dq rva _QueryPerformanceCounter
 CloseHandle dq rva _CloseHandle
+Sleep dq rva _Sleep
+LoadLibrary dq rva _LoadLibrary
+GetProcAddress dq rva _GetProcAddress
 dq 0
 
 _user32_table:
 wsprintf dq rva _wsprintf
-RegisterClassEx dq rva _RegisterClassEx
+RegisterClass dq rva _RegisterClass
 CreateWindowEx dq rva _CreateWindowEx
 DefWindowProc dq rva _DefWindowProc
 PeekMessage dq rva _PeekMessage
 DispatchMessage dq rva _DispatchMessage
 LoadCursor dq rva _LoadCursor
-LoadIcon dq rva _LoadIcon
 SetWindowText dq rva _SetWindowText
 AdjustWindowRect dq rva _AdjustWindowRect
 GetDC dq rva _GetDC
@@ -341,6 +450,8 @@ dq 0
 
 _gdi32_table:
 DeleteDC dq rva _DeleteDC
+SetPixelFormat dq rva _SetPixelFormat
+ChoosePixelFormat dq rva _ChoosePixelFormat
 dq 0
 
 _kernel32 db 'kernel32.dll',0
@@ -352,15 +463,17 @@ emit <_ExitProcess dw 0>,<db 'ExitProcess',0>
 emit <_QueryPerformanceFrequency dw 0>,<db 'QueryPerformanceFrequency',0>
 emit <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
 emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
+emit <_Sleep dw 0>,<db 'Sleep',0>
+emit <_LoadLibrary dw 0>,<db 'LoadLibraryA',0>
+emit <_GetProcAddress dw 0>,<db 'GetProcAddress',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
-emit <_RegisterClassEx dw 0>,<db 'RegisterClassExA',0>
+emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
 emit <_CreateWindowEx dw 0>,<db 'CreateWindowExA',0>
 emit <_DefWindowProc dw 0>,<db 'DefWindowProcA',0>
 emit <_PeekMessage dw 0>,<db 'PeekMessageA',0>
 emit <_DispatchMessage dw 0>,<db 'DispatchMessageA',0>
 emit <_LoadCursor dw 0>,<db 'LoadCursorA',0>
-emit <_LoadIcon dw 0>,<db 'LoadIconA',0>
 emit <_SetWindowText dw 0>,<db 'SetWindowTextA',0>
 emit <_AdjustWindowRect dw 0>,<db 'AdjustWindowRect',0>
 emit <_GetDC dw 0>,<db 'GetDC',0>
@@ -369,4 +482,6 @@ emit <_PostQuitMessage dw 0>,<db 'PostQuitMessage',0>
 emit <_MessageBox dw 0>,<db 'MessageBoxA',0>
 
 emit <_DeleteDC dw 0>,<db 'DeleteDC',0>
+emit <_SetPixelFormat dw 0>,<db 'SetPixelFormat',0>
+emit <_ChoosePixelFormat dw 0>,<db 'ChoosePixelFormat',0>
 ;========================================================================
