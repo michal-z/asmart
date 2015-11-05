@@ -187,12 +187,30 @@ ret
 align 32
 init:
 ;-----------------------------------------------------------------------------
+macro get_wgl_func func {
+mov rcx,[opengl_dll]
+lea rdx,[s_#func]
+call [GetProcAddress]
+mov [func],rax
+test rax,rax
+jz .error }
+ 
 virtual at 0
   rq 12
   .k_stack_size = $+16
 end virtual
 push rsi
 sub rsp,.k_stack_size
+; opengl32.dll
+lea rcx,[s_opengl_dll]
+call [LoadLibrary]
+mov [opengl_dll],rax
+test rax,rax
+jz .error
+get_wgl_func wglCreateContext
+get_wgl_func wglDeleteContext
+get_wgl_func wglGetProcAddress
+get_wgl_func wglMakeCurrent
 ; window class
 xor ecx,ecx
 call [GetModuleHandle]
@@ -237,6 +255,7 @@ call [GetDC]
 mov [win_hdc],rax
 test rax,rax
 jz .error
+; pixel format
 mov rcx,[win_hdc]
 lea rdx,[pfd]
 call [ChoosePixelFormat]
@@ -246,6 +265,7 @@ lea r8,[pfd]
 call [SetPixelFormat]
 test eax,eax
 jz .error
+; opengl context
 mov eax,1
 add rsp,.k_stack_size
 pop rsi
@@ -384,6 +404,7 @@ k_win_height = 720
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
 align 8
+hglrc dq 0
 win_handle dq 0
 win_hdc dq 0
 win_title db 'amnestia', 64 dup 0
@@ -413,6 +434,12 @@ wglCreateContext dq 0
 wglDeleteContext dq 0
 wglGetProcAddress dq 0
 wglMakeCurrent dq 0
+
+s_opengl_dll db 'opengl32.dll',0
+s_wglCreateContext db 'wglCreateContext',0
+s_wglDeleteContext db 'wglDeleteContext',0
+s_wglGetProcAddress db 'wglGetProcAddress',0
+s_wglMakeCurrent db 'wglMakeCurrent',0
 ;========================================================================
 section '.idata' import data readable writeable
 
