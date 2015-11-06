@@ -27,6 +27,7 @@ WGL_CONTEXT_PROFILE_MASK_ARB = 0x9126
 WGL_CONTEXT_ES_PROFILE_BIT_EXT = 0x0004
 WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB = 0x0002
 WGL_CONTEXT_CORE_PROFILE_BIT_ARB = 0x00000001
+GL_COLOR_BUFFER_BIT = 0x00004000
 
 k_funcparam5 = 32
 k_funcparam6 = k_funcparam5 + 8
@@ -194,7 +195,20 @@ call [GetProcAddress]
 mov [func],rax
 test rax,rax
 jz .error }
- 
+
+macro get_gl_func func {
+lea rcx,[s_#func]
+call [wglGetProcAddress]
+test rax,rax
+jnz @f
+mov rcx,[opengl_dll]
+lea rdx,[s_#func]
+call [GetProcAddress]
+test rax,rax
+jz .error
+  @@:
+mov [func],rax }
+
 virtual at 0
   rq 12
   .k_stack_size = $+16
@@ -266,65 +280,86 @@ call [SetPixelFormat]
 test eax,eax
 jz .error
 ; opengl context
-mov eax,1
+mov rcx,[win_hdc]
+call [wglCreateContext]
+test rax,rax
+jz .error
+mov rsi,rax            ; rsi = temp gl context
+mov rcx,[win_hdc]
+mov rdx,rsi
+call [wglMakeCurrent]
+test eax,eax
+jz .error_del_ctx
+get_gl_func wglCreateContextAttribsARB
+mov rcx,[win_hdc]
+xor edx,edx
+lea r8,[ogl_ctx_attribs]
+call [wglCreateContextAttribsARB]
+mov [hglrc],rax
+test rax,rax
+jz .error_del_ctx
+mov rcx,[win_hdc]
+mov rdx,[hglrc]
+call [wglMakeCurrent]
+test eax,eax
+jz .error_del_ctx
+mov rcx,rsi
+call [wglDeleteContext]
+get_gl_func wglSwapIntervalEXT
+xor ecx,ecx
+call [wglSwapIntervalEXT]
+get_gl_func glClear
+get_gl_func glClearColor
+
+movss xmm0,[k_1_0f]
+xorps xmm1,xmm1
+xorps xmm2,xmm2
+movss xmm3,[k_1_0f]
+call [glClearColor]
+
+mov eax,1              ; success
 add rsp,.k_stack_size
 pop rsi
 ret
+  .error_del_ctx:
+mov rcx,rsi
+call [wglDeleteContext]
   .error:
 xor eax,eax
 add rsp,.k_stack_size
 pop rsi
 ret
-;  HGLRC hrc = state->wglCreateContext_(state->hdc);
-;  if (!hrc) return 0;
-;  if (!state->wglMakeCurrent_(state->hdc, hrc)) {
-;    state->wglDeleteContext_(hrc);
-;    return 0;
-;  }
-;
-;  if (!(state->wglCreateContextAttribsARB_ = (wglCreateContextAttribsARB_fn)os_load_gl_func("wglCreateContextAttribsARB"))) return 0;
-;
-;  int ctx_attribs[] = {
-;    WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-;    WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-;    WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-;    WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-;    0
-;  };
-;  state->hrc = state->wglCreateContextAttribsARB_(state->hdc, NULL, ctx_attribs);
-;
-;  if (!state->hrc) {
-;    state->wglDeleteContext_(hrc);
-;    return 0;
-;  }
-;  if (!state->wglMakeCurrent_(state->hdc, state->hrc)) {
-;    state->wglDeleteContext_(hrc);
-;    return 0;
-;  }
-;  state->wglDeleteContext_(hrc);
-;
-;  if (!(state->wglSwapIntervalEXT_ = (wglSwapIntervalEXT_fn)os_load_gl_func("wglSwapIntervalEXT"))) return 0;
-
-
-;  if (state->wglMakeCurrent_) {
-;    state->wglMakeCurrent_(NULL, NULL);
-;  }
-;  if (state->hrc) {
-;    state->wglDeleteContext_(state->hrc);
-;    state->hrc = NULL;
-;  }
-;  if (state->hdc) {
-;    ReleaseDC(state->hwnd, state->hdc);
-;    state->hdc = NULL;
-;  }
-;  if (state->opengl_dll) {
-;    FreeLibrary(state->opengl_dll);
-;    state->opengl_dll = NULL;
-;  }
 ;=============================================================================
 align 32
 deinit:
 ;-----------------------------------------------------------------------------
+  .k_stack_size = 7*8
+sub rsp,.k_stack_size
+mov rax,[wglMakeCurrent]
+test rax,rax
+jz @f
+xor ecx,ecx
+xor edx,edx
+call [wglMakeCurrent]
+  @@:
+mov rcx,[hglrc]
+test rcx,rcx
+jz @f
+call [wglDeleteContext]
+  @@:
+mov rcx,[win_hdc]
+test rcx,rcx
+jz @f
+mov rcx,[win_handle]
+mov rdx,[win_hdc]
+call [ReleaseDC]
+  @@:
+mov rcx,[opengl_dll]
+test rcx,rcx
+jz @f
+call [FreeLibrary]
+  @@:
+add rsp,.k_stack_size
 ret
 ;=============================================================================
 align 32
@@ -333,8 +368,10 @@ update:
   .k_stack_size = 7*8
 sub rsp,.k_stack_size
 call update_frame_stats
-mov ecx,1
-call [Sleep]
+mov ecx,GL_COLOR_BUFFER_BIT
+call [glClear]
+mov rcx,[win_hdc]
+call [SwapBuffers]
 add rsp,.k_stack_size
 ret
 ;=============================================================================
@@ -428,18 +465,34 @@ update_frame_stats.frame dd 0,0
 update_frame_stats.k_1000000_0 dq 1000000.0
 update_frame_stats.k_1_0 dq 1.0
 
+align 4
+k_1_0f dd 1.0
+
 align 8
 opengl_dll dq 0
 wglCreateContext dq 0
 wglDeleteContext dq 0
 wglGetProcAddress dq 0
 wglMakeCurrent dq 0
+wglCreateContextAttribsARB dq 0
+wglSwapIntervalEXT dq 0
+glClear dq 0
+glClearColor dq 0
+
+ogl_ctx_attribs dd WGL_CONTEXT_MAJOR_VERSION_ARB,4,\
+                   WGL_CONTEXT_MINOR_VERSION_ARB,3,\
+                   WGL_CONTEXT_FLAGS_ARB,WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,\
+                   WGL_CONTEXT_PROFILE_MASK_ARB,WGL_CONTEXT_CORE_PROFILE_BIT_ARB,0
 
 s_opengl_dll db 'opengl32.dll',0
 s_wglCreateContext db 'wglCreateContext',0
 s_wglDeleteContext db 'wglDeleteContext',0
 s_wglGetProcAddress db 'wglGetProcAddress',0
 s_wglMakeCurrent db 'wglMakeCurrent',0
+s_wglCreateContextAttribsARB db 'wglCreateContextAttribsARB',0
+s_wglSwapIntervalEXT db 'wglSwapIntervalEXT',0
+s_glClear db 'glClear',0
+s_glClearColor db 'glClearColor',0
 ;========================================================================
 section '.idata' import data readable writeable
 
@@ -456,6 +509,7 @@ QueryPerformanceCounter dq rva _QueryPerformanceCounter
 CloseHandle dq rva _CloseHandle
 Sleep dq rva _Sleep
 LoadLibrary dq rva _LoadLibrary
+FreeLibrary dq rva _FreeLibrary
 GetProcAddress dq rva _GetProcAddress
 dq 0
 
@@ -479,6 +533,7 @@ _gdi32_table:
 DeleteDC dq rva _DeleteDC
 SetPixelFormat dq rva _SetPixelFormat
 ChoosePixelFormat dq rva _ChoosePixelFormat
+SwapBuffers dq rva _SwapBuffers
 dq 0
 
 _kernel32 db 'kernel32.dll',0
@@ -492,6 +547,7 @@ emit <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
 emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
 emit <_Sleep dw 0>,<db 'Sleep',0>
 emit <_LoadLibrary dw 0>,<db 'LoadLibraryA',0>
+emit <_FreeLibrary dw 0>,<db 'FreeLibrary',0>
 emit <_GetProcAddress dw 0>,<db 'GetProcAddress',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
@@ -511,4 +567,5 @@ emit <_MessageBox dw 0>,<db 'MessageBoxA',0>
 emit <_DeleteDC dw 0>,<db 'DeleteDC',0>
 emit <_SetPixelFormat dw 0>,<db 'SetPixelFormat',0>
 emit <_ChoosePixelFormat dw 0>,<db 'ChoosePixelFormat',0>
+emit <_SwapBuffers dw 0>,<db 'SwapBuffers',0>
 ;========================================================================
