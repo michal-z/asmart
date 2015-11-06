@@ -16,6 +16,11 @@ WM_QUIT = 0012h
 WM_KEYDOWN = 0100h
 WM_DESTROY = 0002h
 VK_ESCAPE = 01Bh
+OPEN_EXISTING = 3
+GENERIC_READ = 0x80000000
+INVALID_HANDLE_VALUE = 0xffffffffffffffff
+INVALID_FILE_SIZE = 0xffffffff
+FILE_ATTRIBUTE_NORMAL = 128
 PFD_TYPE_RGBA = 0
 PFD_DOUBLEBUFFER = 0x00000001
 PFD_DRAW_TO_WINDOW = 0x00000004
@@ -110,11 +115,91 @@ db $64,$67,$90 }
 macro iaca_end {
 mov ebx,222
 db $64,$67,$90 }
+
+macro memalloc size {
+mov rcx,[process_heap]
+xor edx,edx
+mov r8d,size
+call [HeapAlloc] }
+
+macro memfree ptr {
+mov rcx,[process_heap]
+xor edx,edx
+mov r8,ptr
+call [HeapFree] }
+;=============================================================================
+program_section = 'code'
+include 'amnestia_demo.inc'
+;=============================================================================
+align 32
+load_entire_file:
+;-----------------------------------------------------------------------------
+virtual at 0
+  rq 4
+  .bytes_read dd ?
+  dd ?
+  .k_stack_size = $
+end virtual
+push rdi rsi rbx
+sub rsp,.k_stack_size
+xor esi,esi                                 ; file handle
+xor edi,edi                                 ; memory pointer
+mov edx,GENERIC_READ
+xor r8d,r8d
+xor r9d,r9d
+mov dword [k_funcparam5+rsp],OPEN_EXISTING
+mov dword [k_funcparam6+rsp],FILE_ATTRIBUTE_NORMAL
+mov [k_funcparam7+rsp],r9
+call [CreateFile]
+cmp rax,INVALID_HANDLE_VALUE
+je .error
+mov rsi,rax
+mov rcx,rsi
+xor edx,edx
+call [GetFileSize]
+cmp eax,INVALID_FILE_SIZE
+je .error
+mov ebx,eax
+memalloc ebx
+test rax,rax
+jz .error
+mov rdi,rax
+mov rcx,rsi
+mov rdx,rdi
+mov r8d,ebx
+lea r9,[.bytes_read+rsp]
+mov qword [k_funcparam5+rsp],0
+call [ReadFile]
+test eax,eax
+jz .error
+cmp [.bytes_read+rsp],ebx
+jne .error
+mov rcx,rsi
+call [CloseHandle]
+mov rax,rdi
+mov edx,ebx
+jmp .done
+  .error:
+test rsi,rsi
+jz @f
+mov rcx,rsi
+call [CloseHandle]
+  @@:
+test rdi,rdi
+jz @f
+memfree rdi
+  @@:
+xor eax,eax
+xor edx,edx
+  .done:
+add rsp,.k_stack_size
+pop rbx rsi rdi
+ret
 ;=============================================================================
 align 32
 get_time:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 7*8
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 mov rax,[.perf_freq]
 test rax,rax
@@ -140,7 +225,7 @@ ret
 align 32
 update_frame_stats:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 7*8
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 mov rax,[.prev_time]
 test rax,rax
@@ -215,6 +300,11 @@ virtual at 0
 end virtual
 push rsi
 sub rsp,.k_stack_size
+; process heap
+call [GetProcessHeap]
+mov [process_heap],rax
+test rax,rax
+jz .error
 ; opengl32.dll
 lea rcx,[s_opengl_dll]
 call [LoadLibrary]
@@ -308,15 +398,9 @@ call [wglDeleteContext]
 get_gl_func wglSwapIntervalEXT
 xor ecx,ecx
 call [wglSwapIntervalEXT]
+; opengl commands
 get_gl_func glClear
 get_gl_func glClearColor
-
-movss xmm0,[k_1_0f]
-xorps xmm1,xmm1
-xorps xmm2,xmm2
-movss xmm3,[k_1_0f]
-call [glClearColor]
-
 mov eax,1              ; success
 add rsp,.k_stack_size
 pop rsi
@@ -333,7 +417,7 @@ ret
 align 32
 deinit:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 7*8
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 mov rax,[wglMakeCurrent]
 test rax,rax
@@ -365,11 +449,10 @@ ret
 align 32
 update:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 7*8
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 call update_frame_stats
-mov ecx,GL_COLOR_BUFFER_BIT
-call [glClear]
+call demo_update
 mov rcx,[win_hdc]
 call [SwapBuffers]
 add rsp,.k_stack_size
@@ -378,12 +461,12 @@ ret
 align 32
 start:
 ;-----------------------------------------------------------------------------
-virtual at 0
-  rq 5
-  .k_stack_size = $+16
-end virtual
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 call init
+test eax,eax
+jz .quit_deinit
+call demo_init
 test eax,eax
 jz .quit
   .main_loop:
@@ -404,6 +487,8 @@ jmp .main_loop
 call update
 jmp .main_loop
   .quit:
+call demo_deinit
+  .quit_deinit:
 call deinit
 xor ecx,ecx
 call [ExitProcess]
@@ -411,7 +496,7 @@ call [ExitProcess]
 align 32
 winproc:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 7*8
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 cmp edx,WM_KEYDOWN
 je .keydown
@@ -436,6 +521,9 @@ ret
 ;========================================================================
 section '.data' data readable writeable
 
+program_section = 'data'
+include 'amnestia_demo.inc'
+
 k_win_width = 1280
 k_win_height = 720
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
@@ -451,6 +539,7 @@ win_class WNDCLASS winproc,win_title
 win_rect RECT 0,0,k_win_width,k_win_height
 
 align 8
+process_heap dq 0
 time dq 0
 time_delta dd 0,0
 pfd PIXELFORMATDESCRIPTOR
@@ -511,6 +600,13 @@ Sleep dq rva _Sleep
 LoadLibrary dq rva _LoadLibrary
 FreeLibrary dq rva _FreeLibrary
 GetProcAddress dq rva _GetProcAddress
+HeapAlloc dq rva _HeapAlloc
+HeapReAlloc dq rva _HeapReAlloc
+HeapFree dq rva _HeapFree
+CreateFile dq rva _CreateFile
+ReadFile dq rva _ReadFile
+GetFileSize dq rva _GetFileSize
+GetProcessHeap dq rva _GetProcessHeap
 dq 0
 
 _user32_table:
@@ -549,6 +645,13 @@ emit <_Sleep dw 0>,<db 'Sleep',0>
 emit <_LoadLibrary dw 0>,<db 'LoadLibraryA',0>
 emit <_FreeLibrary dw 0>,<db 'FreeLibrary',0>
 emit <_GetProcAddress dw 0>,<db 'GetProcAddress',0>
+emit <_HeapAlloc dw 0>,<db 'HeapAlloc',0>
+emit <_HeapReAlloc dw 0>,<db 'HeapReAlloc',0>
+emit <_HeapFree dw 0>,<db 'HeapFree',0>
+emit <_CreateFile dw 0>,<db 'CreateFileA',0>
+emit <_ReadFile dw 0>,<db 'ReadFile',0>
+emit <_GetFileSize dw 0>,<db 'GetFileSize',0>
+emit <_GetProcessHeap dw 0>,<db 'GetProcessHeap',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
 emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
