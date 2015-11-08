@@ -1,1 +1,1 @@
-..\fasm\fasm.exe cpuraymarcher.asm
+..\bin\fasm.exe cpuraymarcher.asm

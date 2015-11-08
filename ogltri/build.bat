@@ -1,0 +1,1 @@
+..\bin\fasm.exe ogltri.asm

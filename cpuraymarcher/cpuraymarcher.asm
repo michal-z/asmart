@@ -1,89 +1,7 @@
 format PE64 GUI 4.0
 entry start
 
-INFINITE = 0xffffffff
-IDI_APPLICATION = 32512
-IDC_ARROW = 32512
-WS_VISIBLE = 010000000h
-WS_OVERLAPPED = 000000000h
-WS_CAPTION = 000C00000h
-WS_SYSMENU = 000080000h
-WS_VISIBLE = 010000000h
-WS_MINIMIZEBOX = 000020000h
-CW_USEDEFAULT = 80000000h
-SRCCOPY = 0x00CC0020
-PM_REMOVE = 0001h
-WM_QUIT = 0012h
-WM_KEYDOWN = 0100h
-WM_DESTROY = 0002h
-VK_ESCAPE = 01Bh
-
-k_funcparam5 = 32
-k_funcparam6 = k_funcparam5 + 8
-k_funcparam7 = k_funcparam6 + 8
-k_funcparam8 = k_funcparam7 + 8
-k_funcparam9 = k_funcparam8 + 8
-k_funcparam10 = k_funcparam9 + 8
-k_funcparam11 = k_funcparam10 + 8
-k_funcparam12 = k_funcparam11 + 8
-
-struc POINT p0=0,p1=0 {
-.x dd p0
-.y dd p1 }
-
-struc MSG p0=0,p1=0,p2=0,p3=0,p4=0,p5=<0,0> {
-.hwnd    dq    p0
-.message dd    p1,?
-.wParam  dq    p2
-.lParam  dq    p3
-.time    dd    p4
-.pt      POINT p5
-         dd    ? }
-
-struc WNDCLASSEX p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0,p10=0 {
-.cbSize        dd 80
-.style         dd p0
-.lpfnWndProc   dq p1
-.cbClsExtra    dd p2
-.cbWndExtra    dd p3
-.hInstance     dq p4
-.hIcon         dq p5
-.hCursor       dq p6
-.hbrBackground dq p7
-.lpszMenuName  dq p8
-.lpszClassName dq p9
-.hIconSm       dq p10 }
-
-struc RECT p0=0,p1=0,p2=0,p3=0 {
-.left   dd p0
-.top    dd p1
-.right  dd p2
-.bottom dd p3 }
-
-struc BITMAPINFOHEADER p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0 {
-.biSize          dd 40
-.biWidth         dd p0
-.biHeight        dd p1
-.biPlanes        dw p2
-.biBitCount      dw p3
-.biCompression   dd p4
-.biSizeImage     dd p5
-.biXPelsPerMeter dd p6
-.biYPelsPerMeter dd p7
-.biClrUsed       dd p8
-.biClrImportant  dd p9 }
-
-struc SYSTEM_INFO p0=0,p1=0,p2=0,p3=0,p4=0,p5=0,p6=0,p7=0,p8=0,p9=0 {
-.dwOemId                     dd p0
-.dwPageSize                  dd p1
-.lpMinimumApplicationAddress dq p2
-.lpMaximumApplicationAddress dq p3
-.dwActiveProcessorMask       dq p4
-.dwNumberOfProcessors        dd p5
-.dwProcessorType             dd p6
-.dwAllocationGranularity     dd p7
-.wProcessorLevel             dw p8
-.wProcessorRevision          dw p9 }
+include '../inc/windows.inc'
 
 section '.text' code readable executable
 ;========================================================================
@@ -242,16 +160,11 @@ xor ecx,ecx
 call [GetModuleHandle]
 mov [win_class.hInstance],rax
 xor ecx,ecx
-mov edx,IDI_APPLICATION
-call [LoadIcon]
-mov [win_class.hIcon],rax
-mov [win_class.hIconSm],rax
-xor ecx,ecx
 mov edx,IDC_ARROW
 call [LoadCursor]
 mov [win_class.hCursor],rax
 mov rcx,win_class
-call [RegisterClassEx]
+call [RegisterClass]
 test eax,eax
 jz .error
 ; window
@@ -537,15 +450,14 @@ win_hdc dq 0
 win_title db 'CPU Raymarcher', 64 dup 0
 win_title_fmt db '[%d fps  %d us] CPU Raymarcher',0
 win_msg MSG
-win_class WNDCLASSEX 0,winproc,0,0,0,0,0,0,0,win_title,0
+win_class WNDCLASS winproc,win_title
 win_rect RECT 0,0,k_win_width,k_win_height
 
 no_avx2_caption db 'Not supported CPU',0
 no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
 
 align 8
-bmp_info BITMAPINFOHEADER k_win_width,k_win_height,1,32,0,\
-                          k_win_width*k_win_height,0,0,0,0
+bmp_info BITMAPINFOHEADER k_win_width,k_win_height,32,k_win_width*k_win_height
 dq 0,0,0,0
 
 align 8
@@ -601,7 +513,7 @@ dq 0
 
 _user32_table:
 wsprintf dq rva _wsprintf
-RegisterClassEx dq rva _RegisterClassEx
+RegisterClass dq rva _RegisterClass
 CreateWindowEx dq rva _CreateWindowEx
 DefWindowProc dq rva _DefWindowProc
 PeekMessage dq rva _PeekMessage
@@ -644,7 +556,7 @@ emit <_WaitForMultipleObjects dw 0>,<db 'WaitForMultipleObjects',0>
 emit <_GetSystemInfo dw 0>,<db 'GetSystemInfo',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
-emit <_RegisterClassEx dw 0>,<db 'RegisterClassExA',0>
+emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
 emit <_CreateWindowEx dw 0>,<db 'CreateWindowExA',0>
 emit <_DefWindowProc dw 0>,<db 'DefWindowProcA',0>
 emit <_PeekMessage dw 0>,<db 'PeekMessageA',0>
@@ -666,3 +578,4 @@ emit <_BitBlt dw 0>,<db 'BitBlt',0>
 emit <_DeleteDC dw 0>,<db 'DeleteDC',0>
 emit <_DeleteObject dw 0>,<db 'DeleteObject',0>
 ;========================================================================
+; vim: set ft=fasm:
