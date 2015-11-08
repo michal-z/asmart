@@ -33,6 +33,11 @@ WGL_CONTEXT_ES_PROFILE_BIT_EXT = 0x0004
 WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB = 0x0002
 WGL_CONTEXT_CORE_PROFILE_BIT_ARB = 0x00000001
 GL_COLOR_BUFFER_BIT = 0x00004000
+GL_FRAGMENT_SHADER = 0x8B30
+GL_VERTEX_SHADER = 0x8B31
+GL_VERTEX_SHADER_BIT = 0x00000001
+GL_FRAGMENT_SHADER_BIT = 0x00000002
+GL_TRIANGLES = 0x0004
 
 k_funcparam5 = 32
 k_funcparam6 = k_funcparam5 + 8
@@ -127,74 +132,12 @@ mov rcx,[process_heap]
 xor edx,edx
 mov r8,ptr
 call [HeapFree] }
+
+macro ln txt {
+db txt,13,10 }
 ;=============================================================================
 program_section = 'code'
 include 'amnestia_demo.inc'
-;=============================================================================
-align 32
-load_entire_file:
-;-----------------------------------------------------------------------------
-virtual at 0
-  rq 4
-  .bytes_read dd ?
-  dd ?
-  .k_stack_size = $
-end virtual
-push rdi rsi rbx
-sub rsp,.k_stack_size
-xor esi,esi                                 ; file handle
-xor edi,edi                                 ; memory pointer
-mov edx,GENERIC_READ
-xor r8d,r8d
-xor r9d,r9d
-mov dword [k_funcparam5+rsp],OPEN_EXISTING
-mov dword [k_funcparam6+rsp],FILE_ATTRIBUTE_NORMAL
-mov [k_funcparam7+rsp],r9
-call [CreateFile]
-cmp rax,INVALID_HANDLE_VALUE
-je .error
-mov rsi,rax
-mov rcx,rsi
-xor edx,edx
-call [GetFileSize]
-cmp eax,INVALID_FILE_SIZE
-je .error
-mov ebx,eax
-memalloc ebx
-test rax,rax
-jz .error
-mov rdi,rax
-mov rcx,rsi
-mov rdx,rdi
-mov r8d,ebx
-lea r9,[.bytes_read+rsp]
-mov qword [k_funcparam5+rsp],0
-call [ReadFile]
-test eax,eax
-jz .error
-cmp [.bytes_read+rsp],ebx
-jne .error
-mov rcx,rsi
-call [CloseHandle]
-mov rax,rdi
-mov edx,ebx
-jmp .done
-  .error:
-test rsi,rsi
-jz @f
-mov rcx,rsi
-call [CloseHandle]
-  @@:
-test rdi,rdi
-jz @f
-memfree rdi
-  @@:
-xor eax,eax
-xor edx,edx
-  .done:
-add rsp,.k_stack_size
-pop rbx rsi rdi
-ret
 ;=============================================================================
 align 32
 get_time:
@@ -401,6 +344,16 @@ call [wglSwapIntervalEXT]
 ; opengl commands
 get_gl_func glClear
 get_gl_func glClearColor
+get_gl_func glCreateShaderProgramv
+get_gl_func glDeleteProgram
+get_gl_func glUseProgramStages
+get_gl_func glBindProgramPipeline
+get_gl_func glDeleteProgramPipelines
+get_gl_func glGenProgramPipelines
+get_gl_func glDrawArrays
+get_gl_func glBindVertexArray
+get_gl_func glDeleteVertexArrays
+get_gl_func glGenVertexArrays
 mov eax,1              ; success
 add rsp,.k_stack_size
 pop rsi
@@ -523,6 +476,7 @@ section '.data' data readable writeable
 
 program_section = 'data'
 include 'amnestia_demo.inc'
+include 'amnestia_shader.inc'
 
 k_win_width = 1280
 k_win_height = 720
@@ -556,7 +510,10 @@ update_frame_stats.k_1_0 dq 1.0
 
 align 4
 k_1_0f dd 1.0
-
+ogl_ctx_attribs dd WGL_CONTEXT_MAJOR_VERSION_ARB,4,\
+                   WGL_CONTEXT_MINOR_VERSION_ARB,3,\
+                   WGL_CONTEXT_FLAGS_ARB,WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,\
+                   WGL_CONTEXT_PROFILE_MASK_ARB,WGL_CONTEXT_CORE_PROFILE_BIT_ARB,0
 align 8
 opengl_dll dq 0
 wglCreateContext dq 0
@@ -567,11 +524,16 @@ wglCreateContextAttribsARB dq 0
 wglSwapIntervalEXT dq 0
 glClear dq 0
 glClearColor dq 0
-
-ogl_ctx_attribs dd WGL_CONTEXT_MAJOR_VERSION_ARB,4,\
-                   WGL_CONTEXT_MINOR_VERSION_ARB,3,\
-                   WGL_CONTEXT_FLAGS_ARB,WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,\
-                   WGL_CONTEXT_PROFILE_MASK_ARB,WGL_CONTEXT_CORE_PROFILE_BIT_ARB,0
+glCreateShaderProgramv dq 0
+glDeleteProgram dq 0
+glUseProgramStages dq 0
+glBindProgramPipeline dq 0
+glDeleteProgramPipelines dq 0
+glGenProgramPipelines dq 0
+glDrawArrays dq 0
+glBindVertexArray dq 0
+glDeleteVertexArrays dq 0
+glGenVertexArrays dq 0
 
 s_opengl_dll db 'opengl32.dll',0
 s_wglCreateContext db 'wglCreateContext',0
@@ -582,6 +544,16 @@ s_wglCreateContextAttribsARB db 'wglCreateContextAttribsARB',0
 s_wglSwapIntervalEXT db 'wglSwapIntervalEXT',0
 s_glClear db 'glClear',0
 s_glClearColor db 'glClearColor',0
+s_glCreateShaderProgramv db 'glCreateShaderProgramv',0
+s_glDeleteProgram db 'glDeleteProgram',0
+s_glUseProgramStages db 'glUseProgramStages',0
+s_glBindProgramPipeline db 'glBindProgramPipeline',0
+s_glDeleteProgramPipelines db 'glDeleteProgramPipelines',0
+s_glGenProgramPipelines db 'glGenProgramPipelines',0
+s_glDrawArrays db 'glDrawArrays',0
+s_glBindVertexArray db 'glBindVertexArray',0
+s_glDeleteVertexArrays db 'glDeleteVertexArrays',0
+s_glGenVertexArrays db 'glGenVertexArrays',0
 ;========================================================================
 section '.idata' import data readable writeable
 
@@ -672,3 +644,4 @@ emit <_SetPixelFormat dw 0>,<db 'SetPixelFormat',0>
 emit <_ChoosePixelFormat dw 0>,<db 'ChoosePixelFormat',0>
 emit <_SwapBuffers dw 0>,<db 'SwapBuffers',0>
 ;========================================================================
+; vim: set ft=fasm:

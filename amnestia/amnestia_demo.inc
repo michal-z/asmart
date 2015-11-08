@@ -6,11 +6,35 @@ demo_init:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
 sub rsp,.k_stack_size
-movss xmm0,[k_1_0f]
-xorps xmm1,xmm1
-xorps xmm2,xmm2
-movss xmm3,[k_1_0f]
-call [glClearColor]
+; vao
+mov ecx,1
+lea rdx,[vao]
+call [glGenVertexArrays]
+; vs
+mov ecx,GL_VERTEX_SHADER
+mov edx,1
+lea r8,[vsh_full_triangle_ptr]
+call [glCreateShaderProgramv]
+mov [vshp],eax
+; fs
+mov ecx,GL_FRAGMENT_SHADER
+mov edx,1
+lea r8,[fsh_green_ptr]
+call [glCreateShaderProgramv]
+mov [fshp],eax
+; pipeline
+mov ecx,1
+mov rdx,pipeline
+call [glGenProgramPipelines]
+mov ecx,[pipeline]
+mov edx,GL_VERTEX_SHADER_BIT
+mov r8d,[vshp]
+call [glUseProgramStages]
+mov ecx,[pipeline]
+mov edx,GL_FRAGMENT_SHADER_BIT
+mov r8d,[fshp]
+call [glUseProgramStages]
+mov eax,1
 add rsp,.k_stack_size
 ret
 ;=============================================================================
@@ -29,9 +53,24 @@ demo_update:
 sub rsp,.k_stack_size
 mov ecx,GL_COLOR_BUFFER_BIT
 call [glClear]
+mov ecx,[vao]
+call [glBindVertexArray]
+mov ecx,[pipeline]
+call [glBindProgramPipeline]
+mov ecx,GL_TRIANGLES
+xor edx,edx
+mov r8d,3
+call [glDrawArrays]
 add rsp,.k_stack_size
 ret
 ;=============================================================================
 else if program_section = 'data'
 
+align 4
+vshp dd 0
+fshp dd 0
+pipeline dd 0
+vao dd 0
+
 end if
+; vim: set ft=fasm:
