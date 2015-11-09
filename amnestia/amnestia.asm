@@ -32,8 +32,22 @@ call [HeapFree] }
 
 macro ln txt {
 db txt,13,10 }
+
+struc audio_state {
+.enumerator dq 0
+.device dq 0
+.client dq 0
+.render_client dq 0 }
+
+struc demo_state {
+.vshp dd 0
+.fshp dd 0
+.pipeline dd 0
+.vao dd 0
+.clear_color dd 0.0,0.2,0.4,1.0
+align 8
+.audio audio_state }
 ;=============================================================================
-program_section = 'code'
 include 'amnestia_demo.inc'
 include 'amnestia_audio.inc'
 ;=============================================================================
@@ -303,6 +317,7 @@ update:
   .k_stack_size = 5*8
 sub rsp,.k_stack_size
 call update_frame_stats
+lea rcx,[demo]
 call demo_update
 mov rcx,[win_hdc]
 call [SwapBuffers]
@@ -316,10 +331,11 @@ start:
 sub rsp,.k_stack_size
 call init
 test eax,eax
-jz .quit_deinit
+jz .deinit
+lea rcx,[demo]
 call demo_init
 test eax,eax
-jz .quit
+jz .demo_deinit
   .main_loop:
 lea rcx,[win_msg]
 xor edx,edx
@@ -332,14 +348,15 @@ jz .update
 lea rcx,[win_msg]
 call [DispatchMessage]
 cmp [win_msg.message],WM_QUIT
-je .quit
+je .demo_deinit
 jmp .main_loop
   .update:
 call update
 jmp .main_loop
-  .quit:
+  .demo_deinit:
+lea rcx,[demo]
 call demo_deinit
-  .quit_deinit:
+  .deinit:
 call deinit
 xor ecx,ecx
 call [ExitProcess]
@@ -372,14 +389,16 @@ ret
 ;========================================================================
 section '.data' data readable writeable
 
-program_section = 'data'
-include 'amnestia_demo.inc'
 include 'amnestia_shader.inc'
 
 k_win_width = 800
 k_win_height = 800
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
+align 8
+demo demo_state
+
+align 8
 CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
 IID_IMMDeviceEnumerator GUID 0xD666063F,0x1587,0x4E43,0x81,0xF1,0xB9,0x48,0xE8,0x07,0x36,0x3F
 
