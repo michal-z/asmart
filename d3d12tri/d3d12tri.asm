@@ -41,35 +41,9 @@ call [HeapFree] }
 section '.text' code readable executable
 ;========================================================================
 align 32
-check_cpu:
-;------------------------------------------------------------------------
-mov eax,1
-cpuid
-and ecx,$018000000                          ; check OSXSAVE,AVX (018001000 if FMA required)
-cmp ecx,$018000000
-jne .not_supported
-;mov eax,7
-;xor ecx,ecx
-;cpuid
-;and ebx,$20                                 ; check AVX2
-;cmp ebx,$20
-;jne .not_supported
-xor ecx,ecx
-xgetbv
-and eax,$06                                 ; check OS support
-cmp eax,$06
-jne .not_supported
-mov eax,1
-jmp .return
-  .not_supported:
-xor eax,eax
-  .return:
-ret
-;========================================================================
-align 32
 get_time:
 ;------------------------------------------------------------------------
-  .k_stack_size = 7*8
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 mov rax,[.perf_freq]
 test rax,rax
@@ -84,52 +58,56 @@ call [QueryPerformanceCounter]
 mov rcx,[.perf_counter]
 sub rcx,[.first_perf_counter]
 mov rdx,[.perf_freq]
-vxorps xmm0,xmm0,xmm0
-vcvtsi2sd xmm1,xmm0,rcx
-vcvtsi2sd xmm2,xmm0,rdx
-vdivsd xmm0,xmm1,xmm2
+xorps xmm0,xmm0
+cvtsi2sd xmm0,rcx
+xorps xmm1,xmm1
+cvtsi2sd xmm1,rdx
+divsd xmm0,xmm1
 add rsp,.k_stack_size
 ret
 ;========================================================================
 align 32
 update_frame_stats:
 ;------------------------------------------------------------------------
-  .k_stack_size = 7*8
+  .k_stack_size = 5*8
 sub rsp,.k_stack_size
 mov rax,[.prev_time]
 test rax,rax
 jnz @f
 call get_time
-vmovsd [.prev_time],xmm0
-vmovsd [.prev_update_time],xmm0
+movsd [.prev_time],xmm0
+movsd [.prev_update_time],xmm0
   @@:
-call get_time                                ; xmm0 = (0, time)
-vmovsd [time],xmm0
-vsubsd xmm1,xmm0,[.prev_time]                  ; xmm1 = (0, time_delta)
-vmovsd [.prev_time],xmm0
-vxorps xmm2,xmm2,xmm2
-vcvtsd2ss xmm1,xmm2,xmm1                          ; xmm1 = (0, 0, 0, time_delta)
-vmovss [time_delta],xmm1
-vmovsd xmm1,[.prev_update_time]                ; xmm1 = (0, prev_update_time)
-vsubsd xmm2,xmm0,xmm1                          ; xmm2 = (0, time - prev_update_time)
-vmovsd xmm3,[.k_1_0]                           ; xmm3 = (0, 1.0)
-vcomisd xmm2,xmm3
+call get_time                       ; xmm0 = (0,time)
+movsd [time],xmm0
+movapd xmm1,xmm0
+subsd xmm1,[.prev_time]             ; xmm1 = (0,time_delta)
+movsd [.prev_time],xmm0
+xorpd xmm2,xmm2
+cvtsd2ss xmm1,xmm1                  ; xmm1 = (0,0,0,time_delta)
+movss [time_delta],xmm1
+movsd xmm1,[.prev_update_time]      ; xmm1 = (0,prev_update_time)
+movapd xmm2,xmm0
+subsd xmm2,xmm1                     ; xmm2 = (0,time-prev_update_time)
+movsd xmm3,[.k_1_0]                 ; xmm3 = (0,1.0)
+comisd xmm2,xmm3
 jb @f
-vmovsd [.prev_update_time],xmm0
+movsd [.prev_update_time],xmm0
 mov eax,[.frame]
-vxorpd xmm1,xmm1,xmm1
-vcvtsi2sd xmm1,xmm1,eax                           ; xmm1 = (0, frame)
-vdivsd xmm0,xmm1,xmm2                          ; xmm0 = (0, frame / (time - prev_update_time))
-vdivsd xmm1,xmm2,xmm1
-vmulsd xmm1,xmm1,[.k_1000000_0]
+xorpd xmm1,xmm1
+cvtsi2sd xmm1,eax                   ; xmm1 = (0,frame)
+movapd xmm3,xmm1
+divsd xmm1,xmm2                     ; xmm1 = (0,frame/(time-prev_update_time))
+divsd xmm2,xmm3                     ; xmm2 = (0,(time-prev_update_time)/frame)
+mulsd xmm2,[.k_1000000_0]
 mov [.frame],0
-mov rcx,win_title
-mov rdx,win_title_fmt
-vcvtsd2si r8,xmm0
-vcvtsd2si r9,xmm1
+lea rcx,[win_title]
+lea rdx,[win_title_fmt]
+cvtsd2si r8,xmm1
+cvtsd2si r9,xmm2
 call [wsprintf]
 mov rcx,[win_handle]
-mov rdx,win_title
+lea rdx,[win_title]
 call [SetWindowText]
   @@:
 add [.frame],1
@@ -317,9 +295,6 @@ virtual at 0
 end virtual
 push rdi rsi rbx
 sub rsp,.k_stack_size
-call check_cpu
-test eax,eax
-jz .error_cpu
 ; process heap
 call [GetProcessHeap]
 mov [def_heap],rax
@@ -382,7 +357,7 @@ call [rax+ID3D12Debug.EnableDebugLayer]
   @@:
 ; device
 xor ecx,ecx
-mov edx,D3D_FEATURE_LEVEL_11_1
+mov edx,D3D_FEATURE_LEVEL_11_0
 lea r8,[IID_ID3D12Device]
 lea r9,[device]
 call [D3D12CreateDevice]
