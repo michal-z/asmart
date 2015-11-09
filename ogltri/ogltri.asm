@@ -375,8 +375,8 @@ program_section = 'data'
 include 'ogltri_demo.inc'
 include 'ogltri_shader.inc'
 
-k_win_width = 1280
-k_win_height = 720
+k_win_width = 800
+k_win_height = 800
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
 align 8

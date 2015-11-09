@@ -20,7 +20,7 @@ ln '#version 430 core'
 ln 'layout(location = 0) out vec4 fs_out_color;'
 ln 'void main()'
 ln '{'
-ln '  fs_out_color = vec4(0.0, 1.0, 0.0, 1.0);'
+ln '  fs_out_color = vec4(0.2, 0.8, 0.2, 0.2);'
 ln '}'
 db 0
 

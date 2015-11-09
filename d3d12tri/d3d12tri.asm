@@ -691,10 +691,10 @@ ret
 ;========================================================================
 section '.data' data readable writeable
 
-k_win_width = 1024
-k_win_height = 1024
-k_win_widthf equ 1024.0
-k_win_heightf equ 1024.0
+k_win_width = 800
+k_win_height = 800
+k_win_widthf equ 800.0
+k_win_heightf equ 800.0
 k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
 align 8

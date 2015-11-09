@@ -6,6 +6,12 @@ demo_init:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
 sub rsp,.k_stack_size
+; clear color
+movss xmm0,[clear_color]
+movss xmm1,[clear_color+4]
+movss xmm2,[clear_color+8]
+movss xmm3,[clear_color+12]
+call [glClearColor]
 ; vao
 mov ecx,1
 lea rdx,[vao]
@@ -71,6 +77,7 @@ vshp dd 0
 fshp dd 0
 pipeline dd 0
 vao dd 0
+clear_color dd 0.0,0.2,0.4,1.0
 
 end if
 ; vim: set ft=fasm:
