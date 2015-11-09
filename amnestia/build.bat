@@ -1,1 +1,0 @@
-..\bin\fasm.exe amnestia.asm
