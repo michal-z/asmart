@@ -118,4 +118,17 @@ struc SYSTEM_INFO {
 .wProcessorLevel             dw 0
 .wProcessorRevision          dw 0 }
 
+struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
+dd p0
+dw p1
+dw p2
+db p3
+db p4
+db p5
+db p6
+db p7
+db p8
+db p9
+db p10 }
+
 ; vim: set ft=fasm:
