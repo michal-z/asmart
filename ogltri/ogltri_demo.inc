@@ -49,6 +49,16 @@ demo_deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
 sub rsp,.k_stack_size
+mov ecx,1
+lea rdx,[pipeline]
+call [glDeleteProgramPipelines]
+mov ecx,1
+lea rdx,[vao]
+call [glDeleteProgramPipelines]
+mov ecx,[vshp]
+call [glDeleteProgram]
+mov ecx,[fshp]
+call [glDeleteProgram]
 add rsp,.k_stack_size
 ret
 ;=============================================================================
