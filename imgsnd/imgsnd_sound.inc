@@ -1,7 +1,7 @@
 ;=============================================================================
 macro get_buffer {
-        mov         rcx,[.audio.render_client+rsi]
-        mov         edx,[.audio.buffer_size_in_frames+rsi]
+        mov         rcx,[audio.render_client]
+        mov         edx,[audio.buffer_size_in_frames]
         lea         r8,[.ptr+rsp]
         mov         rax,[rcx]
         call        [IAudioRenderClient.GetBuffer+rax]
@@ -9,8 +9,8 @@ macro get_buffer {
         js          .error }
 
 macro release_buffer {
-        mov         rcx,[.audio.render_client+rsi]
-        mov         edx,[.audio.buffer_size_in_frames+rsi]
+        mov         rcx,[audio.render_client]
+        mov         edx,[audio.buffer_size_in_frames]
         xor         r8d,r8d
         mov         rax,[rcx]
         call        [IAudioRenderClient.ReleaseBuffer+rax]
@@ -23,11 +23,11 @@ align 32
 audio_play:
 ;-----------------------------------------------------------------------------
 macro activate {
-        mov         rcx,[.audio.device+rsi]
+        mov         rcx,[audio.device]
         lea         rdx,[IID_IAudioClient]
         mov         r8d,CLSCTX_ALL
         xor         r9d,r9d
-        lea         rax,[.audio.client+rsi]
+        lea         rax,[audio.client]
         mov         [k_funcparam5+rsp],rax
         mov         rax,[rcx]
         call        [IMMDevice.Activate+rax]
@@ -35,7 +35,7 @@ macro activate {
         js          .error }
 
 macro initialize {
-        mov         rcx,[.audio.client+rsi]
+        mov         rcx,[audio.client]
         mov         edx,AUDCLNT_SHAREMODE_EXCLUSIVE
         mov         r8d,AUDCLNT_STREAMFLAGS_EVENTCALLBACK
         mov         r9,[.period+rsp]
@@ -47,8 +47,8 @@ macro initialize {
         call        [IAudioClient.Initialize+rax] }
 
 macro get_buf_size {
-        mov         rcx,[.audio.client+rsi]
-        lea         rdx,[.audio.buffer_size_in_frames+rsi]
+        mov         rcx,[audio.client]
+        lea         rdx,[audio.buffer_size_in_frames]
         mov         rax,[rcx]
         call        [IAudioClient.GetBufferSize+rax]
         test        eax,eax
@@ -64,15 +64,13 @@ macro create_event {
         jz          .error }
 
 virtual at 0
-  .audio audio_state
-end virtual
-virtual at 0
   rq 7
   .period dq ?
   .ptr dq ?
   .read_bytes dd ?,?
   .k_stack_size = $
 end virtual
+
         push        rsi
         sub         rsp,.k_stack_size
         mov         rsi,rcx
@@ -85,23 +83,23 @@ end virtual
         xor         edx,edx
         mov         r8d,CLSCTX_ALL
         lea         r9,[IID_IMMDeviceEnumerator]
-        lea         rax,[.audio.enumerator+rsi]
+        lea         rax,[audio.enumerator]
         mov         [k_funcparam5+rsp],rax
         call        [CoCreateInstance]
         test        eax,eax
         js          .error
         ; audio endpoint
-        mov         rcx,[.audio.enumerator+rsi]
+        mov         rcx,[audio.enumerator]
         mov         edx,eRender
         mov         r8d,eConsole
-        lea         r9,[.audio.device+rsi]
+        lea         r9,[audio.device]
         mov         rax,[rcx]
         call        [IMMDeviceEnumerator.GetDefaultAudioEndpoint+rax]
         test        eax,eax
         js          .error
         activate
         ; check device support
-        mov         rcx,[.audio.client+rsi]
+        mov         rcx,[audio.client]
         mov         edx,AUDCLNT_SHAREMODE_EXCLUSIVE
         lea         r8,[.k_format]
         xor         r9d,r9d
@@ -110,7 +108,7 @@ end virtual
         test        eax,eax
         js          .error
         ; get device period
-        mov         rcx,[.audio.client+rsi]
+        mov         rcx,[audio.client]
         xor         edx,edx
         lea         r8,[.period+rsp]
         mov         rax,[rcx]
@@ -126,13 +124,13 @@ end virtual
         ; compute new period and initialize again
         get_buf_size
         xorpd       xmm0,xmm0
-        cvtsi2sd    xmm0,[.audio.buffer_size_in_frames+rsi]
+        cvtsi2sd    xmm0,[audio.buffer_size_in_frames]
         mulsd       xmm0,[.k_10000000_0]
         divsd       xmm0,[.k_48000_0]
         addsd       xmm0,[.k_0_5]
         cvttsd2si   rax,xmm0
         mov         [.period+rsp],rax
-        mov         rcx,[.audio.client+rsi]
+        mov         rcx,[audio.client]
         mov         rax,[rcx]
         call        [IAudioClient.Release+rax]
         activate
@@ -141,18 +139,18 @@ end virtual
         js          .error
   .initialize_ok:
         create_event
-        mov         [.audio.buffer_ready_event+rsi],rax
+        mov         [audio.buffer_ready_event],rax
         create_event
-        mov         [.audio.shutdown_event+rsi],rax
-        mov         rcx,[.audio.client+rsi]
-        mov         rdx,[.audio.buffer_ready_event+rsi]
+        mov         [audio.shutdown_event],rax
+        mov         rcx,[audio.client]
+        mov         rdx,[audio.buffer_ready_event]
         mov         rax,[rcx]
         call        [IAudioClient.SetEventHandle+rax]
         get_buf_size
         ; get audio render client
-        mov         rcx,[.audio.client+rsi]
+        mov         rcx,[audio.client]
         lea         rdx,[IID_IAudioRenderClient]
-        lea         r8,[.audio.render_client+rsi]
+        lea         r8,[audio.render_client]
         mov         rax,[rcx]
         call        [IAudioClient.GetService+rax]
         test        eax,eax
@@ -161,18 +159,18 @@ end virtual
         xor         ecx,ecx
         xor         edx,edx
         lea         r8,[audio_thread]
-        lea         r9,[.audio+rsi]
+        xor         r9d,r9d
         mov         dword[k_funcparam5+rsp],0
         mov         qword[k_funcparam6+rsp],0
         call        [CreateThread]
-        mov         [.audio.thread+rsi],rax
+        mov         [audio.thread],rax
         test        rax,rax
         jz          .error
         ; load initial audio data
         get_buffer
         release_buffer
         ; start
-        mov         rcx,[.audio.client+rsi]
+        mov         rcx,[audio.client]
         mov         rax,[rcx]
         call        [IAudioClient.Start+rax]
         test        eax,eax
@@ -187,44 +185,36 @@ end virtual
         add         rsp,.k_stack_size
         pop         rsi
         ret
-align 8
-.k_10000000_0 dq 10000000.0
-.k_48000_0 dq 48000.0
-.k_0_5 dq 0.5
-.k_format WAVEFORMATEX WAVE_FORMAT_PCM,2,48000,48000*4,4,16
 purge activate,initialize,get_buf_size,create_event
 ;=============================================================================
 align 32
 audio_stop:
 ;-----------------------------------------------------------------------------
-virtual at 0
-  .audio audio_state
-end virtual
   .k_stack_size = 4*8
         push        rsi
         sub         rsp,.k_stack_size
         mov         rsi,rcx
-        mov         rcx,[.audio.shutdown_event+rsi]
+        mov         rcx,[audio.shutdown_event]
         test        rcx,rcx
         jz          @f
         call        [SetEvent]
-  @@:   mov         rcx,[.audio.thread+rsi]
+  @@:   mov         rcx,[audio.thread]
         mov         edx,INFINITE
         test        rcx,rcx
         jz          @f
         call        [WaitForSingleObject]
-  @@:   safe_close  [.audio.thread+rsi]
-        mov         rcx,[.audio.client+rsi]
+  @@:   safe_close  [audio.thread]
+        mov         rcx,[audio.client]
         test        rcx,rcx
         jz          @f
         mov         rax,[rcx]
         call        [IAudioClient.Stop+rax]
-  @@:   safe_close  [.audio.shutdown_event+rsi]
-        safe_close  [.audio.buffer_ready_event+rsi]
-        safe_release [.audio.render_client+rsi]
-        safe_release [.audio.client+rsi]
-        safe_release [.audio.device+rsi]
-        safe_release [.audio.enumerator+rsi]
+  @@:   safe_close  [audio.shutdown_event]
+        safe_close  [audio.buffer_ready_event]
+        safe_release [audio.render_client]
+        safe_release [audio.client]
+        safe_release [audio.device]
+        safe_release [audio.enumerator]
         add         rsp,.k_stack_size
         pop         rsi
         ret
@@ -232,9 +222,6 @@ end virtual
 align 32
 audio_thread:
 ;-----------------------------------------------------------------------------
-virtual at 0
-  .audio audio_state
-end virtual
 virtual at 0
   rq 5
   .ptr dq ?
@@ -256,9 +243,9 @@ end virtual
         call        [AvSetMmThreadCharacteristics]
         test        rax,rax
         jz          .error
-        mov         rax,[.audio.shutdown_event+rsi]
+        mov         rax,[audio.shutdown_event]
         mov         [.wait_array+rsp],rax
-        mov         rax,[.audio.buffer_ready_event+rsi]
+        mov         rax,[audio.buffer_ready_event]
         mov         [.wait_array+rsp+8],rax
   .play_loop:
         mov         ecx,2
@@ -270,12 +257,11 @@ end virtual
         jz          .error
         get_buffer
         release_buffer
-        jmp .play_loop
+        jmp         .play_loop
   .error:
         xor         ecx,ecx
         call        [ExitThread]
         ret
-.k_task_name db 'Playback',0
 ;=============================================================================
 purge get_buffer,release_buffer
 ;=============================================================================

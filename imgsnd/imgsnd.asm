@@ -449,7 +449,6 @@ end virtual
         cmp         esi,[thrd_count]
         jb          @b
         ; init audio
-        lea         rcx,[audio]
         call        audio_play
         test        eax,eax
         jz          .error
@@ -634,6 +633,14 @@ align 8
   update_frame_stats.k_1000000_0 dq 1000000.0
   update_frame_stats.k_1_0 dq 1.0
 
+align 8
+  audio_play.k_10000000_0 dq 10000000.0
+  audio_play.k_48000_0 dq 48000.0
+  audio_play.k_0_5 dq 0.5
+  audio_play.k_format WAVEFORMATEX WAVE_FORMAT_PCM,2,48000,48000*4,4,16
+
+  audio_thread.k_task_name db 'Playback',0
+
 align 32
   generate_image.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
   generate_image.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
@@ -667,7 +674,15 @@ align 32
 section '.data' data readable writeable
 
 align 8
-  audio audio_state
+  audio:
+  .enumerator dq 0
+  .device dq 0
+  .client dq 0
+  .render_client dq 0
+  .buffer_ready_event dq 0
+  .shutdown_event dq 0
+  .thread dq 0
+  .buffer_size_in_frames dd 0
 
 align 8
   bmp_handle dq 0
