@@ -1,174 +1,174 @@
 format PE64 GUI 4.0
 entry start
 
-INFINITE = 0xffffffff
-IDI_APPLICATION = 32512
-IDC_ARROW = 32512
-WS_VISIBLE = 010000000h
-WS_OVERLAPPED = 000000000h
-WS_CAPTION = 000C00000h
-WS_SYSMENU = 000080000h
-WS_VISIBLE = 010000000h
-WS_MINIMIZEBOX = 000020000h
-CW_USEDEFAULT = 80000000h
-PM_REMOVE = 0001h
-WM_QUIT = 0012h
-WM_KEYDOWN = 0100h
-WM_DESTROY = 0002h
-VK_ESCAPE = 01Bh
-SRCCOPY = 0x00CC0020
-EVENT_ALL_ACCESS = 0x1F0003
-CLSCTX_INPROC_SERVER = 0x1
-CLSCTX_INPROC_HANDLER = 0x2
-CLSCTX_LOCAL_SERVER = 0x4
-CLSCTX_REMOTE_SERVER = 0x10
-CLSCTX_ALL = CLSCTX_INPROC_SERVER+CLSCTX_INPROC_HANDLER+CLSCTX_LOCAL_SERVER+CLSCTX_REMOTE_SERVER
-eRender = 0
-eConsole = 0
-WAVE_FORMAT_PCM = 1
-AUDCLNT_SHAREMODE_EXCLUSIVE = 1
-AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000
-AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED = 0x88890019
+  INFINITE = 0xffffffff
+  IDI_APPLICATION = 32512
+  IDC_ARROW = 32512
+  WS_VISIBLE = 010000000h
+  WS_OVERLAPPED = 000000000h
+  WS_CAPTION = 000C00000h
+  WS_SYSMENU = 000080000h
+  WS_VISIBLE = 010000000h
+  WS_MINIMIZEBOX = 000020000h
+  CW_USEDEFAULT = 80000000h
+  PM_REMOVE = 0001h
+  WM_QUIT = 0012h
+  WM_KEYDOWN = 0100h
+  WM_DESTROY = 0002h
+  VK_ESCAPE = 01Bh
+  SRCCOPY = 0x00CC0020
+  EVENT_ALL_ACCESS = 0x1F0003
+  CLSCTX_INPROC_SERVER = 0x1
+  CLSCTX_INPROC_HANDLER = 0x2
+  CLSCTX_LOCAL_SERVER = 0x4
+  CLSCTX_REMOTE_SERVER = 0x10
+  CLSCTX_ALL = CLSCTX_INPROC_SERVER+CLSCTX_INPROC_HANDLER+CLSCTX_LOCAL_SERVER+CLSCTX_REMOTE_SERVER
+  eRender = 0
+  eConsole = 0
+  WAVE_FORMAT_PCM = 1
+  AUDCLNT_SHAREMODE_EXCLUSIVE = 1
+  AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000
+  AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED = 0x88890019
 
-k_funcparam5 = 32
-k_funcparam6 = k_funcparam5 + 8
-k_funcparam7 = k_funcparam6 + 8
-k_funcparam8 = k_funcparam7 + 8
-k_funcparam9 = k_funcparam8 + 8
-k_funcparam10 = k_funcparam9 + 8
-k_funcparam11 = k_funcparam10 + 8
-k_funcparam12 = k_funcparam11 + 8
+  k_funcparam5 = 32
+  k_funcparam6 = k_funcparam5 + 8
+  k_funcparam7 = k_funcparam6 + 8
+  k_funcparam8 = k_funcparam7 + 8
+  k_funcparam9 = k_funcparam8 + 8
+  k_funcparam10 = k_funcparam9 + 8
+  k_funcparam11 = k_funcparam10 + 8
+  k_funcparam12 = k_funcparam11 + 8
 
 struc POINT {
-.x dd 0
-.y dd 0 }
+  .x dd 0
+  .y dd 0 }
 
 struc MSG {
-.hwnd dq 0
-.message dd 0,0
-.wParam dq 0
-.lParam dq 0
-.time dd 0
-.pt POINT
-dd 0 }
+  .hwnd dq 0
+  .message dd 0,0
+  .wParam dq 0
+  .lParam dq 0
+  .time dd 0
+  .pt POINT
+  dd 0 }
 
 struc WNDCLASS proc,name {
-.style dd 0,0
-.lpfnWndProc dq proc
-.cbClsExtra dd 0
-.cbWndExtra dd 0
-.hInstance dq 0
-.hIcon dq 0
-.hCursor dq 0
-.hbrBackground dq 0
-.lpszMenuName dq 0
-.lpszClassName dq name }
+  .style dd 0,0
+  .lpfnWndProc dq proc
+  .cbClsExtra dd 0
+  .cbWndExtra dd 0
+  .hInstance dq 0
+  .hIcon dq 0
+  .hCursor dq 0
+  .hbrBackground dq 0
+  .lpszMenuName dq 0
+  .lpszClassName dq name }
 
 struc RECT l,t,r,b {
-.left dd l
-.top dd t
-.right dd r
-.bottom dd b }
+  .left dd l
+  .top dd t
+  .right dd r
+  .bottom dd b }
 
 struc BITMAPINFOHEADER w,h,b,s {
-.biSize dd 40
-.biWidth dd w
-.biHeight dd h
-.biPlanes dw 1
-.biBitCount dw b
-.biCompression dd 0
-.biSizeImage dd s
-.biXPelsPerMeter dd 0
-.biYPelsPerMeter dd 0
-.biClrUsed dd 0
-.biClrImportant dd 0 }
+  .biSize dd 40
+  .biWidth dd w
+  .biHeight dd h
+  .biPlanes dw 1
+  .biBitCount dw b
+  .biCompression dd 0
+  .biSizeImage dd s
+  .biXPelsPerMeter dd 0
+  .biYPelsPerMeter dd 0
+  .biClrUsed dd 0
+  .biClrImportant dd 0 }
 
 struc SYSTEM_INFO {
-.dwOemId dd 0
-.dwPageSize dd 0
-.lpMinimumApplicationAddress dq 0
-.lpMaximumApplicationAddress dq 0
-.dwActiveProcessorMask dq 0
-.dwNumberOfProcessors dd 0
-.dwProcessorType dd 0
-.dwAllocationGranularity dd 0
-.wProcessorLevel dw 0
-.wProcessorRevision dw 0 }
+  .dwOemId dd 0
+  .dwPageSize dd 0
+  .lpMinimumApplicationAddress dq 0
+  .lpMaximumApplicationAddress dq 0
+  .dwActiveProcessorMask dq 0
+  .dwNumberOfProcessors dd 0
+  .dwProcessorType dd 0
+  .dwAllocationGranularity dd 0
+  .wProcessorLevel dw 0
+  .wProcessorRevision dw 0 }
 
 struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
-dd p0
-dw p1
-dw p2
-db p3
-db p4
-db p5
-db p6
-db p7
-db p8
-db p9
-db p10 }
+  dd p0
+  dw p1
+  dw p2
+  db p3
+  db p4
+  db p5
+  db p6
+  db p7
+  db p8
+  db p9
+  db p10 }
 
 struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
-.wFormatTag dw p0
-.nChannels dw p1
-.nSamplesPerSec dd p2
-.nAvgBytesPerSec dd p3
-.nBlockAlign dw p4
-.wBitsPerSample dw p5
-.cbSize dw 0
-dw 0 }
+  .wFormatTag dw p0
+  .nChannels dw p1
+  .nSamplesPerSec dd p2
+  .nAvgBytesPerSec dd p3
+  .nBlockAlign dw p4
+  .wBitsPerSample dw p5
+  .cbSize dw 0
+  dw 0 }
 
 virtual at 0
-IUnknown.QueryInterface rq 1
-IUnknown.AddRef rq 1
-IUnknown.Release rq 1
+  IUnknown.QueryInterface rq 1
+  IUnknown.AddRef rq 1
+  IUnknown.Release rq 1
 end virtual
 
 virtual at 0
-IMMDeviceEnumerator.QueryInterface rq 1
-IMMDeviceEnumerator.AddRef rq 1
-IMMDeviceEnumerator.Release rq 1
-IMMDeviceEnumerator.EnumAudioEndpoints rq 1
-IMMDeviceEnumerator.GetDefaultAudioEndpoint rq 1
-IMMDeviceEnumerator.GetDevice rq 1
-IMMDeviceEnumerator.RegisterEndpointNotificationCallback rq 1
-IMMDeviceEnumerator.UnregisterEndpointNotificationCallback rq 1
+  IMMDeviceEnumerator.QueryInterface rq 1
+  IMMDeviceEnumerator.AddRef rq 1
+  IMMDeviceEnumerator.Release rq 1
+  IMMDeviceEnumerator.EnumAudioEndpoints rq 1
+  IMMDeviceEnumerator.GetDefaultAudioEndpoint rq 1
+  IMMDeviceEnumerator.GetDevice rq 1
+  IMMDeviceEnumerator.RegisterEndpointNotificationCallback rq 1
+  IMMDeviceEnumerator.UnregisterEndpointNotificationCallback rq 1
 end virtual
 
 virtual at 0
-IMMDevice.QueryInterface rq 1
-IMMDevice.AddRef rq 1
-IMMDevice.Release rq 1
-IMMDevice.Activate rq 1
-IMMDevice.OpenPropertyStore rq 1
-IMMDevice.GetId rq 1
-IMMDevice.GetState rq 1
+  IMMDevice.QueryInterface rq 1
+  IMMDevice.AddRef rq 1
+  IMMDevice.Release rq 1
+  IMMDevice.Activate rq 1
+  IMMDevice.OpenPropertyStore rq 1
+  IMMDevice.GetId rq 1
+  IMMDevice.GetState rq 1
 end virtual
 
 virtual at 0
-IAudioClient.QueryInterface rq 1
-IAudioClient.AddRef rq 1
-IAudioClient.Release rq 1
-IAudioClient.Initialize rq 1
-IAudioClient.GetBufferSize rq 1
-IAudioClient.GetStreamLatency rq 1
-IAudioClient.GetCurrentPadding rq 1
-IAudioClient.IsFormatSupported rq 1
-IAudioClient.GetMixFormat rq 1
-IAudioClient.GetDevicePeriod rq 1
-IAudioClient.Start rq 1
-IAudioClient.Stop rq 1
-IAudioClient.Reset rq 1
-IAudioClient.SetEventHandle rq 1
-IAudioClient.GetService rq 1
+  IAudioClient.QueryInterface rq 1
+  IAudioClient.AddRef rq 1
+  IAudioClient.Release rq 1
+  IAudioClient.Initialize rq 1
+  IAudioClient.GetBufferSize rq 1
+  IAudioClient.GetStreamLatency rq 1
+  IAudioClient.GetCurrentPadding rq 1
+  IAudioClient.IsFormatSupported rq 1
+  IAudioClient.GetMixFormat rq 1
+  IAudioClient.GetDevicePeriod rq 1
+  IAudioClient.Start rq 1
+  IAudioClient.Stop rq 1
+  IAudioClient.Reset rq 1
+  IAudioClient.SetEventHandle rq 1
+  IAudioClient.GetService rq 1
 end virtual
 
 virtual at 0
-IAudioRenderClient.QueryInterface rq 1
-IAudioRenderClient.AddRef rq 1
-IAudioRenderClient.Release rq 1
-IAudioRenderClient.GetBuffer rq 1
-IAudioRenderClient.ReleaseBuffer rq 1
+  IAudioRenderClient.QueryInterface rq 1
+  IAudioRenderClient.AddRef rq 1
+  IAudioRenderClient.Release rq 1
+  IAudioRenderClient.GetBuffer rq 1
+  IAudioRenderClient.ReleaseBuffer rq 1
 end virtual
 
 section '.text' code readable executable
@@ -202,18 +202,18 @@ local .end
         mov         rax,[rcx]
         call        [IUnknown.Release+rax]
         mov         obj,0
-.end: }
+  .end: }
 
 struc audio_state {
-.enumerator dq 0
-.device dq 0
-.client dq 0
-.render_client dq 0
-.buffer_ready_event dq 0
-.shutdown_event dq 0
-.thread dq 0
-.buffer_size_in_frames dd 0
-dd 0 }
+  .enumerator dq 0
+  .device dq 0
+  .client dq 0
+  .render_client dq 0
+  .buffer_ready_event dq 0
+  .shutdown_event dq 0
+  .thread dq 0
+  .buffer_size_in_frames dd 0
+  dd 0 }
 ;=============================================================================
 include 'imgsnd_image.inc'
 include 'imgsnd_sound.inc'
@@ -229,15 +229,14 @@ generate_image_thread:
         call        [WaitForSingleObject]
         mov         eax,[quit]
         test        eax,eax
-        jnz         .return
+        jnz         .ret
         call        generate_image
         mov         rcx,[thrd_semaphore+rsi*8]
         mov         edx,1
         xor         r8d,r8d
         call        [ReleaseSemaphore]
         jmp         .run
-  .return:
-        xor         ecx,ecx
+  .ret: xor         ecx,ecx
         call        [ExitThread]
 ;=============================================================================
 align 32
@@ -260,11 +259,10 @@ supports_avx2:
         cmp         eax,$06
         jne         .not_supported
         mov         eax,1
-        jmp         .return
+        jmp         .ret
   .not_supported:
         xor         eax,eax
-  .return:
-        ret
+  .ret: ret
 ;=============================================================================
 align 32
 get_time:
@@ -612,199 +610,201 @@ winproc:
         add         rsp,40
         ret
 ;========================================================================
+section '.data' data readable
+
+  k_win_width = 1280
+  k_win_height = 720
+  k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+  k_tile_width = 80
+  k_tile_height = 80
+  k_tile_x_count = k_win_width / k_tile_width
+  k_tile_y_count = k_win_height / k_tile_height
+  k_tile_count = k_tile_x_count * k_tile_y_count
+  k_thrd_max_count = 16
+
+align 4
+  k_background_color dd 0.0,0.0,0.0
+
+align 8
+  CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
+  IID_IMMDeviceEnumerator GUID 0xA95664D2,0x9614,0x4F35,0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6
+  IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
+  IID_IAudioRenderClient GUID 0xF294ACFC,0x3146,0x4483,0xA7,0xBF,0xAD,0xDC,0xA7,0xC2,0x60,0xE2
+
+  update_frame_stats.k_1000000_0 dq 1000000.0
+  update_frame_stats.k_1_0 dq 1.0
+
+align 32
+  generate_image.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
+  generate_image.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
+  generate_image.k_win_width_rcp: dd 8 dup 0.0015625      ; 2.0f / k_win_width, k_win_width = 1280
+  generate_image.k_win_height_rcp: dd 8 dup 0.0015625     ; 2.0f / k_win_width, k_win_width = 1280
+  generate_image.k_rd_z: dd 8 dup -1.732
+
+align 32
+  k_1: dd 8 dup 1
+  k_2: dd 8 dup 2
+  k_1_0: dd 8 dup 1.0
+  k_0_5: dd 8 dup 0.5
+  k_0_1: dd 8 dup 0.1
+  k_camera_radius: dd 8 dup 16.0
+  k_sphere_radius: dd 8 dup -4.0
+  k_255_0: dd 8 dup 255.0
+  k_0_02: dd 8 dup 0.02
+  k_hit_distance: dd 8 dup 0.00001
+  k_view_distance: dd 8 dup 50.0
+  k_normal_eps: dd 8 dup 0.00002
+  k_shadow_hardness: dd 8 dup 16.0
+
+  sincos.k_inv_sign_mask: dd 8 dup not 0x80000000
+  sincos.k_sign_mask: dd 8 dup 0x80000000
+  sincos.k_2_div_pi: dd 8 dup 0.636619772
+  sincos.k_p0: dd 8 dup 0.15707963267948963959e1
+  sincos.k_p1: dd 8 dup -0.64596409750621907082e0
+  sincos.k_p2: dd 8 dup 0.7969262624561800806e-1
+  sincos.k_p3: dd 8 dup -0.468175413106023168e-2
+;========================================================================
 section '.data' data readable writeable
 
 align 8
-audio audio_state
+  audio audio_state
 
 align 8
-CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
-IID_IMMDeviceEnumerator GUID 0xA95664D2,0x9614,0x4F35,0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6
-IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
-IID_IAudioRenderClient GUID 0xF294ACFC,0x3146,0x4483,0xA7,0xBF,0xAD,0xDC,0xA7,0xC2,0x60,0xE2
+  bmp_handle dq 0
+  bmp_hdc dq 0
+  win_handle dq 0
+  win_hdc dq 0
+  win_title db 'Image & Sound', 64 dup 0
+  win_title_fmt db '[%d fps  %d us] Image & Sound',0
+  win_msg MSG
+  win_class WNDCLASS winproc,win_title
+  win_rect RECT 0,0,k_win_width,k_win_height
 
-k_win_width = 1280
-k_win_height = 720
-k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
-
-k_tile_width = 80
-k_tile_height = 80
-k_tile_x_count = k_win_width / k_tile_width
-k_tile_y_count = k_win_height / k_tile_height
-k_tile_count = k_tile_x_count * k_tile_y_count
-
-k_thrd_max_count = 16
+  no_avx2_caption db 'Not supported CPU',0
+  no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
 
 align 8
-bmp_handle dq 0
-bmp_hdc dq 0
-win_handle dq 0
-win_hdc dq 0
-win_title db 'Image & Sound', 64 dup 0
-win_title_fmt db '[%d fps  %d us] Image & Sound',0
-win_msg MSG
-win_class WNDCLASS winproc,win_title
-win_rect RECT 0,0,k_win_width,k_win_height
-
-no_avx2_caption db 'Not supported CPU',0
-no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
+  bmp_info BITMAPINFOHEADER k_win_width,k_win_height,32,k_win_width*k_win_height
+  dq 0,0,0,0
 
 align 8
-bmp_info BITMAPINFOHEADER k_win_width,k_win_height,32,k_win_width*k_win_height
-dq 0,0,0,0
+  time dq 0
+  time_delta dd 0
+  quit dd 0
+
+  get_time.perf_counter dq 0
+  get_time.perf_freq dq 0
+  get_time.first_perf_counter dq 0
+
+  update_frame_stats.prev_time dq 0
+  update_frame_stats.prev_update_time dq 0
+  update_frame_stats.frame dd 0,0
+
+  displayptr dq 0
+  tileidx dd 0,0
 
 align 8
-time dq 0
-time_delta dd 0
-quit dd 0
+  main_thrd_semaphore dq 0
+  thrd_handle dq k_thrd_max_count dup 0
+  thrd_semaphore dq k_thrd_max_count dup 0
+  thrd_count dd 0
 
-get_time.perf_counter dq 0
-get_time.perf_freq dq 0
-get_time.first_perf_counter dq 0
-
-update_frame_stats.prev_time dq 0
-update_frame_stats.prev_update_time dq 0
-update_frame_stats.frame dd 0,0
-update_frame_stats.k_1000000_0 dq 1000000.0
-update_frame_stats.k_1_0 dq 1.0
-
-displayptr dq 0
-tileidx dd 0,0
-
-align 8
-main_thrd_semaphore dq 0
-thrd_handle dq k_thrd_max_count dup 0
-thrd_semaphore dq k_thrd_max_count dup 0
-thrd_count dd 0
-
-system_info SYSTEM_INFO
+  system_info SYSTEM_INFO
 
 align 4
-eye_position dd 0.0,4.0,400.0
-eye_focus dd 0.0,0.0,0.0
-k_background_color dd 0.0,0.0,0.0
+  eye_position dd 0.0,4.0,400.0
+  eye_focus dd 0.0,0.0,0.0
 
 align 32
-eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
-eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
-eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
+  eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
+  eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
+  eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
 
 align 32
-generate_image.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-generate_image.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-generate_image.k_win_width_rcp: dd 8 dup 0.0015625      ; 2.0f / k_win_width, k_win_width = 1280
-generate_image.k_win_height_rcp: dd 8 dup 0.0015625     ; 2.0f / k_win_width, k_win_width = 1280
-generate_image.k_rd_z: dd 8 dup -1.732
+  light0_position: dd 8 dup 10.0, 8 dup 10.0, 8 dup 10.0
+  light0_power: dd 8 dup 0.9
+  light1_position: dd 8 dup 5.0, 8 dup 20.0, 8 dup -15.0
+  light1_power: dd 8 dup 0.6
+  ambient: dd 8 dup 0.1
 
 align 32
-k_1: dd 8 dup 1
-k_2: dd 8 dup 2
-k_1_0: dd 8 dup 1.0
-k_0_5: dd 8 dup 0.5
-k_0_1: dd 8 dup 0.1
-k_camera_radius: dd 8 dup 16.0
-k_sphere_radius: dd 8 dup -4.0
-k_255_0: dd 8 dup 255.0
-k_0_02: dd 8 dup 0.02
-k_hit_distance: dd 8 dup 0.00001
-k_view_distance: dd 8 dup 50.0
-k_normal_eps: dd 8 dup 0.00002
-k_shadow_hardness: dd 8 dup 16.0
-
-align 32
-light0_position: dd 8 dup 10.0, 8 dup 10.0, 8 dup 10.0
-light0_power: dd 8 dup 0.9
-light1_position: dd 8 dup 5.0, 8 dup 20.0, 8 dup -15.0
-light1_power: dd 8 dup 0.6
-ambient: dd 8 dup 0.1
-
-align 32
-object:
-.id:      dd 8 dup 0,8 dup 8,8 dup 16,8 dup 24
-.param_x: dd 8 dup 0.0,8 dup 0.0,8 dup 3.0,8 dup 0.0
-.param_y: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0,8 dup 1.0
-.param_z: dd 8 dup 0.0,8 dup 3.0,8 dup 0.0,8 dup 0.0
-.param_w: dd 8 dup 2.0,8 dup 0.7,8 dup 1.0,8 dup 2.0
-.red:     dd 8 dup 1.0,8 dup 0.0,8 dup 0.0,8 dup 0.5
-.green:   dd 8 dup 0.0,8 dup 1.0,8 dup 0.0,8 dup 0.3
-.blue:    dd 8 dup 0.0,8 dup 0.0,8 dup 1.0,8 dup 0.2
-
-align 32
-sincos.k_inv_sign_mask: dd 8 dup not 0x80000000
-sincos.k_sign_mask: dd 8 dup 0x80000000
-sincos.k_2_div_pi: dd 8 dup 0.636619772
-sincos.k_p0: dd 8 dup 0.15707963267948963959e1
-sincos.k_p1: dd 8 dup -0.64596409750621907082e0
-sincos.k_p2: dd 8 dup 0.7969262624561800806e-1
-sincos.k_p3: dd 8 dup -0.468175413106023168e-2
+  object:
+  .id: dd 8 dup 0,8 dup 8,8 dup 16,8 dup 24
+  .param_x: dd 8 dup 0.0,8 dup 0.0,8 dup 3.0,8 dup 0.0
+  .param_y: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0,8 dup 1.0
+  .param_z: dd 8 dup 0.0,8 dup 3.0,8 dup 0.0,8 dup 0.0
+  .param_w: dd 8 dup 2.0,8 dup 0.7,8 dup 1.0,8 dup 2.0
+  .red: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0,8 dup 0.5
+  .green: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0,8 dup 0.3
+  .blue: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0,8 dup 0.2
 ;========================================================================
 section '.idata' import data readable writeable
 
-dd 0,0,0,rva _kernel32,rva _kernel32_table
-dd 0,0,0,rva _user32,rva _user32_table
-dd 0,0,0,rva _gdi32,rva _gdi32_table
-dd 0,0,0,rva _ole32,rva _ole32_table
-dd 0,0,0,rva _avrt,rva _avrt_table
-dd 0,0,0,0,0
+  dd 0,0,0,rva _kernel32,rva _kernel32_table
+  dd 0,0,0,rva _user32,rva _user32_table
+  dd 0,0,0,rva _gdi32,rva _gdi32_table
+  dd 0,0,0,rva _ole32,rva _ole32_table
+  dd 0,0,0,rva _avrt,rva _avrt_table
+  dd 0,0,0,0,0
 
-_kernel32_table:
-GetModuleHandle dq rva _GetModuleHandle
-ExitProcess dq rva _ExitProcess
-WaitForSingleObject dq rva _WaitForSingleObject
-ReleaseSemaphore dq rva _ReleaseSemaphore
-ExitThread dq rva _ExitThread
-QueryPerformanceFrequency dq rva _QueryPerformanceFrequency
-QueryPerformanceCounter dq rva _QueryPerformanceCounter
-CreateSemaphore dq rva _CreateSemaphore
-CreateThread dq rva _CreateThread
-CloseHandle dq rva _CloseHandle
-WaitForMultipleObjects dq rva _WaitForMultipleObjects
-GetSystemInfo dq rva _GetSystemInfo
-CreateEventEx dq rva _CreateEventEx
-SetEvent dq rva _SetEvent
-dq 0
+  _kernel32_table:
+  GetModuleHandle dq rva _GetModuleHandle
+  ExitProcess dq rva _ExitProcess
+  WaitForSingleObject dq rva _WaitForSingleObject
+  ReleaseSemaphore dq rva _ReleaseSemaphore
+  ExitThread dq rva _ExitThread
+  QueryPerformanceFrequency dq rva _QueryPerformanceFrequency
+  QueryPerformanceCounter dq rva _QueryPerformanceCounter
+  CreateSemaphore dq rva _CreateSemaphore
+  CreateThread dq rva _CreateThread
+  CloseHandle dq rva _CloseHandle
+  WaitForMultipleObjects dq rva _WaitForMultipleObjects
+  GetSystemInfo dq rva _GetSystemInfo
+  CreateEventEx dq rva _CreateEventEx
+  SetEvent dq rva _SetEvent
+  dq 0
 
-_user32_table:
-wsprintf dq rva _wsprintf
-RegisterClass dq rva _RegisterClass
-CreateWindowEx dq rva _CreateWindowEx
-DefWindowProc dq rva _DefWindowProc
-PeekMessage dq rva _PeekMessage
-DispatchMessage dq rva _DispatchMessage
-LoadCursor dq rva _LoadCursor
-LoadIcon dq rva _LoadIcon
-SetWindowText dq rva _SetWindowText
-SetRect dq rva _SetRect
-AdjustWindowRect dq rva _AdjustWindowRect
-GetDC dq rva _GetDC
-ReleaseDC dq rva _ReleaseDC
-PostQuitMessage dq rva _PostQuitMessage
-MessageBox dq rva _MessageBox
-dq 0
+  _user32_table:
+  wsprintf dq rva _wsprintf
+  RegisterClass dq rva _RegisterClass
+  CreateWindowEx dq rva _CreateWindowEx
+  DefWindowProc dq rva _DefWindowProc
+  PeekMessage dq rva _PeekMessage
+  DispatchMessage dq rva _DispatchMessage
+  LoadCursor dq rva _LoadCursor
+  LoadIcon dq rva _LoadIcon
+  SetWindowText dq rva _SetWindowText
+  SetRect dq rva _SetRect
+  AdjustWindowRect dq rva _AdjustWindowRect
+  GetDC dq rva _GetDC
+  ReleaseDC dq rva _ReleaseDC
+  PostQuitMessage dq rva _PostQuitMessage
+  MessageBox dq rva _MessageBox
+  dq 0
 
-_gdi32_table:
-CreateDIBSection dq rva _CreateDIBSection
-CreateCompatibleDC dq rva _CreateCompatibleDC
-SelectObject dq rva _SelectObject
-BitBlt dq rva _BitBlt
-DeleteDC dq rva _DeleteDC
-DeleteObject dq rva _DeleteObject
-dq 0
+  _gdi32_table:
+  CreateDIBSection dq rva _CreateDIBSection
+  CreateCompatibleDC dq rva _CreateCompatibleDC
+  SelectObject dq rva _SelectObject
+  BitBlt dq rva _BitBlt
+  DeleteDC dq rva _DeleteDC
+  DeleteObject dq rva _DeleteObject
+  dq 0
 
-_ole32_table:
-CoInitialize dq rva _CoInitialize
-CoCreateInstance dq rva _CoCreateInstance
-dq 0
+  _ole32_table:
+  CoInitialize dq rva _CoInitialize
+  CoCreateInstance dq rva _CoCreateInstance
+  dq 0
  
-_avrt_table:
-AvSetMmThreadCharacteristics dq rva _AvSetMmThreadCharacteristics
-dq 0
+  _avrt_table:
+  AvSetMmThreadCharacteristics dq rva _AvSetMmThreadCharacteristics
+  dq 0
 
-_kernel32 db 'kernel32.dll',0
-_user32 db 'user32.dll',0
-_gdi32 db 'gdi32.dll',0
-_ole32 db 'ole32.dll',0
-_avrt db 'avrt.dll',0
+  _kernel32 db 'kernel32.dll',0
+  _user32 db 'user32.dll',0
+  _gdi32 db 'gdi32.dll',0
+  _ole32 db 'ole32.dll',0
+  _avrt db 'avrt.dll',0
 
 emit <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
 emit <_ExitProcess dw 0>,<db 'ExitProcess',0>
