@@ -70,7 +70,6 @@ virtual at 0
   .read_bytes dd ?,?
   .k_stack_size = $
 end virtual
-
         push        rsi
         sub         rsp,.k_stack_size
         mov         rsi,rcx

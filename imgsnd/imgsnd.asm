@@ -1,6 +1,8 @@
 format PE64 GUI 4.0
 entry start
 
+  TRUE = 1
+  FALSE = 0
   INFINITE = 0xffffffff
   IDI_APPLICATION = 32512
   IDC_ARROW = 32512
@@ -203,17 +205,6 @@ local .end
         call        [IUnknown.Release+rax]
         mov         obj,0
   .end: }
-
-struc audio_state {
-  .enumerator dq 0
-  .device dq 0
-  .client dq 0
-  .render_client dq 0
-  .buffer_ready_event dq 0
-  .shutdown_event dq 0
-  .thread dq 0
-  .buffer_size_in_frames dd 0
-  dd 0 }
 ;=============================================================================
 include 'imgsnd_image.inc'
 include 'imgsnd_sound.inc'
@@ -224,17 +215,15 @@ generate_image_thread:
         and         rsp,-32
         sub         rsp,32
         mov         esi,ecx                                    ; thread id
-  .run: mov         rcx,[main_thrd_semaphore]
+  .run: mov         rcx,[image.semaphore]
         mov         edx,INFINITE
         call        [WaitForSingleObject]
         mov         eax,[quit]
         test        eax,eax
         jnz         .ret
         call        generate_image
-        mov         rcx,[thrd_semaphore+rsi*8]
-        mov         edx,1
-        xor         r8d,r8d
-        call        [ReleaseSemaphore]
+        mov         rcx,[image.thread_done_event+rsi*8]
+        call        [SetEvent]
         jmp         .run
   .ret: xor         ecx,ecx
         call        [ExitThread]
@@ -343,7 +332,7 @@ end virtual
         lea         rcx,[system_info]
         call        [GetSystemInfo]
         mov         eax,[system_info.dwNumberOfProcessors]
-        mov         [thrd_count],eax
+        mov         [image.thread_count],eax
         call        supports_avx2
         test        eax,eax
         jz          .no_avx2
@@ -395,7 +384,7 @@ end virtual
         mov         rcx,[win_hdc]
         lea         rdx,[bmp_info]
         xor         r8d,r8d
-        lea         r9,[displayptr]
+        lea         r9,[image.ptr]
         mov         qword[k_funcparam5+rsp],0
         mov         qword[k_funcparam6+rsp],0
         call        [CreateDIBSection]
@@ -412,28 +401,29 @@ end virtual
         call        [SelectObject]
         test        eax,eax
         jz          .error
-        ; semaphores
+        ; image semaphore
         xor         ecx,ecx
         xor         edx,edx
-        mov         r8d,[thrd_count]
+        mov         r8d,[image.thread_count]
         xor         r9d,r9d
         call        [CreateSemaphore]
-        mov         [main_thrd_semaphore],rax
+        mov         [image.semaphore],rax
         test        rax,rax
         jz          .error
+        ; image events
         xor         esi,esi
   @@:   xor         ecx,ecx
         xor         edx,edx
-        mov         r8d,1
-        xor         r9d,r9d
-        call        [CreateSemaphore]
-        mov         [thrd_semaphore+rsi*8],rax
+        xor         r8d,r8d
+        mov         r9d,EVENT_ALL_ACCESS
+        call        [CreateEventEx]
+        mov         [image.thread_done_event+rsi*8],rax
         test        rax,rax
         jz          .error
         add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          @b
-        ; threads
+        ; image threads
         xor         esi,esi
   @@:   xor         ecx,ecx
         xor         edx,edx
@@ -442,13 +432,13 @@ end virtual
         mov         qword[k_funcparam5+rsp],0
         mov         qword[k_funcparam6+rsp],0
         call        [CreateThread]
-        mov         [thrd_handle+rsi*8],rax
+        mov         [image.thread+rsi*8],rax
         test        rax,rax
         jz          .error
         add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          @b
-        ; init audio
+        ; sound
         call        audio_play
         test        eax,eax
         jz          .error
@@ -475,15 +465,16 @@ deinit:
         push        rsi rdi
         sub         rsp,.k_stack_size
         mov         [quit],1
-        mov         rcx,[main_thrd_semaphore]
+        mov         rcx,[image.semaphore]
         test        rcx,rcx
         jz          @f
-        mov         edx,[thrd_count]
+        mov         edx,[image.thread_count]
         xor         r8d,r8d
         call        [ReleaseSemaphore]
-  @@:   xor         esi,esi
+  @@:
+        xor         esi,esi
   .for_each_thrd:
-        mov         rdi,[thrd_handle+rsi*8]
+        mov         rdi,[image.thread+rsi*8]
         test        rdi,rdi
         jz          @f
         mov         rcx,rdi
@@ -492,15 +483,17 @@ deinit:
         mov         rcx,rdi
         call        [CloseHandle]
   @@:   add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          .for_each_thrd
+
         xor         esi,esi
   .for_each_sem:
-        safe_close  [thrd_semaphore+rsi*8]
+        safe_close  [image.thread_done_event+rsi*8]
         add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          .for_each_sem
-        safe_close  [main_thrd_semaphore]
+
+        safe_close  [image.semaphore]
         mov         rcx,[bmp_hdc]
         test        rcx,rcx
         jz          @f
@@ -527,14 +520,14 @@ end virtual
         sub         rsp,.k_stack_size
         call        update_frame_stats
         call        update_state
-        mov         [tileidx],0
-        mov         rcx,[main_thrd_semaphore]
-        mov         edx,[thrd_count]
+        mov         [image.tile_counter],0
+        mov         rcx,[image.semaphore]
+        mov         edx,[image.thread_count]
         xor         r8d,r8d
         call        [ReleaseSemaphore]
-        mov         ecx,[thrd_count]
-        lea         rdx,[thrd_semaphore]
-        mov         r8d,1
+        mov         ecx,[image.thread_count]
+        lea         rdx,[image.thread_done_event]
+        mov         r8d,TRUE
         mov         r9d,INFINITE
         call        [WaitForMultipleObjects]
         mov         rcx,[win_hdc]
@@ -685,6 +678,15 @@ align 8
   .buffer_size_in_frames dd 0
 
 align 8
+  image:
+  .ptr dq 0
+  .semaphore dq 0
+  .thread dq 16 dup 0
+  .thread_done_event dq 16 dup 0
+  .thread_count dd 0
+  .tile_counter dd 0
+
+align 8
   bmp_handle dq 0
   bmp_hdc dq 0
   win_handle dq 0
@@ -715,15 +717,7 @@ align 8
   update_frame_stats.prev_update_time dq 0
   update_frame_stats.frame dd 0,0
 
-  displayptr dq 0
-  tileidx dd 0,0
-
 align 8
-  main_thrd_semaphore dq 0
-  thrd_handle dq k_thrd_max_count dup 0
-  thrd_semaphore dq k_thrd_max_count dup 0
-  thrd_count dd 0
-
   system_info SYSTEM_INFO
 
 align 4

@@ -249,7 +249,6 @@ cast_shadow_ray:
 ; in: <ymm2,ymm3,ymm4> position, <ymm5> k_normal_eps
 ; out: <ymm0,ymm1,ymm2> normal $vector at input position
 macro calc_normal {
-;-----------------------------------------------------------------------------
         vsubps      ymm0,ymm2,ymm5               ; ymm0 = hit_pos_x-k_normal_pos
         vaddps      ymm6,ymm2,ymm5               ; ymm6 = hit_pos_x+k_normal_eps
         vsubps      ymm7,ymm3,ymm5               ; ymm7 = hit_pos_y-k_normal_eps
@@ -432,7 +431,7 @@ generate_image:
         sub         rsp,24
   .for_each_tile:
         mov         eax,1
-        lock xadd   [tileidx],eax
+        lock xadd   [image.tile_counter],eax
         cmp         eax,k_tile_count
         jae         .return
         xor         edx,edx
@@ -453,7 +452,7 @@ generate_image:
         imul        eax,k_win_width
         add         eax,edx
         shl         eax,2
-        mov         rbx,[displayptr]
+        mov         rbx,[image.ptr]
         add         rbx,rax
   align 32
   .for_each_4x2:
