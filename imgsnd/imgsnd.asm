@@ -221,7 +221,24 @@ generate_image_thread:
         mov         eax,[quit]
         test        eax,eax
         jnz         .ret
-        call        generate_image
+  .for_each_tile:
+        mov         eax,1
+        lock xadd   [image.tile_counter],eax
+        cmp         eax,k_tile_count
+        jae         .done
+        xor         edx,edx
+        mov         ecx,k_tile_x_count
+        div         ecx
+        imul        ecx,edx,k_tile_width
+        imul        edx,eax,k_tile_height
+        imul        eax,edx,k_win_width
+        add         eax,ecx
+        shl         eax,2
+        mov         r8,[image.ptr]
+        add         r8,rax
+        call        generate_image_tile
+        jmp         .for_each_tile
+  .done:
         mov         rcx,[image.thread_done_event+rsi*8]
         call        [SetEvent]
         jmp         .run
@@ -635,11 +652,11 @@ align 8
   audio_thread.k_task_name db 'Playback',0
 
 align 32
-  generate_image.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-  generate_image.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-  generate_image.k_win_width_rcp: dd 8 dup 0.0015625      ; 2.0f / k_win_width, k_win_width = 1280
-  generate_image.k_win_height_rcp: dd 8 dup 0.0015625     ; 2.0f / k_win_width, k_win_width = 1280
-  generate_image.k_rd_z: dd 8 dup -1.732
+  generate_image_tile.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
+  generate_image_tile.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
+  generate_image_tile.k_win_width_rcp: dd 8 dup 0.0015625      ; 2.0f / k_win_width, k_win_width = 1280
+  generate_image_tile.k_win_height_rcp: dd 8 dup 0.0015625     ; 2.0f / k_win_width, k_win_width = 1280
+  generate_image_tile.k_rd_z: dd 8 dup -1.732
 
 align 32
   k_1: dd 8 dup 1

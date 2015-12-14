@@ -425,35 +425,17 @@ compute_color:
 ; are computed. This function is dispatched from all worker threads in
 ; parallel.
 align 32
-generate_image:
+generate_image_tile:
 ;-----------------------------------------------------------------------------
         push        rsi rdi rbx rbp r12 r13 r14 r15
         sub         rsp,24
-  .for_each_tile:
-        mov         eax,1
-        lock xadd   [image.tile_counter],eax
-        cmp         eax,k_tile_count
-        jae         .return
-        xor         edx,edx
-        mov         ecx,k_tile_x_count
-        div         ecx
-        ; eax = (k_tile_count / k_tile_x_count)
-        ; edx = (k_tile_count % k_tile_x_count)
-        mov         r14d,k_tile_width
-        mov         r15d,k_tile_height
-        imul        edx,r14d
-        imul        eax,r15d
-        ; eax = (k_tile_count / k_tile_x_count) * k_tile_height
-        ; edx = (k_tile_count % k_tile_x_count) * k_tile_width
-        mov         r12d,edx                                  ; r12d = x0
-        mov         r13d,eax                                  ; r13d = y0
-        add         r14d,r12d                                 ; r14d = x1 = x0 + k_tile_width
-        add         r15d,r13d                                 ; r15d = y1 = y0 + k_tile_height
-        imul        eax,k_win_width
-        add         eax,edx
-        shl         eax,2
-        mov         rbx,[image.ptr]
-        add         rbx,rax
+        mov         r12d,ecx                                  ; r12d = x0
+        mov         r13d,edx                                  ; r13d = y0
+        mov         r14d,ecx
+        mov         r15d,edx
+        add         r14d,k_tile_width                                 ; r14d = x1 = x0 + k_tile_width
+        add         r15d,k_tile_height                                 ; r15d = y1 = y0 + k_tile_height
+        mov         rbx,r8
   align 32
   .for_each_4x2:
         vxorps      xmm0,xmm0,xmm0
@@ -523,7 +505,6 @@ generate_image:
         add         r13d,2
         cmp         r13d,r15d
         jb          .for_each_4x2
-        jmp         .for_each_tile
   .return:
         add         rsp,24
         pop         r15 r14 r13 r12 rbp rbx rdi rsi
