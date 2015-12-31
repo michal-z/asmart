@@ -93,12 +93,12 @@ forward
         inst }
 
 macro iaca_begin {
-      mov           ebx,111
-      db            $64,$67,$90 }
+        mov         ebx,111
+        db          $64,$67,$90 }
 
 macro iaca_end {
-      mov           ebx,222
-      db            $64,$67,$90 }
+        mov         ebx,222
+        db          $64,$67,$90 }
 
 macro safe_close handle {
 local .end
