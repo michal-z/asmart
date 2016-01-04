@@ -1,6 +1,8 @@
 format PE64 GUI 4.0
 entry start
 
+  TRUE = 1
+  FALSE = 0
   INFINITE = 0xffffffff
   IDI_APPLICATION = 32512
   IDC_ARROW = 32512
@@ -17,6 +19,7 @@ entry start
   WM_DESTROY = 0002h
   VK_ESCAPE = 01Bh
   SRCCOPY = 0x00CC0020
+  EVENT_ALL_ACCESS = 0x1F0003
 
   k_funcparam5 = 32
   k_funcparam6 = k_funcparam5 + 8
@@ -84,7 +87,7 @@ struc SYSTEM_INFO {
   .wProcessorRevision dw 0 }
 
 section '.text' code readable executable
-;========================================================================
+;=============================================================================
 macro emit [inst] {
 forward
         inst }
@@ -106,7 +109,7 @@ local .end
         mov         handle,0
   .end: }
 ;=============================================================================
-include 'cpuraymarching_image.inc'
+include 'buddhabrot_renderer.inc'
 ;=============================================================================
 align 32
 generate_image_thread:
@@ -114,20 +117,18 @@ generate_image_thread:
         and         rsp,-32
         sub         rsp,32
         mov         esi,ecx                                    ; thread id
-  .run: mov         rcx,[main_thrd_semaphore]
+  .run: mov         rcx,[image.semaphore]
         mov         edx,INFINITE
         call        [WaitForSingleObject]
         mov         eax,[quit]
         test        eax,eax
-        jnz         .return
+        jnz         .ret
+        mov         ecx,esi
         call        generate_image
-        mov         rcx,[thrd_semaphore+rsi*8]
-        mov         edx,1
-        xor         r8d,r8d
-        call        [ReleaseSemaphore]
+        mov         rcx,[image.thread_done_event+rsi*8]
+        call        [SetEvent]
         jmp         .run
-  .return:
-        xor         ecx,ecx
+  .ret: xor         ecx,ecx
         call        [ExitThread]
 ;=============================================================================
 align 32
@@ -135,26 +136,25 @@ supports_avx2:
 ;-----------------------------------------------------------------------------
         mov         eax,1
         cpuid
-        and         ecx,$018001000                             ; check OSXSAVE,AVX,FMA
+        and         ecx,$018001000         ; check OSXSAVE,AVX,FMA
         cmp         ecx,$018001000
         jne         .not_supported
         mov         eax,7
         xor         ecx,ecx
         cpuid
-        and         ebx,$20                                    ; check AVX2
+        and         ebx,$20                ; check AVX2
         cmp         ebx,$20
         jne         .not_supported
         xor         ecx,ecx
         xgetbv
-        and         eax,$06                                    ; check OS support
+        and         eax,$06                ; check OS support
         cmp         eax,$06
         jne         .not_supported
         mov         eax,1
-        jmp         .return
+        jmp         .ret
   .not_supported:
         xor         eax,eax
-  .return:
-        ret
+  .ret: ret
 ;=============================================================================
 align 32
 get_time:
@@ -191,12 +191,12 @@ update_frame_stats:
         call        get_time
         vmovsd      [.prev_time],xmm0
         vmovsd      [.prev_update_time],xmm0
-  @@:   call        get_time                       ; xmm0 = (0,time)
+  @@:   call        get_time                     ; xmm0 = (0,time)
         vmovsd      [time],xmm0
         vsubsd      xmm1,xmm0,[.prev_time]       ; xmm1 = (0,time_delta)
         vmovsd      [.prev_time],xmm0
         vxorps      xmm2,xmm2,xmm2
-        vcvtsd2ss   xmm1,xmm2,xmm1            ; xmm1 = (0,0,0,time_delta)
+        vcvtsd2ss   xmm1,xmm2,xmm1               ; xmm1 = (0,0,0,time_delta)
         vmovss      [time_delta],xmm1
         vmovsd      xmm1,[.prev_update_time]     ; xmm1 = (0,prev_update_time)
         vsubsd      xmm2,xmm0,xmm1               ; xmm2 = (0,time-prev_update_time)
@@ -206,7 +206,7 @@ update_frame_stats:
         vmovsd      [.prev_update_time],xmm0
         mov         eax,[.frame]
         vxorpd      xmm1,xmm1,xmm1
-        vcvtsi2sd   xmm1,xmm1,eax             ; xmm1 = (0,frame)
+        vcvtsi2sd   xmm1,xmm1,eax                ; xmm1 = (0,frame)
         vdivsd      xmm0,xmm1,xmm2               ; xmm0 = (0,frame/(time-prev_update_time))
         vdivsd      xmm1,xmm2,xmm1
         vmulsd      xmm1,xmm1,[.k_1000000_0]
@@ -235,7 +235,7 @@ end virtual
         lea         rcx,[system_info]
         call        [GetSystemInfo]
         mov         eax,[system_info.dwNumberOfProcessors]
-        mov         [thrd_count],eax
+        mov         [image.thread_count],eax
         call        supports_avx2
         test        eax,eax
         jz          .no_avx2
@@ -287,7 +287,7 @@ end virtual
         mov         rcx,[win_hdc]
         lea         rdx,[bmp_info]
         xor         r8d,r8d
-        lea         r9,[displayptr]
+        lea         r9,[image.ptr]
         mov         qword[k_funcparam5+rsp],0
         mov         qword[k_funcparam6+rsp],0
         call        [CreateDIBSection]
@@ -304,28 +304,29 @@ end virtual
         call        [SelectObject]
         test        eax,eax
         jz          .error
-        ; semaphores
+        ; image semaphore
         xor         ecx,ecx
         xor         edx,edx
-        mov         r8d,[thrd_count]
+        mov         r8d,[image.thread_count]
         xor         r9d,r9d
         call        [CreateSemaphore]
-        mov         [main_thrd_semaphore],rax
+        mov         [image.semaphore],rax
         test        rax,rax
         jz          .error
+        ; image events
         xor         esi,esi
   @@:   xor         ecx,ecx
         xor         edx,edx
-        mov         r8d,1
-        xor         r9d,r9d
-        call        [CreateSemaphore]
-        mov         [thrd_semaphore+rsi*8],rax
+        xor         r8d,r8d
+        mov         r9d,EVENT_ALL_ACCESS
+        call        [CreateEventEx]
+        mov         [image.thread_done_event+rsi*8],rax
         test        rax,rax
         jz          .error
         add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          @b
-        ; threads
+        ; image threads
         xor         esi,esi
   @@:   xor         ecx,ecx
         xor         edx,edx
@@ -334,11 +335,11 @@ end virtual
         mov         qword[k_funcparam5+rsp],0
         mov         qword[k_funcparam6+rsp],0
         call        [CreateThread]
-        mov         [thrd_handle+rsi*8],rax
+        mov         [image.thread+rsi*8],rax
         test        rax,rax
         jz          .error
         add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          @b
         mov         eax,1
         add         rsp,.k_stack_size
@@ -363,15 +364,16 @@ deinit:
         push        rsi rdi
         sub         rsp,.k_stack_size
         mov         [quit],1
-        mov         rcx,[main_thrd_semaphore]
+        mov         rcx,[image.semaphore]
         test        rcx,rcx
         jz          @f
-        mov         edx,[thrd_count]
+        mov         edx,[image.thread_count]
         xor         r8d,r8d
         call        [ReleaseSemaphore]
-  @@:   xor         esi,esi
+  @@:
+        xor         esi,esi
   .for_each_thrd:
-        mov         rdi,[thrd_handle+rsi*8]
+        mov         rdi,[image.thread+rsi*8]
         test        rdi,rdi
         jz          @f
         mov         rcx,rdi
@@ -380,15 +382,17 @@ deinit:
         mov         rcx,rdi
         call        [CloseHandle]
   @@:   add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          .for_each_thrd
+
         xor         esi,esi
   .for_each_sem:
-        safe_close  [thrd_semaphore+rsi*8]
+        safe_close  [image.thread_done_event+rsi*8]
         add         esi,1
-        cmp         esi,[thrd_count]
+        cmp         esi,[image.thread_count]
         jb          .for_each_sem
-        safe_close  [main_thrd_semaphore]
+
+        safe_close  [image.semaphore]
         mov         rcx,[bmp_hdc]
         test        rcx,rcx
         jz          @f
@@ -414,15 +418,14 @@ virtual at 0
 end virtual
         sub         rsp,.k_stack_size
         call        update_frame_stats
-        call        update_state
-        mov         [tileidx],0
-        mov         rcx,[main_thrd_semaphore]
-        mov         edx,[thrd_count]
+        mov         [image.tile_counter],0
+        mov         rcx,[image.semaphore]
+        mov         edx,[image.thread_count]
         xor         r8d,r8d
         call        [ReleaseSemaphore]
-        mov         ecx,[thrd_count]
-        lea         rdx,[thrd_semaphore]
-        mov         r8d,1
+        mov         ecx,[image.thread_count]
+        lea         rdx,[image.thread_done_event]
+        mov         r8d,TRUE
         mov         r9d,INFINITE
         call        [WaitForMultipleObjects]
         mov         rcx,[win_hdc]
@@ -496,28 +499,36 @@ winproc:
   .return:
         add         rsp,40
         ret
-;========================================================================
+;=============================================================================
+section '.data' data readable
+
+  k_win_width = 1024
+  k_win_height = 1024
+  k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+  k_thrd_max_count = 16
+
+align 8
+  update_frame_stats.k_1000000_0 dq 1000000.0
+  update_frame_stats.k_1_0 dq 1.0
+;=============================================================================
 section '.data' data readable writeable
 
-  k_win_width = 1280
-  k_win_height = 720
-  k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
-
-  k_tile_width = 80
-  k_tile_height = 80
-  k_tile_x_count = k_win_width / k_tile_width
-  k_tile_y_count = k_win_height / k_tile_height
-  k_tile_count = k_tile_x_count * k_tile_y_count
-
-  k_thrd_max_count = 16
+align 8
+  image:
+  .ptr dq 0
+  .semaphore dq 0
+  .thread dq 16 dup 0
+  .thread_done_event dq 16 dup 0
+  .thread_count dd 0
+  .tile_counter dd 0
 
 align 8
   bmp_handle dq 0
   bmp_hdc dq 0
   win_handle dq 0
   win_hdc dq 0
-  win_title db 'CPU Raymarching', 64 dup 0
-  win_title_fmt db '[%d fps  %d us] CPU Raymarching',0
+  win_title db 'buddhabrot', 64 dup 0
+  win_title_fmt db '[%d fps  %d us] buddhabrot',0
   win_msg MSG
   win_class WNDCLASS winproc,win_title
   win_rect RECT 0,0,k_win_width,k_win_height
@@ -541,79 +552,10 @@ align 8
   update_frame_stats.prev_time dq 0
   update_frame_stats.prev_update_time dq 0
   update_frame_stats.frame dd 0,0
-  update_frame_stats.k_1000000_0 dq 1000000.0
-  update_frame_stats.k_1_0 dq 1.0
-
-  displayptr dq 0
-  tileidx dd 0,0
 
 align 8
-  main_thrd_semaphore dq 0
-  thrd_handle dq k_thrd_max_count dup 0
-  thrd_semaphore dq k_thrd_max_count dup 0
-  thrd_count dd 0
-
   system_info SYSTEM_INFO
-
-align 4
-  eye_position dd 0.0,4.0,400.0
-  eye_focus dd 0.0,0.0,0.0
-  k_background_color dd 0.0,0.0,0.0
-
-align 32
-  eye_xaxis: dd 8 dup 1.0,8 dup 0.0,8 dup 0.0
-  eye_yaxis: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0
-  eye_zaxis: dd 8 dup 0.0,8 dup 0.0,8 dup 1.0
-
-align 32
-  generate_image.k_x_offset: dd 0.5,1.5,2.5,3.5,0.5,1.5,2.5,3.5
-  generate_image.k_y_offset: dd 0.5,0.5,0.5,0.5,1.5,1.5,1.5,1.5
-  generate_image.k_win_width_rcp: dd 8 dup 0.0015625      ; 2.0f / k_win_width, k_win_width = 1280
-  generate_image.k_win_height_rcp: dd 8 dup 0.0015625     ; 2.0f / k_win_width, k_win_width = 1280
-  generate_image.k_rd_z: dd 8 dup -1.732
-
-align 32
-  k_1: dd 8 dup 1
-  k_2: dd 8 dup 2
-  k_1_0: dd 8 dup 1.0
-  k_0_5: dd 8 dup 0.5
-  k_0_1: dd 8 dup 0.1
-  k_camera_radius: dd 8 dup 16.0
-  k_sphere_radius: dd 8 dup -4.0
-  k_255_0: dd 8 dup 255.0
-  k_0_02: dd 8 dup 0.02
-  k_hit_distance: dd 8 dup 0.00001
-  k_view_distance: dd 8 dup 50.0
-  k_normal_eps: dd 8 dup 0.00002
-  k_shadow_hardness: dd 8 dup 16.0
-
-align 32
-  light0_position: dd 8 dup 10.0, 8 dup 10.0, 8 dup 10.0
-  light0_power: dd 8 dup 0.9
-  light1_position: dd 8 dup 5.0, 8 dup 20.0, 8 dup -15.0
-  light1_power: dd 8 dup 0.6
-  ambient: dd 8 dup 0.1
-
-align 32
-  object:
-  .id:      dd 8 dup 0,8 dup 8,8 dup 16,8 dup 24
-  .param_x: dd 8 dup 0.0,8 dup 0.0,8 dup 3.0,8 dup 0.0
-  .param_y: dd 8 dup 0.0,8 dup 1.0,8 dup 0.0,8 dup 1.0
-  .param_z: dd 8 dup 0.0,8 dup 3.0,8 dup 0.0,8 dup 0.0
-  .param_w: dd 8 dup 2.0,8 dup 0.7,8 dup 1.0,8 dup 2.0
-  .red:     dd 8 dup 1.0,8 dup 0.0,8 dup 0.0,8 dup 0.5
-  .green:   dd 8 dup 0.0,8 dup 1.0,8 dup 0.0,8 dup 0.3
-  .blue:    dd 8 dup 0.0,8 dup 0.0,8 dup 1.0,8 dup 0.2
-
-align 32
-  sincos.k_inv_sign_mask: dd 8 dup not 0x80000000
-  sincos.k_sign_mask: dd 8 dup 0x80000000
-  sincos.k_2_div_pi: dd 8 dup 0.636619772
-  sincos.k_p0: dd 8 dup 0.15707963267948963959e1
-  sincos.k_p1: dd 8 dup -0.64596409750621907082e0
-  sincos.k_p2: dd 8 dup 0.7969262624561800806e-1
-  sincos.k_p3: dd 8 dup -0.468175413106023168e-2
-;========================================================================
+;=============================================================================
 section '.idata' import data readable writeable
 
   dd 0,0,0,rva _kernel32,rva _kernel32_table
@@ -634,6 +576,8 @@ section '.idata' import data readable writeable
   CloseHandle dq rva _CloseHandle
   WaitForMultipleObjects dq rva _WaitForMultipleObjects
   GetSystemInfo dq rva _GetSystemInfo
+  CreateEventEx dq rva _CreateEventEx
+  SetEvent dq rva _SetEvent
   dq 0
 
   _user32_table:
@@ -679,6 +623,8 @@ emit <_CreateThread dw 0>,<db 'CreateThread',0>
 emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
 emit <_WaitForMultipleObjects dw 0>,<db 'WaitForMultipleObjects',0>
 emit <_GetSystemInfo dw 0>,<db 'GetSystemInfo',0>
+emit <_CreateEventEx dw 0>,<db 'CreateEventExA',0>
+emit <_SetEvent dw 0>,<db 'SetEvent',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
 emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
@@ -702,4 +648,4 @@ emit <_SelectObject dw 0>,<db 'SelectObject',0>
 emit <_BitBlt dw 0>,<db 'BitBlt',0>
 emit <_DeleteDC dw 0>,<db 'DeleteDC',0>
 emit <_DeleteObject dw 0>,<db 'DeleteObject',0>
-;========================================================================
+;=============================================================================
