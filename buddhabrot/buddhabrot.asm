@@ -20,6 +20,10 @@ entry start
   VK_ESCAPE = 01Bh
   SRCCOPY = 0x00CC0020
   EVENT_ALL_ACCESS = 0x1F0003
+  MEM_COMMIT = 0x00001000
+  MEM_RESERVE = 0x00002000
+  MEM_RELEASE = 0x8000
+  PAGE_READWRITE = 0x04
 
   k_funcparam5 = 32
   k_funcparam6 = k_funcparam5 + 8
@@ -117,7 +121,7 @@ generate_image_thread:
         and         rsp,-32
         sub         rsp,32
         mov         esi,ecx                                    ; thread id
-  .run: mov         rcx,[image.semaphore]
+  .run: mov         rcx,[image_semaphore]
         mov         edx,INFINITE
         call        [WaitForSingleObject]
         mov         eax,[quit]
@@ -125,7 +129,7 @@ generate_image_thread:
         jnz         .ret
         mov         ecx,esi
         call        generate_image
-        mov         rcx,[image.thread_done_event+rsi*8]
+        mov         rcx,[thread_done_event+rsi*8]
         call        [SetEvent]
         jmp         .run
   .ret: xor         ecx,ecx
@@ -235,7 +239,9 @@ end virtual
         lea         rcx,[system_info]
         call        [GetSystemInfo]
         mov         eax,[system_info.dwNumberOfProcessors]
-        mov         [image.thread_count],eax
+        cmp         eax,k_max_threads_count
+        ja          .error
+        mov         [threads_count],eax
         call        supports_avx2
         test        eax,eax
         jz          .no_avx2
@@ -287,7 +293,7 @@ end virtual
         mov         rcx,[win_hdc]
         lea         rdx,[bmp_info]
         xor         r8d,r8d
-        lea         r9,[image.ptr]
+        lea         r9,[image_dataptr]
         mov         qword[k_funcparam5+rsp],0
         mov         qword[k_funcparam6+rsp],0
         call        [CreateDIBSection]
@@ -304,13 +310,25 @@ end virtual
         call        [SelectObject]
         test        eax,eax
         jz          .error
+        ; density map memory
+        xor         ecx,ecx
+        mov         edx,k_win_width*k_win_height*4
+        mov         r8d,MEM_COMMIT+MEM_RESERVE
+        mov         r9d,PAGE_READWRITE
+        call        [VirtualAlloc]
+        mov         [density],rax
+        test        rax,rax
+        jz          .error
+        mov         rcx,[density]
+        mov         edx,k_win_width*k_win_height*4
+        call        [RtlZeroMemory]
         ; image semaphore
         xor         ecx,ecx
         xor         edx,edx
-        mov         r8d,[image.thread_count]
+        mov         r8d,[threads_count]
         xor         r9d,r9d
         call        [CreateSemaphore]
-        mov         [image.semaphore],rax
+        mov         [image_semaphore],rax
         test        rax,rax
         jz          .error
         ; image events
@@ -320,11 +338,11 @@ end virtual
         xor         r8d,r8d
         mov         r9d,EVENT_ALL_ACCESS
         call        [CreateEventEx]
-        mov         [image.thread_done_event+rsi*8],rax
+        mov         [thread_done_event+rsi*8],rax
         test        rax,rax
         jz          .error
         add         esi,1
-        cmp         esi,[image.thread_count]
+        cmp         esi,[threads_count]
         jb          @b
         ; image threads
         xor         esi,esi
@@ -335,11 +353,11 @@ end virtual
         mov         qword[k_funcparam5+rsp],0
         mov         qword[k_funcparam6+rsp],0
         call        [CreateThread]
-        mov         [image.thread+rsi*8],rax
+        mov         [thread_handle+rsi*8],rax
         test        rax,rax
         jz          .error
         add         esi,1
-        cmp         esi,[image.thread_count]
+        cmp         esi,[threads_count]
         jb          @b
         mov         eax,1
         add         rsp,.k_stack_size
@@ -364,16 +382,16 @@ deinit:
         push        rsi rdi
         sub         rsp,.k_stack_size
         mov         [quit],1
-        mov         rcx,[image.semaphore]
+        mov         rcx,[image_semaphore]
         test        rcx,rcx
         jz          @f
-        mov         edx,[image.thread_count]
+        mov         edx,[threads_count]
         xor         r8d,r8d
         call        [ReleaseSemaphore]
   @@:
         xor         esi,esi
   .for_each_thrd:
-        mov         rdi,[image.thread+rsi*8]
+        mov         rdi,[thread_handle+rsi*8]
         test        rdi,rdi
         jz          @f
         mov         rcx,rdi
@@ -382,18 +400,24 @@ deinit:
         mov         rcx,rdi
         call        [CloseHandle]
   @@:   add         esi,1
-        cmp         esi,[image.thread_count]
+        cmp         esi,[threads_count]
         jb          .for_each_thrd
 
         xor         esi,esi
   .for_each_sem:
-        safe_close  [image.thread_done_event+rsi*8]
+        safe_close  [thread_done_event+rsi*8]
         add         esi,1
-        cmp         esi,[image.thread_count]
+        cmp         esi,[threads_count]
         jb          .for_each_sem
 
-        safe_close  [image.semaphore]
-        mov         rcx,[bmp_hdc]
+        safe_close  [image_semaphore]
+        mov         rcx,[density]
+        test        rcx,rcx
+        jz          @f
+        xor         edx,edx
+        mov         r8d,MEM_RELEASE
+        call        [VirtualFree]
+  @@:   mov         rcx,[bmp_hdc]
         test        rcx,rcx
         jz          @f
         call        [DeleteDC]
@@ -418,13 +442,12 @@ virtual at 0
 end virtual
         sub         rsp,.k_stack_size
         call        update_frame_stats
-        mov         [image.tile_counter],0
-        mov         rcx,[image.semaphore]
-        mov         edx,[image.thread_count]
+        mov         rcx,[image_semaphore]
+        mov         edx,[threads_count]
         xor         r8d,r8d
         call        [ReleaseSemaphore]
-        mov         ecx,[image.thread_count]
-        lea         rdx,[image.thread_done_event]
+        mov         ecx,[threads_count]
+        lea         rdx,[thread_done_event]
         mov         r8d,TRUE
         mov         r9d,INFINITE
         call        [WaitForMultipleObjects]
@@ -505,22 +528,27 @@ section '.data' data readable
   k_win_width = 1024
   k_win_height = 1024
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
-  k_thrd_max_count = 16
+  k_max_threads_count = 16
 
 align 8
   update_frame_stats.k_1000000_0 dq 1000000.0
   update_frame_stats.k_1_0 dq 1.0
+
+  no_avx2_caption db 'Not supported CPU',0
+  no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
 ;=============================================================================
 section '.data' data readable writeable
 
 align 8
-  image:
-  .ptr dq 0
-  .semaphore dq 0
-  .thread dq 16 dup 0
-  .thread_done_event dq 16 dup 0
-  .thread_count dd 0
-  .tile_counter dd 0
+  density dq 0
+
+align 8
+  image_dataptr dq 0
+  image_semaphore dq 0
+  threads_count dd 0,0
+  thread_handle dq k_max_threads_count dup 0
+  thread_done_event dq k_max_threads_count dup 0
+  thread_xyseq dq k_max_threads_count dup 0
 
 align 8
   bmp_handle dq 0
@@ -532,9 +560,6 @@ align 8
   win_msg MSG
   win_class WNDCLASS winproc,win_title
   win_rect RECT 0,0,k_win_width,k_win_height
-
-  no_avx2_caption db 'Not supported CPU',0
-  no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
 
 align 8
   bmp_info BITMAPINFOHEADER k_win_width,k_win_height,32,k_win_width*k_win_height
@@ -578,6 +603,9 @@ section '.idata' import data readable writeable
   GetSystemInfo dq rva _GetSystemInfo
   CreateEventEx dq rva _CreateEventEx
   SetEvent dq rva _SetEvent
+  VirtualAlloc dq rva _VirtualAlloc
+  VirtualFree dq rva _VirtualFree
+  RtlZeroMemory dq rva _RtlZeroMemory
   dq 0
 
   _user32_table:
@@ -625,6 +653,9 @@ emit <_WaitForMultipleObjects dw 0>,<db 'WaitForMultipleObjects',0>
 emit <_GetSystemInfo dw 0>,<db 'GetSystemInfo',0>
 emit <_CreateEventEx dw 0>,<db 'CreateEventExA',0>
 emit <_SetEvent dw 0>,<db 'SetEvent',0>
+emit <_VirtualAlloc dw 0>,<db 'VirtualAlloc',0>
+emit <_VirtualFree dw 0>,<db 'VirtualFree',0>
+emit <_RtlZeroMemory dw 0>,<db 'RtlZeroMemory',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
 emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
