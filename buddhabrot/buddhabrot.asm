@@ -163,6 +163,27 @@ display_density:
         vpminud     xmm1,xmm2,xmm3
         vpbroadcastd ymm0,xmm0             ; ymm0 = largest value
         vpbroadcastd ymm1,xmm1             ; ymm1 = smallest value
+        vpsubd      ymm2,ymm0,ymm1
+        vcvtdq2ps   ymm2,ymm2
+        vrcpps      ymm2,ymm2              ; ymm2 = 1/(largest-smallest) as float
+        vmovaps     ymm7,[k_255_0f]        ; ymm7 = [255.0f ... 255.0f]
+        mov         rcx,[density]
+        mov         rdx,[image_dataptr]
+        xor         eax,eax
+  @@:   vmovdqa     ymm3,[rcx+rax]
+        vpsubd      ymm3,ymm3,ymm1
+        vcvtdq2ps   ymm3,ymm3
+        vmulps      ymm3,ymm3,ymm2
+        vmulps      ymm3,ymm3,ymm7
+        vcvttps2dq  ymm3,ymm3
+        vpslld      ymm4,ymm3,8
+        vpslld      ymm5,ymm3,16
+        vpor        ymm3,ymm3,ymm4
+        vpor        ymm3,ymm3,ymm5
+        vmovdqa     [rdx+rax],ymm3
+        add         eax,32
+        cmp         eax,k_win_width*k_win_height*4
+        jb          @b
         ret
 ;=============================================================================
 align 32
@@ -519,18 +540,18 @@ test_code:
         mov         dword[rcx+4],2
         mov         dword[rcx+8],3
         mov         dword[rcx+12],4
-        mov         dword[rcx+16],53232
+        mov         dword[rcx+16],3
         mov         dword[rcx+20],6
-        mov         dword[rcx+24],222
+        mov         dword[rcx+24],2
         mov         dword[rcx+28],8
         mov         dword[rcx+32],0
-        mov         dword[rcx+36],222
+        mov         dword[rcx+36],22
         mov         dword[rcx+40],11
-        mov         dword[rcx+44],323
+        mov         dword[rcx+44],32
         mov         dword[rcx+48],5
-        mov         dword[rcx+52],60
+        mov         dword[rcx+52],6
         mov         dword[rcx+56],1
-        mov         dword[rcx+60],211
+        mov         dword[rcx+60],21
         call        display_density
         lea         rcx,[dbg_txt]
         lea         rdx,[dbg_txt_fmt]
@@ -612,6 +633,9 @@ section '.data' data readable
 align 8
   update_frame_stats.k_1000000_0 dq 1000000.0
   update_frame_stats.k_1_0 dq 1.0
+
+align 32
+  k_255_0f: dd 8 dup 255.0
 
   no_avx2_caption db 'Not supported CPU',0
   no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
