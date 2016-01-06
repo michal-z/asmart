@@ -136,6 +136,36 @@ generate_image_thread:
         call        [ExitThread]
 ;=============================================================================
 align 32
+display_density:
+;-----------------------------------------------------------------------------
+        mov         rcx,[density]
+        mov         rdx,rcx
+        add         rdx,k_win_width*k_win_height*4
+        vpxor       ymm0,ymm0,ymm0         ; largest value
+        vpcmpeqd    ymm2,ymm2,ymm2         ; smallest value
+  @@:   vmovdqa     ymm3,[rcx]
+        vpmaxud     ymm0,ymm0,ymm3
+        vpminud     ymm2,ymm2,ymm3
+        add         rcx,32
+        cmp         rcx,rdx
+        jb          @b
+        vextracti128 xmm1,ymm0,1
+        vextracti128 xmm3,ymm2,1
+        vpmaxud     xmm0,xmm0,xmm1
+        vpminud     xmm2,xmm2,xmm3
+        vpsrldq     xmm1,xmm0,8
+        vpsrldq     xmm3,xmm2,8
+        vpmaxud     xmm0,xmm0,xmm1
+        vpminud     xmm2,xmm2,xmm3
+        vpsrldq     xmm1,xmm0,4
+        vpsrldq     xmm3,xmm2,4
+        vpmaxud     xmm0,xmm0,xmm1
+        vpminud     xmm1,xmm2,xmm3
+        vpbroadcastd ymm0,xmm0             ; ymm0 = largest value
+        vpbroadcastd ymm1,xmm1             ; ymm1 = smallest value
+        ret
+;=============================================================================
+align 32
 supports_avx2:
 ;-----------------------------------------------------------------------------
         mov         eax,1
@@ -322,6 +352,19 @@ end virtual
         mov         rcx,[density]
         mov         edx,k_win_width*k_win_height*4
         call        [RtlZeroMemory]
+        ; memory for each thread
+        xor         esi,esi
+  @@:   xor         ecx,ecx
+        mov         edx,k_bailout*16
+        mov         r8d,MEM_COMMIT+MEM_RESERVE
+        mov         r9d,PAGE_READWRITE
+        call        [VirtualAlloc]
+        mov         [thread_xyseq+rsi*8],rax
+        test        rax,rax
+        jz          .error
+        add         esi,1
+        cmp         esi,[threads_count]
+        jb          @b
         ; image semaphore
         xor         ecx,ecx
         xor         edx,edx
@@ -451,6 +494,7 @@ end virtual
         mov         r8d,TRUE
         mov         r9d,INFINITE
         call        [WaitForMultipleObjects]
+        call        display_density
         mov         rcx,[win_hdc]
         xor         edx,edx
         xor         r8d,r8d
@@ -466,6 +510,39 @@ end virtual
         ret
 ;=============================================================================
 align 32
+test_code:
+;-----------------------------------------------------------------------------
+  .k_stack_size = 24+32
+        sub         rsp,.k_stack_size
+        mov         rcx,[density]
+        mov         dword[rcx],1
+        mov         dword[rcx+4],2
+        mov         dword[rcx+8],3
+        mov         dword[rcx+12],4
+        mov         dword[rcx+16],53232
+        mov         dword[rcx+20],6
+        mov         dword[rcx+24],222
+        mov         dword[rcx+28],8
+        mov         dword[rcx+32],0
+        mov         dword[rcx+36],222
+        mov         dword[rcx+40],11
+        mov         dword[rcx+44],323
+        mov         dword[rcx+48],5
+        mov         dword[rcx+52],60
+        mov         dword[rcx+56],1
+        mov         dword[rcx+60],211
+        call        display_density
+        lea         rcx,[dbg_txt]
+        lea         rdx,[dbg_txt_fmt]
+        vmovd       r8d,xmm0
+        vmovd       r9d,xmm1
+        call        [wsprintf]
+        lea         rcx,[dbg_txt]
+        call        [OutputDebugString]
+        add         rsp,.k_stack_size
+        ret
+;=============================================================================
+align 32
 start:
 ;-----------------------------------------------------------------------------
 virtual at 0
@@ -476,6 +553,7 @@ end virtual
         call        init
         test        eax,eax
         jz          .quit
+        call        test_code
   .main_loop:
         lea         rcx,[win_msg]
         xor         edx,edx
@@ -529,6 +607,7 @@ section '.data' data readable
   k_win_height = 1024
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
   k_max_threads_count = 16
+  k_bailout = 200
 
 align 8
   update_frame_stats.k_1000000_0 dq 1000000.0
@@ -580,6 +659,10 @@ align 8
 
 align 8
   system_info SYSTEM_INFO
+
+align 8
+  dbg_txt rb 256
+  dbg_txt_fmt db 'max: %d, min: %d',0
 ;=============================================================================
 section '.idata' import data readable writeable
 
@@ -606,6 +689,7 @@ section '.idata' import data readable writeable
   VirtualAlloc dq rva _VirtualAlloc
   VirtualFree dq rva _VirtualFree
   RtlZeroMemory dq rva _RtlZeroMemory
+  OutputDebugString dq rva _OutputDebugString
   dq 0
 
   _user32_table:
@@ -656,6 +740,7 @@ emit <_SetEvent dw 0>,<db 'SetEvent',0>
 emit <_VirtualAlloc dw 0>,<db 'VirtualAlloc',0>
 emit <_VirtualFree dw 0>,<db 'VirtualFree',0>
 emit <_RtlZeroMemory dw 0>,<db 'RtlZeroMemory',0>
+emit <_OutputDebugString dw 0>,<db 'OutputDebugStringA',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
 emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
