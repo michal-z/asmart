@@ -112,6 +112,10 @@ local .end
         call        [CloseHandle]
         mov         handle,0
   .end: }
+
+macro dbgbreak {
+        int3
+        nop }
 ;=============================================================================
 include 'buddhabrot_renderer.inc'
 ;=============================================================================
@@ -119,7 +123,7 @@ align 32
 generate_image_thread:
 ;-----------------------------------------------------------------------------
         and         rsp,-32
-        sub         rsp,32
+        sub         rsp,64
         mov         esi,ecx                                    ; thread id
   .run: mov         rcx,[image_semaphore]
         mov         edx,INFINITE
@@ -165,8 +169,8 @@ display_density:
         vpbroadcastd ymm1,xmm1             ; ymm1 = smallest value
         vpsubd      ymm2,ymm0,ymm1
         vcvtdq2ps   ymm2,ymm2
-        vrcpps      ymm2,ymm2              ; ymm2 = 1/(largest-smallest) as float
-        vmovaps     ymm7,[k_255_0f]        ; ymm7 = [255.0f ... 255.0f]
+        vrcpps      ymm2,ymm2
+        vaddps      ymm2,ymm2,ymm2         ; ymm2 = 2.0f/(largest-smallest)
         mov         rcx,[density]
         mov         rdx,[image_dataptr]
         xor         eax,eax
@@ -174,7 +178,9 @@ display_density:
         vpsubd      ymm3,ymm3,ymm1
         vcvtdq2ps   ymm3,ymm3
         vmulps      ymm3,ymm3,ymm2
-        vmulps      ymm3,ymm3,ymm7
+        vminps      ymm3,ymm3,[k_1_0f]
+        ;vsqrtps     ymm3,ymm3
+        vmulps      ymm3,ymm3,[k_255_0f]
         vcvttps2dq  ymm3,ymm3
         vpslld      ymm4,ymm3,8
         vpslld      ymm5,ymm3,16
@@ -187,12 +193,12 @@ display_density:
         ret
 ;=============================================================================
 align 32
-supports_avx2:
+check_cpu_extensions:
 ;-----------------------------------------------------------------------------
         mov         eax,1
         cpuid
-        and         ecx,$018001000         ; check OSXSAVE,AVX,FMA
-        cmp         ecx,$018001000
+        and         ecx,$58001000          ; check RDRAND,AVX,OSXSAVE,FMA
+        cmp         ecx,$58001000
         jne         .not_supported
         mov         eax,7
         xor         ecx,ecx
@@ -202,8 +208,8 @@ supports_avx2:
         jne         .not_supported
         xor         ecx,ecx
         xgetbv
-        and         eax,$06                ; check OS support
-        cmp         eax,$06
+        and         eax,$6                 ; check OS support
+        cmp         eax,$6
         jne         .not_supported
         mov         eax,1
         jmp         .ret
@@ -293,7 +299,7 @@ end virtual
         cmp         eax,k_max_threads_count
         ja          .error
         mov         [threads_count],eax
-        call        supports_avx2
+        call        check_cpu_extensions
         test        eax,eax
         jz          .no_avx2
         ; window class
@@ -574,7 +580,7 @@ end virtual
         call        init
         test        eax,eax
         jz          .quit
-        call        test_code
+        ;call        test_code
   .main_loop:
         lea         rcx,[win_msg]
         xor         edx,edx
@@ -628,15 +634,26 @@ section '.data' data readable
   k_win_height = 1024
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
   k_max_threads_count = 16
-  k_bailout = 200
+  k_bailout = 2000
 
 align 8
   update_frame_stats.k_1000000_0 dq 1000000.0
   update_frame_stats.k_1_0 dq 1.0
 
+align 8
+  k_1_div_2pow53 dq 1.1102230246251565404236316680908e-16
+  k_6_0 dq 6.0
+  k_3_0 dq 3.0
+  k_0_5 dq 0.5
+  k_10_0 dq 10.0
+  k_view_scale dq 1024.0 ; 0.3 * k_win_width
+  k_view_bias dq 512.0 ; 0.5 * k_win_width
+
 align 32
   k_255_0f: dd 8 dup 255.0
+  k_1_0f: dd 8 dup 1.0
 
+align 1
   no_avx2_caption db 'Not supported CPU',0
   no_avx2_message db 'Your CPU does not support AVX2, program will not run.',0
 ;=============================================================================
