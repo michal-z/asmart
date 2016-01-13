@@ -1,7 +1,5 @@
-align 8
-vsh_full_triangle_ptr dq vsh_full_triangle
 vsh_full_triangle:
-ln '#version 430 core'
+ln '#version 440 core'
 ln 'out gl_PerVertex'
 ln '{'
 ln '  vec4 gl_Position;'
@@ -13,10 +11,8 @@ ln '  gl_Position = vec4(p[gl_VertexID], 0.0, 1.0);'
 ln '}'
 db 0
 
-align 8
-fsh_green_ptr dq fsh_green
 fsh_green:
-ln '#version 430 core'
+ln '#version 440 core'
 ln 'layout(location = 0) out vec4 fs_out_color;'
 ln 'void main()'
 ln '{'
@@ -24,4 +20,6 @@ ln '  fs_out_color = vec4(0.2, 0.8, 0.2, 0.2);'
 ln '}'
 db 0
 
-; vim: set ft=:
+align 8
+vsh_full_triangle_ptr dq vsh_full_triangle
+fsh_green_ptr dq fsh_green
