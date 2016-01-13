@@ -22,6 +22,7 @@ entry start
   INVALID_HANDLE_VALUE = 0xffffffffffffffff
   INVALID_FILE_SIZE = 0xffffffff
   FILE_ATTRIBUTE_NORMAL = 128
+  FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
   EVENT_ALL_ACCESS = 0x1F0003
   PFD_TYPE_RGBA = 0
   PFD_DOUBLEBUFFER = 0x00000001
@@ -122,15 +123,28 @@ struc PIXELFORMATDESCRIPTOR {
   .dwVisibleMask dd 0
   .dwDamageMask dd 0 }
 
-struc WAVEFORMATEX {
-  .wFormatTag dw 0
-  .nChannels dw 0
-  .nSamplesPerSec dd 0
-  .nAvgBytesPerSec dd 0
-  .nBlockAlign dw 0
-  .wBitsPerSample dw 0
+struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
+  .wFormatTag dw p0
+  .nChannels dw p1
+  .nSamplesPerSec dd p2
+  .nAvgBytesPerSec dd p3
+  .nBlockAlign dw p4
+  .wBitsPerSample dw p5
   .cbSize dw 0
   dw 0 }
+
+struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
+  dd p0
+  dw p1
+  dw p2
+  db p3
+  db p4
+  db p5
+  db p6
+  db p7
+  db p8
+  db p9
+  db p10 }
 
 virtual at 0
   IUnknown.QueryInterface rq 1
@@ -213,7 +227,27 @@ macro memfree ptr {
 
 macro ln txt {
         db      txt,13,10 }
+
+macro scloseh handle {
+  local .end
+        mov     rcx,handle
+        test    rcx,rcx
+        jz      .end
+        call    [CloseHandle]
+        mov     handle,0
+  .end: }
+
+macro sreleac iface {
+  local .end
+        mov     rcx,iface
+        test    rcx,rcx
+        jz      .end
+        mov     rax,[rcx]
+        call    [IUnknown.Release+rax]
+        mov     iface,0
+  .end: }
 ;=============================================================================
+include 'amnestia_audio.inc'
 include 'amnestia_demo.inc'
 ;=============================================================================
 align 32
@@ -556,6 +590,12 @@ align 4
                      WGL_CONTEXT_FLAGS_ARB,WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,\
                      WGL_CONTEXT_PROFILE_MASK_ARB,WGL_CONTEXT_CORE_PROFILE_BIT_ARB,0
 
+align 8
+  CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
+  IID_IMMDeviceEnumerator GUID 0xA95664D2,0x9614,0x4F35,0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6
+  IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
+  IID_IAudioRenderClient GUID 0xF294ACFC,0x3146,0x4483,0xA7,0xBF,0xAD,0xDC,0xA7,0xC2,0x60,0xE2
+
 include 'amnestia_glsl.inc'
 ;========================================================================
 section '.data' data readable writeable
@@ -565,6 +605,17 @@ align 4
   fshp dd 0
   pipeline dd 0
   vao dd 0
+
+align 8
+  audio_stream dq 0
+  audio_thread dq 0
+  audio_shutdown_event dq 0
+  audio_buffer_ready_event dq 0
+  audio_render_client dq 0
+  audio_client dq 0
+  audio_device dq 0
+  audio_enumerator dq 0
+  audio_buffer_size_in_frames dd 0,0
 
 align 8
   hglrc dq 0
@@ -582,6 +633,7 @@ align 8
   time_delta dd 0,0
   pfd PIXELFORMATDESCRIPTOR
 
+align 8
   get_time.perf_counter dq 0
   get_time.perf_freq dq 0
   get_time.first_perf_counter dq 0
@@ -638,11 +690,14 @@ section '.idata' import data readable writeable
   dd 0,0,0,rva _kernel32,rva _kernel32_table
   dd 0,0,0,rva _user32,rva _user32_table
   dd 0,0,0,rva _gdi32,rva _gdi32_table
+  dd 0,0,0,rva _ole32,rva _ole32_table
+  dd 0,0,0,rva _avrt,rva _avrt_table
   dd 0,0,0,0,0
 
   _kernel32_table:
   GetModuleHandle dq rva _GetModuleHandle
   ExitProcess dq rva _ExitProcess
+  ExitThread dq rva _ExitThread
   QueryPerformanceFrequency dq rva _QueryPerformanceFrequency
   QueryPerformanceCounter dq rva _QueryPerformanceCounter
   CloseHandle dq rva _CloseHandle
@@ -657,6 +712,11 @@ section '.idata' import data readable writeable
   ReadFile dq rva _ReadFile
   GetFileSize dq rva _GetFileSize
   GetProcessHeap dq rva _GetProcessHeap
+  CreateEventEx dq rva _CreateEventEx
+  CreateThread dq rva _CreateThread
+  SetEvent dq rva _SetEvent
+  WaitForSingleObject dq rva _WaitForSingleObject
+  WaitForMultipleObjects dq rva _WaitForMultipleObjects
   dq 0
 
   _user32_table:
@@ -682,12 +742,24 @@ section '.idata' import data readable writeable
   SwapBuffers dq rva _SwapBuffers
   dq 0
 
+  _ole32_table:
+  CoInitialize dq rva _CoInitialize
+  CoCreateInstance dq rva _CoCreateInstance
+  dq 0
+
+  _avrt_table:
+  AvSetMmThreadCharacteristics dq rva _AvSetMmThreadCharacteristics
+  dq 0
+
   _kernel32 db 'kernel32.dll',0
   _user32 db 'user32.dll',0
   _gdi32 db 'gdi32.dll',0
+  _ole32 db 'ole32.dll',0
+  _avrt db 'avrt.dll',0
 
 emit <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
 emit <_ExitProcess dw 0>,<db 'ExitProcess',0>
+emit <_ExitThread dw 0>,<db 'ExitThread',0>
 emit <_QueryPerformanceFrequency dw 0>,<db 'QueryPerformanceFrequency',0>
 emit <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
 emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
@@ -702,6 +774,11 @@ emit <_CreateFile dw 0>,<db 'CreateFileA',0>
 emit <_ReadFile dw 0>,<db 'ReadFile',0>
 emit <_GetFileSize dw 0>,<db 'GetFileSize',0>
 emit <_GetProcessHeap dw 0>,<db 'GetProcessHeap',0>
+emit <_CreateEventEx dw 0>,<db 'CreateEventExA',0>
+emit <_CreateThread dw 0>,<db 'CreateThread',0>
+emit <_SetEvent dw 0>,<db 'SetEvent',0>
+emit <_WaitForSingleObject dw 0>,<db 'WaitForSingleObject',0>
+emit <_WaitForMultipleObjects dw 0>,<db 'WaitForMultipleObjects',0>
 
 emit <_wsprintf dw 0>,<db 'wsprintfA',0>
 emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
@@ -721,4 +798,9 @@ emit <_DeleteDC dw 0>,<db 'DeleteDC',0>
 emit <_SetPixelFormat dw 0>,<db 'SetPixelFormat',0>
 emit <_ChoosePixelFormat dw 0>,<db 'ChoosePixelFormat',0>
 emit <_SwapBuffers dw 0>,<db 'SwapBuffers',0>
+
+emit <_CoInitialize dw 0>,<db 'CoInitialize',0>
+emit <_CoCreateInstance dw 0>,<db 'CoCreateInstance',0>
+
+emit <_AvSetMmThreadCharacteristics dw 0>,<db 'AvSetMmThreadCharacteristicsA',0>
 ;========================================================================

@@ -28,7 +28,7 @@ demo_init:
         mov     [fshp],eax
   ; pipeline
         mov     ecx,1
-        mov     rdx,pipeline
+        lea     rdx,[pipeline]
         call    [glGenProgramPipelines]
         mov     ecx,[pipeline]
         mov     edx,GL_VERTEX_SHADER_BIT
@@ -38,7 +38,15 @@ demo_init:
         mov     edx,GL_FRAGMENT_SHADER_BIT
         mov     r8d,[fshp]
         call    [glUseProgramStages]
+  ; audio
+        call    audio_play
+        test    eax,eax
+        jz      .error
         mov     eax,1
+        add     rsp,.k_stack_size
+        ret
+  .error:
+        xor     eax,eax
         add     rsp,.k_stack_size
         ret
 ;=============================================================================
@@ -47,6 +55,7 @@ demo_deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
         sub     rsp,.k_stack_size
+        call    audio_stop
         mov     ecx,1
         lea     rdx,[pipeline]
         call    [glDeleteProgramPipelines]
