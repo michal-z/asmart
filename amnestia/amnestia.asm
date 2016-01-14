@@ -246,11 +246,15 @@ macro sreleac iface {
         call    [IUnknown.Release+rax]
         mov     iface,0
   .end: }
+
+macro falign {
+        align 16 }
 ;=============================================================================
-include 'amnestia_audio.inc'
 include 'amnestia_demo.inc'
+include 'amnestia_audio.inc'
+include 'amnestia_math.inc'
 ;=============================================================================
-align 32
+falign
 get_time:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
@@ -275,7 +279,7 @@ get_time:
         add     rsp,.k_stack_size
         ret
 ;=============================================================================
-align 32
+falign
 update_frame_stats:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
@@ -321,7 +325,7 @@ update_frame_stats:
         add     rsp,.k_stack_size
         ret
 ;=============================================================================
-align 32
+falign
 init:
 ;-----------------------------------------------------------------------------
 macro getwgl func {
@@ -475,7 +479,7 @@ end virtual
         ret
 purge getwgl,getgl
 ;=============================================================================
-align 32
+falign
 deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
@@ -503,7 +507,7 @@ deinit:
   @@:   add     rsp,.k_stack_size
         ret
 ;=============================================================================
-align 32
+falign
 update:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
@@ -515,7 +519,7 @@ update:
         add     rsp,.k_stack_size
         ret
 ;=============================================================================
-align 32
+falign
 start:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
@@ -550,7 +554,7 @@ start:
         xor     ecx,ecx
         call    [ExitProcess]
 ;=============================================================================
-align 32
+falign
 winproc:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
@@ -584,7 +588,6 @@ section '.data' data readable
 
 align 4
   clear_color dd 0.0,0.2,0.4,1.0
-  k_1_0f dd 1.0
   ogl_ctx_attribs dd WGL_CONTEXT_MAJOR_VERSION_ARB,4,\
                      WGL_CONTEXT_MINOR_VERSION_ARB,4,\
                      WGL_CONTEXT_FLAGS_ARB,WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,\
@@ -596,6 +599,7 @@ align 8
   IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
   IID_IAudioRenderClient GUID 0xF294ACFC,0x3146,0x4483,0xA7,0xBF,0xAD,0xDC,0xA7,0xC2,0x60,0xE2
 
+include 'amnestia_const.inc'
 include 'amnestia_glsl.inc'
 ;========================================================================
 section '.data' data readable writeable
