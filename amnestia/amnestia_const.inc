@@ -2,27 +2,31 @@ align 4
   k_f32_1 dd 1.0
 
 align 16
-  k4_0         dd 4 dup 0
-  k4_f32_0p5   dd 4 dup 0.5
-  k4_i32_1     dd 4 dup 1
-  k4_f32_1     dd 4 dup 1.0
-  k4_f32_2     dd 4 dup 2.0
-  k4_f32_m1    dd 4 dup -1.0
-  k4_i32_2     dd 4 dup 2
-  k4_i32_7     dd 4 dup 7
-  k4_f32_0p5pi dd 4 dup 1.57079633
-  k4_f32_pi    dd 4 dup 3.1415926535897
-  k4_f32_2pi   dd 4 dup 6.2831853
+  k4_0 dd 4 dup 0
+  k4_f32_0p5 dd 4 dup 0.5
+  k4_i32_1 dd 4 dup 1
+  k4_f32_1 dd 4 dup 1.0
+  k4_f32_2 dd 4 dup 2.0
+  k4_f32_m1 dd 4 dup -1.0
+  k4_i32_2 dd 4 dup 2
+  k4_i32_7 dd 4 dup 7
+  k4_f32_pi dd 4 dup 3.1415926535897
+  k4_f32_2pi dd 4 dup 6.2831853
 
   k4_i32_min_norm_pos    dd 4 dup 0x00800000
   k4_i32_00800000        dd 4 dup 0x00800000
+
   k4_i32_not_mant_mask   dd 4 dup not 0x7f800000
   k4_i32_7f800000        dd 4 dup not 0x7f800000
+
   k4_i32_0000007f        dd 4 dup 0x7f
+
   k4_i32_sign_mask       dd 4 dup 0x80000000
   k4_i32_80000000        dd 4 dup 0x80000000
+
   k4_i32_not_sign_mask   dd 4 dup not 0x80000000
-  k4_i32_7fffffff        dd 4 dup not 0x7fffffff
+  k4_i32_7fffffff        dd 4 dup 0x7fffffff
+
   k4_f32_2_div_pi        dd 4 dup 0.636619772
   k4_f32_4_div_pi        dd 4 dup 1.2732395
   k4_f32_pi_div_2        dd 4 dup 1.5707963

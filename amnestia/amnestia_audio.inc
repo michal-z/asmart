@@ -1,75 +1,75 @@
 ;=============================================================================
-macro getbuf {
-        mov     rcx,[audio_render_client]
-        mov     edx,[audio_buffer_size_in_frames]
-        lea     r8,[.ptr+rsp]
-        mov     rax,[rcx]
-        call    [IAudioRenderClient.GetBuffer+rax]
-        test    eax,eax
-        js      .error }
+macro GET_BUFFER {
+        $mov rcx,[audio_render_client]
+        $mov edx,[audio_buffer_size_in_frames]
+        $lea r8,[.ptr+rsp]
+        $mov rax,[rcx]
+        $call [IAudioRenderClient.GetBuffer+rax]
+        $test eax,eax
+        $js .error }
 
-macro relbuf {
-        mov     rcx,[audio_render_client]
-        mov     edx,[audio_buffer_size_in_frames]
-        xor     r8d,r8d
-        mov     rax,[rcx]
-        call    [IAudioRenderClient.ReleaseBuffer+rax]
-        test    eax,eax
-        js      .error }
+macro RELEASE_BUFFER {
+        $mov rcx,[audio_render_client]
+        $mov edx,[audio_buffer_size_in_frames]
+        $xor r8d,r8d
+        $mov rax,[rcx]
+        $call [IAudioRenderClient.ReleaseBuffer+rax]
+        $test eax,eax
+        $js .error }
 
-macro fillbuf {
-        mov     rcx,[audio_stream]
-        mov     rdx,[.ptr+rsp]
-        mov     r8d,[audio_buffer_size_in_frames]
-        shl     r8d,2
-        lea     r9,[.read_bytes+rsp]
-        mov     qword[k_funcparam5+rsp],0
-        call    [ReadFile] }
+macro FILL_BUFFER {
+        $mov rcx,[audio_stream]
+        $mov rdx,[.ptr+rsp]
+        $mov r8d,[audio_buffer_size_in_frames]
+        $shl r8d,2
+        $lea r9,[.read_bytes+rsp]
+        $mov qword[k_funcparam5+rsp],0
+        $call [ReadFile] }
 ;=============================================================================
 ; out: eax - result
 align 32
 audio_play:
 ;-----------------------------------------------------------------------------
-macro activ {
-        mov     rcx,[audio_device]
-        lea     rdx,[IID_IAudioClient]
-        mov     r8d,CLSCTX_ALL
-        xor     r9d,r9d
-        lea     rax,[audio_client]
-        mov     [k_funcparam5+rsp],rax
-        mov     rax,[rcx]
-        call    [IMMDevice.Activate+rax]
-        test    eax,eax
-        js      .error }
+macro ACTIVATE_DEVICE {
+        $mov rcx,[audio_device]
+        $lea rdx,[IID_IAudioClient]
+        $mov r8d,CLSCTX_ALL
+        $xor r9d,r9d
+        $lea rax,[audio_client]
+        $mov [k_funcparam5+rsp],rax
+        $mov rax,[rcx]
+        $call [IMMDevice.Activate+rax]
+        $test eax,eax
+        $js .error }
 
-macro init {
-        mov     rcx,[audio_client]
-        mov     edx,AUDCLNT_SHAREMODE_EXCLUSIVE
-        mov     r8d,AUDCLNT_STREAMFLAGS_EVENTCALLBACK
-        mov     r9,[.period+rsp]
-        mov     [k_funcparam5+rsp],r9
-        lea     rax,[.k_format]
-        mov     [k_funcparam6+rsp],rax
-        mov     qword[k_funcparam7+rsp],0
-        mov     rax,[rcx]
-        call    [IAudioClient.Initialize+rax] }
+macro INIT_CLIENT {
+        $mov rcx,[audio_client]
+        $mov edx,AUDCLNT_SHAREMODE_EXCLUSIVE
+        $mov r8d,AUDCLNT_STREAMFLAGS_EVENTCALLBACK
+        $mov r9,[.period+rsp]
+        $mov [k_funcparam5+rsp],r9
+        $lea rax,[.k_format]
+        $mov [k_funcparam6+rsp],rax
+        $mov qword[k_funcparam7+rsp],0
+        $mov rax,[rcx]
+        $call [IAudioClient.Initialize+rax] }
 
-macro bufsize {
-        mov     rcx,[audio_client]
-        lea     rdx,[audio_buffer_size_in_frames]
-        mov     rax,[rcx]
-        call    [IAudioClient.GetBufferSize+rax]
-        test    eax,eax
-        js      .error }
+macro GET_BUFFER_SIZE {
+        $mov rcx,[audio_client]
+        $lea rdx,[audio_buffer_size_in_frames]
+        $mov rax,[rcx]
+        $call [IAudioClient.GetBufferSize+rax]
+        $test eax,eax
+        $js .error }
 
-macro mkevent {
-        xor     ecx,ecx
-        xor     edx,edx
-        xor     r8d,r8d
-        mov     r9d,EVENT_ALL_ACCESS
-        call    [CreateEventEx]
-        test    rax,rax
-        jz      .error }
+macro CREATE_EVENT {
+        $xor ecx,ecx
+        $xor edx,edx
+        $xor r8d,r8d
+        $mov r9d,EVENT_ALL_ACCESS
+        $call [CreateEventEx]
+        $test rax,rax
+        $jz .error }
 
 virtual at 0
   rq 7
@@ -78,90 +78,90 @@ virtual at 0
   .read_bytes dd ?,?
   .k_stack_size = $
 end virtual
-        push    rsi
-        sub     rsp,.k_stack_size
-        mov     rsi,rcx
-        xor     ecx,ecx
-        call    [CoInitialize]
-        test    eax,eax
-        js      .error
+        $push rsi
+        $sub rsp,.k_stack_size
+        $mov rsi,rcx
+        $xor ecx,ecx
+        $call [CoInitialize]
+        $test eax,eax
+        $js .error
   ; device enumerator
-        lea     rcx,[CLSID_MMDeviceEnumerator]
-        xor     edx,edx
-        mov     r8d,CLSCTX_ALL
-        lea     r9,[IID_IMMDeviceEnumerator]
-        lea     rax,[audio_enumerator]
-        mov     [k_funcparam5+rsp],rax
-        call    [CoCreateInstance]
-        test    eax,eax
-        js      .error
+        $lea rcx,[CLSID_MMDeviceEnumerator]
+        $xor edx,edx
+        $mov r8d,CLSCTX_ALL
+        $lea r9,[IID_IMMDeviceEnumerator]
+        $lea rax,[audio_enumerator]
+        $mov [k_funcparam5+rsp],rax
+        $call [CoCreateInstance]
+        $test eax,eax
+        $js .error
   ; audio endpoint
-        mov     rcx,[audio_enumerator]
-        mov     edx,eRender
-        mov     r8d,eConsole
-        lea     r9,[audio_device]
-        mov     rax,[rcx]
-        call    [IMMDeviceEnumerator.GetDefaultAudioEndpoint+rax]
-        test    eax,eax
-        js      .error
-        activ
+        $mov rcx,[audio_enumerator]
+        $mov edx,eRender
+        $mov r8d,eConsole
+        $lea r9,[audio_device]
+        $mov rax,[rcx]
+        $call [IMMDeviceEnumerator.GetDefaultAudioEndpoint+rax]
+        $test eax,eax
+        $js .error
+        ACTIVATE_DEVICE
   ; check device support
-        mov     rcx,[audio_client]
-        mov     edx,AUDCLNT_SHAREMODE_EXCLUSIVE
-        lea     r8,[.k_format]
-        xor     r9d,r9d
-        mov     rax,[rcx]
-        call    [IAudioClient.IsFormatSupported+rax]
-        test    eax,eax
-        js      .error
+        $mov rcx,[audio_client]
+        $mov edx,AUDCLNT_SHAREMODE_EXCLUSIVE
+        $lea r8,[.k_format]
+        $xor r9d,r9d
+        $mov rax,[rcx]
+        $call [IAudioClient.IsFormatSupported+rax]
+        $test eax,eax
+        $js .error
   ; get device period
-        mov     rcx,[audio_client]
-        xor     edx,edx
-        lea     r8,[.period+rsp]
-        mov     rax,[rcx]
-        call    [IAudioClient.GetDevicePeriod+rax]
-        test    eax,eax
-        js      .error
+        $mov rcx,[audio_client]
+        $xor edx,edx
+        $lea r8,[.period+rsp]
+        $mov rax,[rcx]
+        $call [IAudioClient.GetDevicePeriod+rax]
+        $test eax,eax
+        $js .error
   ; try to initialize audio client
-        init
-        test    eax,eax
-        jz      .initialize_ok
-        cmp     eax,AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED
-        jne     .error
+        INIT_CLIENT
+        $test eax,eax
+        $jz .initialize_ok
+        $cmp eax,AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED
+        $jne .error
   ; compute new period and initialize again
-        bufsize
-        xorpd   xmm0,xmm0
-        cvtsi2sd xmm0,[audio_buffer_size_in_frames]
-        mulsd   xmm0,[.k_10000000_0]
-        divsd   xmm0,[.k_44100_0]
-        addsd   xmm0,[.k_0_5]
-        cvttsd2si rax,xmm0
-        mov     [.period+rsp],rax
-        mov     rcx,[audio_client]
-        mov     rax,[rcx]
-        call    [IAudioClient.Release+rax]
-        activ
-        init
-        test    eax,eax
-        js      .error
+        GET_BUFFER_SIZE
+        $xorpd xmm0,xmm0
+        $cvtsi2sd xmm0,[audio_buffer_size_in_frames]
+        $mulsd xmm0,[.k_10000000_0]
+        $divsd xmm0,[.k_44100_0]
+        $addsd xmm0,[.k_0_5]
+        $cvttsd2si rax,xmm0
+        $mov [.period+rsp],rax
+        $mov rcx,[audio_client]
+        $mov rax,[rcx]
+        $call [IAudioClient.Release+rax]
+        ACTIVATE_DEVICE
+        INIT_CLIENT
+        $test eax,eax
+        $js .error
   .initialize_ok:
-        mkevent
-        mov     [audio_buffer_ready_event],rax
-        mkevent
-        mov     [audio_shutdown_event],rax
-        mov     rcx,[audio_client]
-        mov     rdx,[audio_buffer_ready_event]
-        mov     rax,[rcx]
-        call    [IAudioClient.SetEventHandle+rax]
-        bufsize
+        CREATE_EVENT
+        $mov [audio_buffer_ready_event],rax
+        CREATE_EVENT
+        $mov [audio_shutdown_event],rax
+        $mov rcx,[audio_client]
+        $mov rdx,[audio_buffer_ready_event]
+        $mov rax,[rcx]
+        $call [IAudioClient.SetEventHandle+rax]
+        GET_BUFFER_SIZE
   ; get audio render client
-        mov     rcx,[audio_client]
-        lea     rdx,[IID_IAudioRenderClient]
-        lea     r8,[audio_render_client]
-        mov     rax,[rcx]
-        call    [IAudioClient.GetService+rax]
-        test    eax,eax
-        js      .error
+        $mov     rcx,[audio_client]
+        $lea     rdx,[IID_IAudioRenderClient]
+        $lea     r8,[audio_render_client]
+        $mov     rax,[rcx]
+        $call    [IAudioClient.GetService+rax]
+        $test    eax,eax
+        $js      .error
   ; open audio file
         lea     rcx,[.k_audio_file]
         mov     edx,GENERIC_READ
@@ -186,9 +186,9 @@ end virtual
         test    rax,rax
         jz      .error
   ; load initial audio data
-        getbuf
-        fillbuf
-        relbuf
+        GET_BUFFER
+        FILL_BUFFER
+        RELEASE_BUFFER
   ; start
         mov     rcx,[audio_client]
         mov     rax,[rcx]
@@ -282,7 +282,7 @@ end virtual
         call    [WaitForMultipleObjects]
         test    eax,eax
         jz      .error
-        getbuf
+        GET_BUFFER
         xor     eax,eax
         mov     edx,[audio_buffer_size_in_frames]
         mov     rcx,[.ptr+rsp]
@@ -290,8 +290,8 @@ end virtual
         add     eax,1
         cmp     eax,edx
         jne     @b
-        fillbuf
-        relbuf
+        FILL_BUFFER
+        RELEASE_BUFFER
         mov     eax,[audio_buffer_size_in_frames]
         shl     eax,2
         cmp     eax,[.read_bytes+rsp]

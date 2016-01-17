@@ -1,6 +1,8 @@
 format PE64 GUI 4.0
 entry start
 
+include '../fasm/inst_prefix.inc'
+
   INFINITE = 0xffffffff
   IDI_APPLICATION = 32512
   IDC_ARROW = 32512
@@ -249,6 +251,10 @@ macro sreleac iface {
 
 macro falign {
         align 16 }
+
+macro dbgbrk {
+        int3
+        nop }
 ;=============================================================================
 include 'amnestia_demo.inc'
 include 'amnestia_audio.inc'
@@ -524,6 +530,10 @@ start:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
         sub     rsp,.k_stack_size
+        mov     eax,1234567.0
+        movd    xmm0,eax
+        call    sinf
+        ;dbgbrk
         call    init
         test    eax,eax
         jz      .quit_deinit
