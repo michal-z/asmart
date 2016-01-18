@@ -27,7 +27,7 @@ macro FILL_BUFFER {
         $call [ReadFile] }
 ;=============================================================================
 ; out: eax - result
-align 32
+FALIGN
 audio_play:
 ;-----------------------------------------------------------------------------
 macro ACTIVATE_DEVICE {
@@ -155,98 +155,98 @@ end virtual
         $call [IAudioClient.SetEventHandle+rax]
         GET_BUFFER_SIZE
   ; get audio render client
-        $mov     rcx,[audio_client]
-        $lea     rdx,[IID_IAudioRenderClient]
-        $lea     r8,[audio_render_client]
-        $mov     rax,[rcx]
-        $call    [IAudioClient.GetService+rax]
-        $test    eax,eax
-        $js      .error
+        $mov rcx,[audio_client]
+        $lea rdx,[IID_IAudioRenderClient]
+        $lea r8,[audio_render_client]
+        $mov rax,[rcx]
+        $call [IAudioClient.GetService+rax]
+        $test eax,eax
+        $js .error
   ; open audio file
-        lea     rcx,[.k_audio_file]
-        mov     edx,GENERIC_READ
-        xor     r8d,r8d
-        xor     r9d,r9d
-        mov     dword[k_funcparam5+rsp],OPEN_EXISTING
-        mov     dword[k_funcparam6+rsp],FILE_ATTRIBUTE_NORMAL+FILE_FLAG_SEQUENTIAL_SCAN
-        mov     qword[k_funcparam7+rsp],0
-        call    [CreateFile]
-        cmp     rax,INVALID_HANDLE_VALUE
-        je      .error
-        mov     [audio_stream],rax
+        $lea rcx,[.k_audio_file]
+        $mov edx,GENERIC_READ
+        $xor r8d,r8d
+        $xor r9d,r9d
+        $mov dword[k_funcparam5+rsp],OPEN_EXISTING
+        $mov dword[k_funcparam6+rsp],FILE_ATTRIBUTE_NORMAL+FILE_FLAG_SEQUENTIAL_SCAN
+        $mov qword[k_funcparam7+rsp],0
+        $call [CreateFile]
+        $cmp rax,INVALID_HANDLE_VALUE
+        $je .error
+        $mov [audio_stream],rax
   ; create audio thread
-        xor     ecx,ecx
-        xor     edx,edx
-        lea     r8,[audio_thread_func]
-        xor     r9d,r9d
-        mov     dword[k_funcparam5+rsp],0
-        mov     qword[k_funcparam6+rsp],0
-        call    [CreateThread]
-        mov     [audio_thread],rax
-        test    rax,rax
-        jz      .error
+        $xor ecx,ecx
+        $xor edx,edx
+        $lea r8,[audio_thread_func]
+        $xor r9d,r9d
+        $mov dword[k_funcparam5+rsp],0
+        $mov qword[k_funcparam6+rsp],0
+        $call [CreateThread]
+        $mov [audio_thread],rax
+        $test rax,rax
+        $jz .error
   ; load initial audio data
         GET_BUFFER
         FILL_BUFFER
         RELEASE_BUFFER
   ; start
-        mov     rcx,[audio_client]
-        mov     rax,[rcx]
-        call    [IAudioClient.Start+rax]
-        test    eax,eax
-        js      .error
+        $mov rcx,[audio_client]
+        $mov rax,[rcx]
+        $call [IAudioClient.Start+rax]
+        $test eax,eax
+        $js .error
   ; success
-        mov     eax,1
-        add     rsp,.k_stack_size
-        pop     rsi
-        ret
+        $mov eax,1
+        $add rsp,.k_stack_size
+        $pop rsi
+        $ret
   .error:
-        xor     eax,eax
-        add     rsp,.k_stack_size
-        pop     rsi
-        ret
+        $xor eax,eax
+        $add rsp,.k_stack_size
+        $pop rsi
+        $ret
 align 8
   .k_10000000_0 dq 10000000.0
   .k_44100_0 dq 44100.0
   .k_0_5 dq 0.5
   .k_format WAVEFORMATEX WAVE_FORMAT_PCM,2,44100,44100*4,4,16
   .k_audio_file db 'data/flis_amnestia.raw',0
-purge activ,init,bufsize,mkevent
+purge ACTIVATE_DEVICE,INIT_CLIENT,GET_BUFFER_SIZE,CREATE_EVENT
 ;=============================================================================
-align 32
+FALIGN
 audio_stop:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 4*8
-        push    rsi
-        sub     rsp,.k_stack_size
-        mov     rsi,rcx
-        mov     rcx,[audio_shutdown_event]
-        test    rcx,rcx
-        jz      @f
-        call    [SetEvent]
-  @@:   mov     rcx,[audio_thread]
-        mov     edx,INFINITE
-        test    rcx,rcx
-        jz      @f
-        call    [WaitForSingleObject]
-  @@:   scloseh [audio_thread]
-        mov     rcx,[audio_client]
-        test    rcx,rcx
-        jz      @f
-        mov     rax,[rcx]
-        call    [IAudioClient.Stop+rax]
-  @@:   scloseh [audio_stream]
-        scloseh [audio_shutdown_event]
-        scloseh [audio_buffer_ready_event]
-        sreleac [audio_render_client]
-        sreleac [audio_client]
-        sreleac [audio_device]
-        sreleac [audio_enumerator]
-        add     rsp,.k_stack_size
-        pop     rsi
-        ret
+        $push rsi
+        $sub rsp,.k_stack_size
+        $mov rsi,rcx
+        $mov rcx,[audio_shutdown_event]
+        $test rcx,rcx
+        $jz @f
+        $call [SetEvent]
+  @@:   $mov rcx,[audio_thread]
+        $mov edx,INFINITE
+        $test rcx,rcx
+        $jz @f
+        $call [WaitForSingleObject]
+  @@:   SAFE_CLOSE [audio_thread]
+        $mov rcx,[audio_client]
+        $test rcx,rcx
+        $jz @f
+        $mov rax,[rcx]
+        $call [IAudioClient.Stop+rax]
+  @@:   SAFE_CLOSE [audio_stream]
+        SAFE_CLOSE [audio_shutdown_event]
+        SAFE_CLOSE [audio_buffer_ready_event]
+        SAFE_RELEASE [audio_render_client]
+        SAFE_RELEASE [audio_client]
+        SAFE_RELEASE [audio_device]
+        SAFE_RELEASE [audio_enumerator]
+        $add rsp,.k_stack_size
+        $pop rsi
+        $ret
 ;=============================================================================
-align 32
+FALIGN
 audio_thread_func:
 ;-----------------------------------------------------------------------------
 virtual at 0
@@ -257,52 +257,58 @@ virtual at 0
   .wait_array dq ?,?
   .k_stack_size = $+8
 end virtual
-        push    rsi
-        sub     rsp,.k_stack_size
-        mov     rsi,rcx
-        xor     ecx,ecx
-        call    [CoInitialize]
-        test    eax,eax
-        js      .error
-        lea     rcx,[.k_task_name]
-        mov     [.task_index+rsp],0
-        lea     rdx,[.task_index+rsp]
-        call    [AvSetMmThreadCharacteristics]
-        test    rax,rax
-        jz      .error
-        mov     rax,[audio_shutdown_event]
-        mov     [.wait_array+rsp],rax
-        mov     rax,[audio_buffer_ready_event]
-        mov     [.wait_array+rsp+8],rax
+        $push rsi
+        $sub rsp,.k_stack_size
+        $mov rsi,rcx
+
+        $xor ecx,ecx
+        $call [CoInitialize]
+        $test eax,eax
+        $js .error
+
+        $lea rcx,[.k_task_name]
+        $mov [.task_index+rsp],0
+        $lea rdx,[.task_index+rsp]
+        $call [AvSetMmThreadCharacteristics]
+        $test rax,rax
+        $jz .error
+
+        $mov rax,[audio_shutdown_event]
+        $mov [.wait_array+rsp],rax
+        $mov rax,[audio_buffer_ready_event]
+        $mov [.wait_array+rsp+8],rax
   .play_loop:
-        mov     ecx,2
-        lea     rdx,[.wait_array+rsp]
-        xor     r8d,r8d
-        mov     r9d,INFINITE
-        call    [WaitForMultipleObjects]
-        test    eax,eax
-        jz      .error
+        $mov ecx,2
+        $lea rdx,[.wait_array+rsp]
+        $xor r8d,r8d
+        $mov r9d,INFINITE
+        $call [WaitForMultipleObjects]
+        $test eax,eax
+        $jz .error
+
         GET_BUFFER
-        xor     eax,eax
-        mov     edx,[audio_buffer_size_in_frames]
-        mov     rcx,[.ptr+rsp]
-  @@:   mov     dword[rcx+rax*4],0
-        add     eax,1
-        cmp     eax,edx
-        jne     @b
+        $xor eax,eax
+        $mov edx,[audio_buffer_size_in_frames]
+        $mov rcx,[.ptr+rsp]
+  @@:   $mov dword[rcx+rax*4],0
+        $add eax,1
+        $cmp eax,edx
+        $jne @b
+
         FILL_BUFFER
         RELEASE_BUFFER
-        mov     eax,[audio_buffer_size_in_frames]
-        shl     eax,2
-        cmp     eax,[.read_bytes+rsp]
-        jne     .error
-        jmp     .play_loop
+
+        $mov eax,[audio_buffer_size_in_frames]
+        $shl eax,2
+        $cmp eax,[.read_bytes+rsp]
+        $jne .error
+        $jmp .play_loop
   .error:
-        xor     ecx,ecx
-        call    [ExitThread]
-        ret
+        $xor ecx,ecx
+        $call [ExitThread]
+        $ret
 align 1
   .k_task_name db 'Playback',0
 ;=============================================================================
-purge getbuf,relbuf,fillbuf
+purge GET_BUFFER,RELEASE_BUFFER,FILL_BUFFER
 ;=============================================================================
