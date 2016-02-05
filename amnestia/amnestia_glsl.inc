@@ -23,3 +23,5 @@ db 0
 align 8
 vsh_full_triangle_ptr dq vsh_full_triangle
 fsh_green_ptr dq fsh_green
+
+; vim: ft= indentexpr= nocindent noautoindent nosmartindent tabstop=2 softtabstop=2 shiftwidth=2 :

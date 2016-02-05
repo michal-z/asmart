@@ -86,3 +86,5 @@ align 16
   k4_f32_atan_s1     dd 4 dup 0.21972168858277355914e1
   k4_f32_atan_s2     dd 4 dup 0.68193064729268275701e1
   k4_f32_atan_s3     dd 4 dup 0.28205206687035841409e2
+
+; vim: ft=fasm autoindent tabstop=8 softtabstop=8 shiftwidth=8 :

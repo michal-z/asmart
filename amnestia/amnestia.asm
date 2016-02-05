@@ -1,8 +1,6 @@
 format PE64 GUI 4.0
 entry start
 
-include '../fasm/inst_prefix.inc'
-
   INFINITE = 0xffffffff
   IDI_APPLICATION = 32512
   IDC_ARROW = 32512
@@ -208,53 +206,53 @@ macro EMIT [inst] {
         inst }
 
 macro IACA_BEGIN {
-        $mov ebx,111
+        mov ebx,111
         db $64,$67,$90 }
 
 macro IACA_END {
-        $mov ebx,222
+        mov ebx,222
         db $64,$67,$90 }
 
 macro MALLOC size {
-        $mov rcx,[process_heap]
-        $xor edx,edx
-        $mov r8d,size
-        $call [HeapAlloc] }
+        mov rcx,[process_heap]
+        xor edx,edx
+        mov r8d,size
+        call [HeapAlloc] }
 
 macro FREE ptr {
-        $mov rcx,[process_heap]
-        $xor edx,edx
-        $mov r8,ptr
-        $call [HeapFree] }
+        mov rcx,[process_heap]
+        xor edx,edx
+        mov r8,ptr
+        call [HeapFree] }
 
 macro LN txt {
         db txt,13,10 }
 
 macro SAFE_CLOSE handle {
   local .end
-        $mov rcx,handle
-        $test rcx,rcx
-        $jz .end
-        $call [CloseHandle]
-        $mov handle,0
+        mov rcx,handle
+        test rcx,rcx
+        jz .end
+        call [CloseHandle]
+        mov handle,0
   .end: }
 
 macro SAFE_RELEASE iface {
   local .end
-        $mov rcx,iface
-        $test rcx,rcx
-        $jz .end
-        $mov rax,[rcx]
-        $call [IUnknown.Release+rax]
-        $mov iface,0
+        mov rcx,iface
+        test rcx,rcx
+        jz .end
+        mov rax,[rcx]
+        call [IUnknown.Release+rax]
+        mov iface,0
   .end: }
 
 macro FALIGN {
         align 16 }
 
 macro DEBUG_BREAK {
-        $int3
-        $nop }
+        int3
+        nop }
 ;=============================================================================
 include 'amnestia_demo.inc'
 include 'amnestia_audio.inc'
@@ -264,212 +262,213 @@ FALIGN
 get_time:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
-        $sub rsp,.k_stack_size
-        $mov rax,[.perf_freq]
-        $test rax,rax
-        $jnz @f
-        $lea rcx,[.perf_freq]
-        $call [QueryPerformanceFrequency]
-        $lea rcx,[.first_perf_counter]
-        $call [QueryPerformanceCounter]
+        sub rsp,.k_stack_size
+        mov rax,[.perf_freq]
+        test rax,rax
+        jnz @f
+        lea rcx,[.perf_freq]
+        call [QueryPerformanceFrequency]
+        lea rcx,[.first_perf_counter]
+        call [QueryPerformanceCounter]
 
-  @@:   $lea rcx,[.perf_counter]
-        $call [QueryPerformanceCounter]
-        $mov rcx,[.perf_counter]
-        $sub rcx,[.first_perf_counter]
-        $mov rdx,[.perf_freq]
-        $xorps xmm0,xmm0
-        $cvtsi2sd xmm0,rcx
-        $xorps xmm1,xmm1
-        $cvtsi2sd xmm1,rdx
-        $divsd xmm0,xmm1
-        $add rsp,.k_stack_size
-        $ret
+  @@:   lea rcx,[.perf_counter]
+        call [QueryPerformanceCounter]
+        mov rcx,[.perf_counter]
+        sub rcx,[.first_perf_counter]
+        mov rdx,[.perf_freq]
+        xorps xmm0,xmm0
+        cvtsi2sd xmm0,rcx
+        xorps xmm1,xmm1
+        cvtsi2sd xmm1,rdx
+        divsd xmm0,xmm1
+        add rsp,.k_stack_size
+        ret
 ;=============================================================================
 FALIGN
 update_frame_stats:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
-        $sub rsp,.k_stack_size
-        $mov rax,[.prev_time]
-        $test rax,rax
-        $jnz @f
-        $call get_time
-        $movsd [.prev_time],xmm0
-        $movsd [.prev_update_time],xmm0
-  @@:   $call get_time                        ; xmm0 = (0,time)
-        $movsd [time],xmm0
-        $movapd xmm1,xmm0
-        $subsd xmm1,[.prev_time]               ; xmm1 = (0,time_delta)
-        $movsd [.prev_time],xmm0
-        $xorpd xmm2,xmm2
-        $cvtsd2ss xmm1,xmm1                      ; xmm1 = (0,0,0,time_delta)
-        $movss [time_delta],xmm1
-        $movsd xmm1,[.prev_update_time]        ; xmm1 = (0,prev_update_time)
-        $movapd xmm2,xmm0
-        $subsd xmm2,xmm1                       ; xmm2 = (0,time-prev_update_time)
-        $movsd xmm3,[.k_1_0]                   ; xmm3 = (0,1.0)
-        $comisd xmm2,xmm3
-        $jb @f
-        $movsd [.prev_update_time],xmm0
-        $mov eax,[.frame]
-        $xorpd xmm1,xmm1
-        $cvtsi2sd xmm1,eax                       ; xmm1 = (0,frame)
-        $movapd xmm3,xmm1
-        $divsd xmm1,xmm2                       ; xmm1 = (0,frame/(time-prev_update_time))
-        $divsd xmm2,xmm3                       ; xmm2 = (0,(time-prev_update_time)/frame)
-        $mulsd xmm2,[.k_1000000_0]
-        $mov [.frame],0
-        $lea rcx,[win_title]
-        $lea rdx,[win_title_fmt]
-        $cvtsd2si r8,xmm1
-        $cvtsd2si r9,xmm2
-        $call [wsprintf]
-        $mov rcx,[win_handle]
-        $lea rdx,[win_title]
-        $call [SetWindowText]
-  @@:   $add [.frame],1
-        $add rsp,.k_stack_size
-        $ret
+        sub rsp,.k_stack_size
+        mov rax,[.prev_time]
+        test rax,rax
+        jnz @f
+        call get_time
+        movsd [.prev_time],xmm0
+        movsd [.prev_update_time],xmm0
+  @@:   call get_time                        ; xmm0 = (0,time)
+        movsd [time],xmm0
+        movapd xmm1,xmm0
+        subsd xmm1,[.prev_time]               ; xmm1 = (0,time_delta)
+        movsd [.prev_time],xmm0
+        xorpd xmm2,xmm2
+        cvtsd2ss xmm1,xmm1                      ; xmm1 = (0,0,0,time_delta)
+        movss [time_delta],xmm1
+        movsd xmm1,[.prev_update_time]        ; xmm1 = (0,prev_update_time)
+        movapd xmm2,xmm0
+        subsd xmm2,xmm1                       ; xmm2 = (0,time-prev_update_time)
+        movsd xmm3,[.k_1_0]                   ; xmm3 = (0,1.0)
+        comisd xmm2,xmm3
+        jb @f
+        movsd [.prev_update_time],xmm0
+        mov eax,[.frame]
+        xorpd xmm1,xmm1
+        cvtsi2sd xmm1,eax                       ; xmm1 = (0,frame)
+        movapd xmm3,xmm1
+        divsd xmm1,xmm2                       ; xmm1 = (0,frame/(time-prev_update_time))
+        divsd xmm2,xmm3                       ; xmm2 = (0,(time-prev_update_time)/frame)
+        mulsd xmm2,[.k_1000000_0]
+        mov [.frame],0
+        lea rcx,[win_title]
+        lea rdx,[win_title_fmt]
+        cvtsd2si r8,xmm1
+        cvtsd2si r9,xmm2
+        call [wsprintf]
+        mov rcx,[win_handle]
+        lea rdx,[win_title]
+        call [SetWindowText]
+  @@:   add [.frame],1
+        add rsp,.k_stack_size
+        ret
 ;=============================================================================
 FALIGN
 init:
 ;-----------------------------------------------------------------------------
 macro GET_WGL_FUNC func {
-        $mov rcx,[opengl_dll]
-        $lea rdx,[s_#func]
-        $call [GetProcAddress]
-        $mov [func],rax
-        $test rax,rax
-        $jz .error }
+        mov rcx,[opengl_dll]
+        lea rdx,[s_#func]
+        call [GetProcAddress]
+        mov [func],rax
+        test rax,rax
+        jz .error }
 
 macro GET_GL_FUNC func {
-        $lea rcx,[s_#func]
-        $call [wglGetProcAddress]
-        $test rax,rax
-        $jnz @f
-        $mov rcx,[opengl_dll]
-        $lea rdx,[s_#func]
-        $call [GetProcAddress]
-        $test rax,rax
-        $jz .error
-  @@:   $mov [func],rax }
+        lea rcx,[s_#func]
+        call [wglGetProcAddress]
+        test rax,rax
+        jnz @f
+        mov rcx,[opengl_dll]
+        lea rdx,[s_#func]
+        call [GetProcAddress]
+        test rax,rax
+        jz .error
+  @@:   mov [func],rax }
 
 virtual at 0
   rq 12
   .k_stack_size = $+16
 end virtual
-        $push rsi
-        $sub rsp,.k_stack_size
+        push rsi
+        sub rsp,.k_stack_size
   ; process heap
-        $call [GetProcessHeap]
-        $mov [process_heap],rax
-        $test rax,rax
-        $jz .error
+        call [GetProcessHeap]
+        mov [process_heap],rax
+        test rax,rax
+        jz .error
   ; opengl32.dll
-        $lea rcx,[s_opengl_dll]
-        $call [LoadLibrary]
-        $mov [opengl_dll],rax
-        $test rax,rax
-        $jz .error
+        lea rcx,[s_opengl_dll]
+        call [LoadLibrary]
+        mov [opengl_dll],rax
+        test rax,rax
+        jz .error
+
         GET_WGL_FUNC wglCreateContext
         GET_WGL_FUNC wglDeleteContext
         GET_WGL_FUNC wglGetProcAddress
         GET_WGL_FUNC wglMakeCurrent
   ; window class
-        $xor ecx,ecx
-        $call [GetModuleHandle]
-        $mov [win_class.hInstance],rax
+        xor ecx,ecx
+        call [GetModuleHandle]
+        mov [win_class.hInstance],rax
 
-        $xor ecx,ecx
-        $mov edx,IDC_ARROW
-        $call [LoadCursor]
-        $mov [win_class.hCursor],rax
+        xor ecx,ecx
+        mov edx,IDC_ARROW
+        call [LoadCursor]
+        mov [win_class.hCursor],rax
 
-        $lea rcx,[win_class]
-        $call [RegisterClass]
-        $test eax,eax
-        $jz .error
+        lea rcx,[win_class]
+        call [RegisterClass]
+        test eax,eax
+        jz .error
   ; window
-        $lea rcx,[win_rect]
-        $mov edx,k_win_style
-        $xor r8d,r8d
-        $call [AdjustWindowRect]
+        lea rcx,[win_rect]
+        mov edx,k_win_style
+        xor r8d,r8d
+        call [AdjustWindowRect]
 
-        $mov r10d,[win_rect.right]
-        $mov r11d,[win_rect.bottom]
-        $sub r10d,[win_rect.left]
-        $sub r11d,[win_rect.top]
+        mov r10d,[win_rect.right]
+        mov r11d,[win_rect.bottom]
+        sub r10d,[win_rect.left]
+        sub r11d,[win_rect.top]
 
-        $xor ecx,ecx
-        $lea rdx,[win_title]
-        $mov r8,rdx
-        $mov r9d,WS_VISIBLE+k_win_style
-        $mov eax,CW_USEDEFAULT
-        $mov [k_funcparam5+rsp],eax
-        $mov [k_funcparam6+rsp],eax
-        $mov [k_funcparam7+rsp],r10d
-        $mov [k_funcparam8+rsp],r11d
-        $mov [k_funcparam9+rsp],ecx
-        $mov [k_funcparam10+rsp],ecx
-        $mov rax,[win_class.hInstance]
-        $mov [k_funcparam11+rsp],rax
-        $mov [k_funcparam12+rsp],ecx
-        $call [CreateWindowEx]
-        $mov [win_handle],rax
-        $test rax,rax
-        $jz .error
+        xor ecx,ecx
+        lea rdx,[win_title]
+        mov r8,rdx
+        mov r9d,WS_VISIBLE+k_win_style
+        mov eax,CW_USEDEFAULT
+        mov [k_funcparam5+rsp],eax
+        mov [k_funcparam6+rsp],eax
+        mov [k_funcparam7+rsp],r10d
+        mov [k_funcparam8+rsp],r11d
+        mov [k_funcparam9+rsp],ecx
+        mov [k_funcparam10+rsp],ecx
+        mov rax,[win_class.hInstance]
+        mov [k_funcparam11+rsp],rax
+        mov [k_funcparam12+rsp],ecx
+        call [CreateWindowEx]
+        mov [win_handle],rax
+        test rax,rax
+        jz .error
 
-        $mov rcx,[win_handle]
-        $call [GetDC]
-        $mov [win_hdc],rax
-        $test rax,rax
-        $jz .error
+        mov rcx,[win_handle]
+        call [GetDC]
+        mov [win_hdc],rax
+        test rax,rax
+        jz .error
   ; pixel format
-        $mov rcx,[win_hdc]
-        $lea rdx,[pfd]
-        $call [ChoosePixelFormat]
+        mov rcx,[win_hdc]
+        lea rdx,[pfd]
+        call [ChoosePixelFormat]
 
-        $mov rcx,[win_hdc]
-        $mov edx,eax
-        $lea r8,[pfd]
-        $call [SetPixelFormat]
-        $test eax,eax
-        $jz .error
+        mov rcx,[win_hdc]
+        mov edx,eax
+        lea r8,[pfd]
+        call [SetPixelFormat]
+        test eax,eax
+        jz .error
   ; opengl context
-        $mov rcx,[win_hdc]
-        $call [wglCreateContext]
-        $test rax,rax
-        $jz .error
+        mov rcx,[win_hdc]
+        call [wglCreateContext]
+        test rax,rax
+        jz .error
 
-        $mov rsi,rax                         ; rsi = temp gl context
-        $mov rcx,[win_hdc]
-        $mov rdx,rsi
-        $call [wglMakeCurrent]
-        $test eax,eax
-        $jz .error_del_ctx
+        mov rsi,rax                         ; rsi = temp gl context
+        mov rcx,[win_hdc]
+        mov rdx,rsi
+        call [wglMakeCurrent]
+        test eax,eax
+        jz .error_del_ctx
 
         GET_GL_FUNC wglCreateContextAttribsARB
-        $mov rcx,[win_hdc]
-        $xor edx,edx
-        $lea r8,[ogl_ctx_attribs]
-        $call [wglCreateContextAttribsARB]
-        $mov [hglrc],rax
-        $test rax,rax
-        $jz .error_del_ctx
+        mov rcx,[win_hdc]
+        xor edx,edx
+        lea r8,[ogl_ctx_attribs]
+        call [wglCreateContextAttribsARB]
+        mov [hglrc],rax
+        test rax,rax
+        jz .error_del_ctx
 
-        $mov rcx,[win_hdc]
-        $mov rdx,[hglrc]
-        $call [wglMakeCurrent]
-        $test eax,eax
-        $jz .error_del_ctx
+        mov rcx,[win_hdc]
+        mov rdx,[hglrc]
+        call [wglMakeCurrent]
+        test eax,eax
+        jz .error_del_ctx
 
-        $mov rcx,rsi
-        $call [wglDeleteContext]
+        mov rcx,rsi
+        call [wglDeleteContext]
 
         GET_GL_FUNC wglSwapIntervalEXT
-        $xor ecx,ecx
-        $call [wglSwapIntervalEXT]
+        xor ecx,ecx
+        call [wglSwapIntervalEXT]
   ; opengl commands
         GET_GL_FUNC glClear
         GET_GL_FUNC glClearColor
@@ -483,133 +482,133 @@ end virtual
         GET_GL_FUNC glBindVertexArray
         GET_GL_FUNC glDeleteVertexArrays
         GET_GL_FUNC glGenVertexArrays
-        $mov eax,1                           ; success
-        $add rsp,.k_stack_size
-        $pop rsi
-        $ret
+        mov eax,1                           ; success
+        add rsp,.k_stack_size
+        pop rsi
+        ret
   .error_del_ctx:
-        $mov rcx,rsi
-        $call [wglDeleteContext]
+        mov rcx,rsi
+        call [wglDeleteContext]
   .error:
-        $xor eax,eax
-        $add rsp,.k_stack_size
-        $pop rsi
-        $ret
+        xor eax,eax
+        add rsp,.k_stack_size
+        pop rsi
+        ret
 purge GET_WGL_FUNC,GET_GL_FUNC
 ;=============================================================================
 FALIGN
 deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
-        $sub rsp,.k_stack_size
-        $mov rax,[wglMakeCurrent]
-        $test rax,rax
-        $jz @f
+        sub rsp,.k_stack_size
+        mov rax,[wglMakeCurrent]
+        test rax,rax
+        jz @f
 
-        $xor ecx,ecx
-        $xor edx,edx
-        $call [wglMakeCurrent]
+        xor ecx,ecx
+        xor edx,edx
+        call [wglMakeCurrent]
 
-  @@:   $mov rcx,[hglrc]
-        $test rcx,rcx
-        $jz @f
-        $call [wglDeleteContext]
+  @@:   mov rcx,[hglrc]
+        test rcx,rcx
+        jz @f
+        call [wglDeleteContext]
 
-  @@:   $mov rcx,[win_hdc]
-        $test rcx,rcx
-        $jz @f
-        $mov rcx,[win_handle]
-        $mov rdx,[win_hdc]
-        $call [ReleaseDC]
+  @@:   mov rcx,[win_hdc]
+        test rcx,rcx
+        jz @f
+        mov rcx,[win_handle]
+        mov rdx,[win_hdc]
+        call [ReleaseDC]
 
-  @@:   $mov rcx,[opengl_dll]
-        $test rcx,rcx
-        $jz @f
-        $call [FreeLibrary]
+  @@:   mov rcx,[opengl_dll]
+        test rcx,rcx
+        jz @f
+        call [FreeLibrary]
 
-  @@:   $add rsp,.k_stack_size
-        $ret
+  @@:   add rsp,.k_stack_size
+        ret
 ;=============================================================================
 FALIGN
 update:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
-        $sub rsp,.k_stack_size
-        $call update_frame_stats
-        $call demo_update
-        $mov rcx,[win_hdc]
-        $call [SwapBuffers]
-        $add rsp,.k_stack_size
-        $ret
+        sub rsp,.k_stack_size
+        call update_frame_stats
+        call demo_update
+        mov rcx,[win_hdc]
+        call [SwapBuffers]
+        add rsp,.k_stack_size
+        ret
 ;=============================================================================
 FALIGN
 start:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
-        $sub rsp,.k_stack_size
-        $mov eax,1234567.0
-        $movd xmm0,eax
-        $call sinf
+        sub rsp,.k_stack_size
+        mov eax,1234567.0
+        movd xmm0,eax
+        call am_sinf
         ;DEBUG_BREAK
-        $call init
-        $test eax,eax
-        $jz .quit_deinit
+        call init
+        test eax,eax
+        jz .quit_deinit
 
-        $call demo_init
-        $test eax,eax
-        $jz .quit
+        call demo_init
+        test eax,eax
+        jz .quit
   .main_loop:
-        $lea rcx,[win_msg]
-        $xor edx,edx
-        $xor r8d,r8d
-        $xor r9d,r9d
-        $mov dword[k_funcparam5+rsp],PM_REMOVE
-        $call [PeekMessage]
+        lea rcx,[win_msg]
+        xor edx,edx
+        xor r8d,r8d
+        xor r9d,r9d
+        mov dword[k_funcparam5+rsp],PM_REMOVE
+        call [PeekMessage]
 
-        $test eax,eax
-        $jz .update
+        test eax,eax
+        jz .update
 
-        $lea rcx,[win_msg]
-        $call [DispatchMessage]
-        $cmp [win_msg.message],WM_QUIT
-        $je .quit
+        lea rcx,[win_msg]
+        call [DispatchMessage]
+        cmp [win_msg.message],WM_QUIT
+        je .quit
 
-        $jmp .main_loop
+        jmp .main_loop
   .update:
-        $call update
-        $jmp .main_loop
+        call update
+        jmp .main_loop
   .quit:
-        $call demo_deinit
+        call demo_deinit
   .quit_deinit:
-        $call deinit
-        $xor ecx,ecx
-        $call [ExitProcess]
+        call deinit
+        xor ecx,ecx
+        call [ExitProcess]
 ;=============================================================================
 FALIGN
 winproc:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 5*8
-        $sub rsp,.k_stack_size
-        $cmp edx,WM_KEYDOWN
-        $je .keydown
-        $cmp edx,WM_DESTROY
-        $je .destroy
-        $call [DefWindowProc]
-        $jmp .return
+        sub rsp,.k_stack_size
+        cmp edx,WM_KEYDOWN
+        je .keydown
+        cmp edx,WM_DESTROY
+        je .destroy
+        call [DefWindowProc]
+        jmp .return
   .keydown:
-        $cmp r8d,VK_ESCAPE
-        $jne .return
-        $xor ecx,ecx
-        $call [PostQuitMessage]
-        $xor eax,eax
-        $jmp .return
+        cmp r8d,VK_ESCAPE
+        jne .return
+        xor ecx,ecx
+        call [PostQuitMessage]
+        xor eax,eax
+        jmp .return
   .destroy:
-        $xor ecx,ecx
-        $call [PostQuitMessage]
-        $xor eax,eax
+        xor ecx,ecx
+        call [PostQuitMessage]
+        xor eax,eax
   .return:
-        $add rsp,.k_stack_size
-        $ret
+        add rsp,.k_stack_size
+        ret
 ;========================================================================
 section '.data' data readable
 
@@ -839,3 +838,4 @@ EMIT <_CoCreateInstance dw 0>,<db 'CoCreateInstance',0>
 
 EMIT <_AvSetMmThreadCharacteristics dw 0>,<db 'AvSetMmThreadCharacteristicsA',0>
 ;========================================================================
+; vim: ft=fasm autoindent tabstop=8 softtabstop=8 shiftwidth=8 :
