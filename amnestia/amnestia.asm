@@ -146,6 +146,8 @@ struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
   db p9
   db p10 }
 
+include 'd3d12.inc'
+
 virtual at 0
   IUnknown.QueryInterface rq 1
   IUnknown.AddRef rq 1
@@ -629,6 +631,20 @@ align 8
   IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
   IID_IAudioRenderClient GUID 0xF294ACFC,0x3146,0x4483,0xA7,0xBF,0xAD,0xDC,0xA7,0xC2,0x60,0xE2
 
+  IID_IDXGISwapChain3 GUID 0x94d99bdb,0xf1f8,0x4ab0,0xb2,0x36,0x7d,0xa0,0x17,0x0e,0xda,0xb1
+  IID_IDXGIFactory4 GUID 0x1bc6ea02,0xef36,0x464f,0xbf,0x0c,0x21,0xca,0x39,0xe5,0x16,0x8a
+  IID_ID3D12Device GUID 0x189819f1,0x1db6,0x4b57,0xbe,0x54,0x18,0x21,0x33,0x9b,0x85,0xf7
+  IID_ID3D12Debug GUID 0x344488b7,0x6846,0x474b,0xb9,0x89,0xf0,0x27,0x44,0x82,0x45,0xe0
+  IID_ID3D12CommandQueue GUID 0x0ec870a6,0x5d7e,0x4c22,0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x16,0xed
+  IID_ID3D12CommandAllocator GUID 0x6102dee4,0xaf59,0x4b09,0xb9,0x99,0xb4,0x4d,0x73,0xf0,0x9b,0x24
+  IID_ID3D12CommandList GUID 0x7116d91c,0xe7e4,0x47ce,0xb8,0xc6,0xec,0x81,0x68,0xf4,0x37,0xe5
+  IID_ID3D12GraphicsCommandList GUID 0x5b160d0f,0xac1b,0x4185,0x8b,0xa8,0xb3,0xae,0x42,0xa5,0xa4,0x55
+  IID_ID3D12DescriptorHeap GUID 0x8efb471d,0x616c,0x4f49,0x90,0xf7,0x12,0x7b,0xb7,0x63,0xfa,0x51
+  IID_ID3D12Resource GUID 0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad
+  IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a,0x76
+  IID_ID3D12RootSignature GUID 0xc54a6b66,0x72df,0x4ee8,0x8b,0xe5,0xa9,0x46,0xa1,0x42,0x92,0x14
+  IID_ID3D12PipelineState GUID 0x765a30f3,0xf624,0x4c6f,0xa8,0x28,0xac,0xe9,0x48,0x62,0x24,0x45
+
 include 'amnestia_const.inc'
 include 'amnestia_glsl.inc'
 ;========================================================================
@@ -726,6 +742,8 @@ section '.idata' import data readable writeable
   dd 0,0,0,rva _gdi32,rva _gdi32_table
   dd 0,0,0,rva _ole32,rva _ole32_table
   dd 0,0,0,rva _avrt,rva _avrt_table
+  dd 0,0,0,rva _dxgi,rva _dxgi_table
+  dd 0,0,0,rva _d3d12,rva _d3d12_table
   dd 0,0,0,0,0
 
   _kernel32_table:
@@ -785,11 +803,23 @@ section '.idata' import data readable writeable
   AvSetMmThreadCharacteristics dq rva _AvSetMmThreadCharacteristics
   dq 0
 
+  _dxgi_table:
+  CreateDXGIFactory1 dq rva _CreateDXGIFactory1
+  dq 0
+
+  _d3d12_table:
+  D3D12CreateDevice dq rva _D3D12CreateDevice
+  D3D12GetDebugInterface dq rva _D3D12GetDebugInterface
+  D3D12SerializeRootSignature dq rva _D3D12SerializeRootSignature
+  dq 0
+
   _kernel32 db 'kernel32.dll',0
   _user32 db 'user32.dll',0
   _gdi32 db 'gdi32.dll',0
   _ole32 db 'ole32.dll',0
   _avrt db 'avrt.dll',0
+  _dxgi db 'dxgi.dll',0
+  _d3d12 db 'd3d12.dll',0
 
 EMIT <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
 EMIT <_ExitProcess dw 0>,<db 'ExitProcess',0>
@@ -837,5 +867,11 @@ EMIT <_CoInitialize dw 0>,<db 'CoInitialize',0>
 EMIT <_CoCreateInstance dw 0>,<db 'CoCreateInstance',0>
 
 EMIT <_AvSetMmThreadCharacteristics dw 0>,<db 'AvSetMmThreadCharacteristicsA',0>
+
+EMIT <_CreateDXGIFactory1 dw 0>,<db 'CreateDXGIFactory1',0>
+
+EMIT <_D3D12CreateDevice dw 0>,<db 'D3D12CreateDevice',0>
+EMIT <_D3D12GetDebugInterface dw 0>,<db 'D3D12GetDebugInterface',0>
+EMIT <_D3D12SerializeRootSignature dw 0>,< db 'D3D12SerializeRootSignature',0>
 ;========================================================================
 ; vim: ft=fasm autoindent tabstop=8 softtabstop=8 shiftwidth=8 :
