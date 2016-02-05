@@ -24,24 +24,6 @@ entry start
   FILE_ATTRIBUTE_NORMAL = 128
   FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
   EVENT_ALL_ACCESS = 0x1F0003
-  PFD_TYPE_RGBA = 0
-  PFD_DOUBLEBUFFER = 0x00000001
-  PFD_DRAW_TO_WINDOW = 0x00000004
-  PFD_SUPPORT_OPENGL = 0x00000020
-
-  WGL_CONTEXT_MAJOR_VERSION_ARB = 0x2091
-  WGL_CONTEXT_MINOR_VERSION_ARB = 0x2092
-  WGL_CONTEXT_FLAGS_ARB = 0x2094
-  WGL_CONTEXT_PROFILE_MASK_ARB = 0x9126
-  WGL_CONTEXT_ES_PROFILE_BIT_EXT = 0x0004
-  WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB = 0x0002
-  WGL_CONTEXT_CORE_PROFILE_BIT_ARB = 0x00000001
-  GL_COLOR_BUFFER_BIT = 0x00004000
-  GL_FRAGMENT_SHADER = 0x8B30
-  GL_VERTEX_SHADER = 0x8B31
-  GL_VERTEX_SHADER_BIT = 0x00000001
-  GL_FRAGMENT_SHADER_BIT = 0x00000002
-  GL_TRIANGLES = 0x0004
 
   CLSCTX_INPROC_SERVER = 0x1
   CLSCTX_INPROC_HANDLER = 0x2
@@ -94,34 +76,6 @@ struc RECT l,t,r,b {
   .top dd t
   .right dd r
   .bottom dd b }
-
-struc PIXELFORMATDESCRIPTOR {
-  .nSize dw 40
-  .nVersion dw 1
-  .dwFlags dd PFD_DRAW_TO_WINDOW+PFD_SUPPORT_OPENGL+PFD_DOUBLEBUFFER
-  .iPixelType db PFD_TYPE_RGBA
-  .cColorBits db 32
-  .cRedBits db 0
-  .cRedShift db 0
-  .cGreenBits db 0
-  .cGreenShift db 0
-  .cBlueBits db 0
-  .cBlueShift db 0
-  .cAlphaBits db 0
-  .cAlphaShift db 0
-  .cAccumBits db 0
-  .cAccumRedBits db 0
-  .cAccumGreenBits db 0
-  .cAccumBlueBits db 0
-  .cAccumAlphaBits db 0
-  .cDepthBits db 24
-  .cStencilBits db 8
-  .cAuxBuffers db 0
-  .iLayerType db 0
-  .bReserved db 0
-  .dwLayerMask dd 0
-  .dwVisibleMask dd 0
-  .dwDamageMask dd 0 }
 
 struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
   .wFormatTag dw p0
@@ -261,9 +215,34 @@ include 'amnestia_audio.inc'
 include 'amnestia_math.inc'
 ;=============================================================================
 FALIGN
+check_cpu_extensions:
+;-----------------------------------------------------------------------------
+        mov eax,1
+        cpuid
+        and ecx,$58001000          ; check RDRAND,AVX,OSXSAVE,FMA
+        cmp ecx,$58001000
+        jne .not_supported
+        mov eax,7
+        xor ecx,ecx
+        cpuid
+        and ebx,$20                ; check AVX2
+        cmp ebx,$20
+        jne .not_supported
+        xor ecx,ecx
+        xgetbv
+        and eax,$6                 ; check OS support
+        cmp eax,$6
+        jne .not_supported
+        mov eax,1
+        jmp .ret
+  .not_supported:
+        xor eax,eax
+  .ret: ret
+;=============================================================================
+FALIGN
 get_time:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 5*8
+  .k_stack_size = 32*2-8
         sub rsp,.k_stack_size
         mov rax,[.perf_freq]
         test rax,rax
@@ -278,52 +257,48 @@ get_time:
         mov rcx,[.perf_counter]
         sub rcx,[.first_perf_counter]
         mov rdx,[.perf_freq]
-        xorps xmm0,xmm0
-        cvtsi2sd xmm0,rcx
-        xorps xmm1,xmm1
-        cvtsi2sd xmm1,rdx
-        divsd xmm0,xmm1
+        vxorps xmm0,xmm0,xmm0
+        vcvtsi2sd xmm1,xmm0,rcx
+        vcvtsi2sd xmm2,xmm0,rdx
+        vdivsd xmm0,xmm1,xmm2
         add rsp,.k_stack_size
         ret
 ;=============================================================================
 FALIGN
 update_frame_stats:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 5*8
+  .k_stack_size = 32*2-8
         sub rsp,.k_stack_size
         mov rax,[.prev_time]
         test rax,rax
         jnz @f
         call get_time
-        movsd [.prev_time],xmm0
-        movsd [.prev_update_time],xmm0
-  @@:   call get_time                        ; xmm0 = (0,time)
-        movsd [time],xmm0
-        movapd xmm1,xmm0
-        subsd xmm1,[.prev_time]               ; xmm1 = (0,time_delta)
-        movsd [.prev_time],xmm0
-        xorpd xmm2,xmm2
-        cvtsd2ss xmm1,xmm1                      ; xmm1 = (0,0,0,time_delta)
-        movss [time_delta],xmm1
-        movsd xmm1,[.prev_update_time]        ; xmm1 = (0,prev_update_time)
-        movapd xmm2,xmm0
-        subsd xmm2,xmm1                       ; xmm2 = (0,time-prev_update_time)
-        movsd xmm3,[.k_1_0]                   ; xmm3 = (0,1.0)
-        comisd xmm2,xmm3
+        vmovsd [.prev_time],xmm0
+        vmovsd [.prev_update_time],xmm0
+  @@:   call get_time                       ; xmm0 = (0,time)
+        vmovsd [time],xmm0
+        vsubsd xmm1,xmm0,[.prev_time]       ; xmm1 = (0,time_delta)
+        vmovsd [.prev_time],xmm0
+        vxorps xmm2,xmm2,xmm2
+        vcvtsd2ss xmm1,xmm2,xmm1            ; xmm1 = (0,0,0,time_delta)
+        vmovss [time_delta],xmm1
+        vmovsd xmm1,[.prev_update_time]     ; xmm1 = (0,prev_update_time)
+        vsubsd xmm2,xmm0,xmm1               ; xmm2 = (0,time-prev_update_time)
+        vmovsd xmm3,[.k_1_0]                ; xmm3 = (0,1.0)
+        vcomisd xmm2,xmm3
         jb @f
-        movsd [.prev_update_time],xmm0
+        vmovsd [.prev_update_time],xmm0
         mov eax,[.frame]
-        xorpd xmm1,xmm1
-        cvtsi2sd xmm1,eax                       ; xmm1 = (0,frame)
-        movapd xmm3,xmm1
-        divsd xmm1,xmm2                       ; xmm1 = (0,frame/(time-prev_update_time))
-        divsd xmm2,xmm3                       ; xmm2 = (0,(time-prev_update_time)/frame)
-        mulsd xmm2,[.k_1000000_0]
+        vxorpd xmm1,xmm1,xmm1
+        vcvtsi2sd xmm1,xmm1,eax             ; xmm1 = (0,frame)
+        vdivsd xmm0,xmm1,xmm2               ; xmm0 = (0,frame/(time-prev_update_time))
+        vdivsd xmm1,xmm2,xmm1
+        vmulsd xmm1,xmm1,[.k_1000000_0]
         mov [.frame],0
         lea rcx,[win_title]
         lea rdx,[win_title_fmt]
-        cvtsd2si r8,xmm1
-        cvtsd2si r9,xmm2
+        vcvtsd2si r8,xmm0
+        vcvtsd2si r9,xmm1
         call [wsprintf]
         mov rcx,[win_handle]
         lea rdx,[win_title]
@@ -335,48 +310,21 @@ update_frame_stats:
 FALIGN
 init:
 ;-----------------------------------------------------------------------------
-macro GET_WGL_FUNC func {
-        mov rcx,[opengl_dll]
-        lea rdx,[s_#func]
-        call [GetProcAddress]
-        mov [func],rax
-        test rax,rax
-        jz .error }
-
-macro GET_GL_FUNC func {
-        lea rcx,[s_#func]
-        call [wglGetProcAddress]
-        test rax,rax
-        jnz @f
-        mov rcx,[opengl_dll]
-        lea rdx,[s_#func]
-        call [GetProcAddress]
-        test rax,rax
-        jz .error
-  @@:   mov [func],rax }
-
 virtual at 0
-  rq 12
-  .k_stack_size = $+16
+  rb 32*4
+  .k_stack_size = $-16
 end virtual
         push rsi
         sub rsp,.k_stack_size
+  ; check CPU
+        call check_cpu_extensions
+        test eax,eax
+        jz .error
   ; process heap
         call [GetProcessHeap]
         mov [process_heap],rax
         test rax,rax
         jz .error
-  ; opengl32.dll
-        lea rcx,[s_opengl_dll]
-        call [LoadLibrary]
-        mov [opengl_dll],rax
-        test rax,rax
-        jz .error
-
-        GET_WGL_FUNC wglCreateContext
-        GET_WGL_FUNC wglDeleteContext
-        GET_WGL_FUNC wglGetProcAddress
-        GET_WGL_FUNC wglMakeCurrent
   ; window class
         xor ecx,ecx
         call [GetModuleHandle]
@@ -421,136 +369,42 @@ end virtual
         test rax,rax
         jz .error
 
-        mov rcx,[win_handle]
-        call [GetDC]
-        mov [win_hdc],rax
-        test rax,rax
-        jz .error
-  ; pixel format
-        mov rcx,[win_hdc]
-        lea rdx,[pfd]
-        call [ChoosePixelFormat]
-
-        mov rcx,[win_hdc]
-        mov edx,eax
-        lea r8,[pfd]
-        call [SetPixelFormat]
-        test eax,eax
-        jz .error
-  ; opengl context
-        mov rcx,[win_hdc]
-        call [wglCreateContext]
-        test rax,rax
-        jz .error
-
-        mov rsi,rax                         ; rsi = temp gl context
-        mov rcx,[win_hdc]
-        mov rdx,rsi
-        call [wglMakeCurrent]
-        test eax,eax
-        jz .error_del_ctx
-
-        GET_GL_FUNC wglCreateContextAttribsARB
-        mov rcx,[win_hdc]
-        xor edx,edx
-        lea r8,[ogl_ctx_attribs]
-        call [wglCreateContextAttribsARB]
-        mov [hglrc],rax
-        test rax,rax
-        jz .error_del_ctx
-
-        mov rcx,[win_hdc]
-        mov rdx,[hglrc]
-        call [wglMakeCurrent]
-        test eax,eax
-        jz .error_del_ctx
-
-        mov rcx,rsi
-        call [wglDeleteContext]
-
-        GET_GL_FUNC wglSwapIntervalEXT
-        xor ecx,ecx
-        call [wglSwapIntervalEXT]
-  ; opengl commands
-        GET_GL_FUNC glClear
-        GET_GL_FUNC glClearColor
-        GET_GL_FUNC glCreateShaderProgramv
-        GET_GL_FUNC glDeleteProgram
-        GET_GL_FUNC glUseProgramStages
-        GET_GL_FUNC glBindProgramPipeline
-        GET_GL_FUNC glDeleteProgramPipelines
-        GET_GL_FUNC glGenProgramPipelines
-        GET_GL_FUNC glDrawArrays
-        GET_GL_FUNC glBindVertexArray
-        GET_GL_FUNC glDeleteVertexArrays
-        GET_GL_FUNC glGenVertexArrays
         mov eax,1                           ; success
         add rsp,.k_stack_size
         pop rsi
         ret
-  .error_del_ctx:
-        mov rcx,rsi
-        call [wglDeleteContext]
   .error:
         xor eax,eax
         add rsp,.k_stack_size
         pop rsi
         ret
-purge GET_WGL_FUNC,GET_GL_FUNC
 ;=============================================================================
 FALIGN
 deinit:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 5*8
+  .k_stack_size = 32*2-8
         sub rsp,.k_stack_size
-        mov rax,[wglMakeCurrent]
-        test rax,rax
-        jz @f
-
-        xor ecx,ecx
-        xor edx,edx
-        call [wglMakeCurrent]
-
-  @@:   mov rcx,[hglrc]
-        test rcx,rcx
-        jz @f
-        call [wglDeleteContext]
-
-  @@:   mov rcx,[win_hdc]
-        test rcx,rcx
-        jz @f
-        mov rcx,[win_handle]
-        mov rdx,[win_hdc]
-        call [ReleaseDC]
-
-  @@:   mov rcx,[opengl_dll]
-        test rcx,rcx
-        jz @f
-        call [FreeLibrary]
-
-  @@:   add rsp,.k_stack_size
+        add rsp,.k_stack_size
         ret
 ;=============================================================================
 FALIGN
 update:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 5*8
+  .k_stack_size = 32*2-8
         sub rsp,.k_stack_size
         call update_frame_stats
         call demo_update
-        mov rcx,[win_hdc]
-        call [SwapBuffers]
+        mov ecx,1
+        call [Sleep]
         add rsp,.k_stack_size
         ret
 ;=============================================================================
 FALIGN
 start:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 5*8
+  .k_stack_size = 32*2
+        and rsp,-32
         sub rsp,.k_stack_size
-        mov eax,1234567.0
-        movd xmm0,eax
-        call am_sinf
         ;DEBUG_BREAK
         call init
         test eax,eax
@@ -589,7 +443,7 @@ start:
 FALIGN
 winproc:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 5*8
+  .k_stack_size = 16*3-8
         sub rsp,.k_stack_size
         cmp edx,WM_KEYDOWN
         je .keydown
@@ -618,13 +472,6 @@ section '.data' data readable
   k_win_height = 800
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 
-align 4
-  clear_color dd 0.0,0.2,0.4,1.0
-  ogl_ctx_attribs dd WGL_CONTEXT_MAJOR_VERSION_ARB,4,\
-                     WGL_CONTEXT_MINOR_VERSION_ARB,4,\
-                     WGL_CONTEXT_FLAGS_ARB,WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,\
-                     WGL_CONTEXT_PROFILE_MASK_ARB,WGL_CONTEXT_CORE_PROFILE_BIT_ARB,0
-
 align 8
   CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
   IID_IMMDeviceEnumerator GUID 0xA95664D2,0x9614,0x4F35,0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6
@@ -646,15 +493,8 @@ align 8
   IID_ID3D12PipelineState GUID 0x765a30f3,0xf624,0x4c6f,0xa8,0x28,0xac,0xe9,0x48,0x62,0x24,0x45
 
 include 'amnestia_const.inc'
-include 'amnestia_glsl.inc'
 ;========================================================================
 section '.data' data readable writeable
-
-align 4
-  vshp dd 0
-  fshp dd 0
-  pipeline dd 0
-  vao dd 0
 
 align 8
   audio_stream dq 0
@@ -681,7 +521,6 @@ align 8
   process_heap dq 0
   time dq 0
   time_delta dd 0,0
-  pfd PIXELFORMATDESCRIPTOR
 
 align 8
   get_time.perf_counter dq 0
@@ -693,47 +532,6 @@ align 8
   update_frame_stats.frame dd 0,0
   update_frame_stats.k_1000000_0 dq 1000000.0
   update_frame_stats.k_1_0 dq 1.0
-
-align 8
-  opengl_dll dq 0
-  wglCreateContext dq 0
-  wglDeleteContext dq 0
-  wglGetProcAddress dq 0
-  wglMakeCurrent dq 0
-  wglCreateContextAttribsARB dq 0
-  wglSwapIntervalEXT dq 0
-  glClear dq 0
-  glClearColor dq 0
-  glCreateShaderProgramv dq 0
-  glDeleteProgram dq 0
-  glUseProgramStages dq 0
-  glBindProgramPipeline dq 0
-  glDeleteProgramPipelines dq 0
-  glGenProgramPipelines dq 0
-  glDrawArrays dq 0
-  glBindVertexArray dq 0
-  glDeleteVertexArrays dq 0
-  glGenVertexArrays dq 0
-
-  s_opengl_dll db 'opengl32.dll',0
-  s_wglCreateContext db 'wglCreateContext',0
-  s_wglDeleteContext db 'wglDeleteContext',0
-  s_wglGetProcAddress db 'wglGetProcAddress',0
-  s_wglMakeCurrent db 'wglMakeCurrent',0
-  s_wglCreateContextAttribsARB db 'wglCreateContextAttribsARB',0
-  s_wglSwapIntervalEXT db 'wglSwapIntervalEXT',0
-  s_glClear db 'glClear',0
-  s_glClearColor db 'glClearColor',0
-  s_glCreateShaderProgramv db 'glCreateShaderProgramv',0
-  s_glDeleteProgram db 'glDeleteProgram',0
-  s_glUseProgramStages db 'glUseProgramStages',0
-  s_glBindProgramPipeline db 'glBindProgramPipeline',0
-  s_glDeleteProgramPipelines db 'glDeleteProgramPipelines',0
-  s_glGenProgramPipelines db 'glGenProgramPipelines',0
-  s_glDrawArrays db 'glDrawArrays',0
-  s_glBindVertexArray db 'glBindVertexArray',0
-  s_glDeleteVertexArrays db 'glDeleteVertexArrays',0
-  s_glGenVertexArrays db 'glGenVertexArrays',0
 ;========================================================================
 section '.idata' import data readable writeable
 

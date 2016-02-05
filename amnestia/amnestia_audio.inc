@@ -76,10 +76,12 @@ virtual at 0
   .period dq ?
   .ptr dq ?
   .read_bytes dd ?,?
-  .k_stack_size = $
+  align 32
+  .k_stack_size = $-16
 end virtual
         push rsi
         sub rsp,.k_stack_size
+        vmovaps [rsp],ymm0
         mov rsi,rcx
         xor ecx,ecx
         call [CoInitialize]
@@ -130,12 +132,12 @@ end virtual
         jne .error
   ; compute new period and initialize again
         GET_BUFFER_SIZE
-        xorpd xmm0,xmm0
-        cvtsi2sd xmm0,[audio_buffer_size_in_frames]
-        mulsd xmm0,[.k_10000000_0]
-        divsd xmm0,[.k_44100_0]
-        addsd xmm0,[.k_0_5]
-        cvttsd2si rax,xmm0
+        vxorpd xmm0,xmm0,xmm0
+        vcvtsi2sd xmm0,xmm0,[audio_buffer_size_in_frames]
+        vmulsd xmm0,xmm0,[.k_10000000_0]
+        vdivsd xmm0,xmm0,[.k_44100_0]
+        vaddsd xmm0,xmm0,[.k_0_5]
+        vcvttsd2si rax,xmm0
         mov [.period+rsp],rax
         mov rcx,[audio_client]
         mov rax,[rcx]
