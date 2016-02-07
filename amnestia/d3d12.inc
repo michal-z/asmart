@@ -400,10 +400,10 @@ struc D3D12_RASTERIZER_DESC {
     .ConservativeRaster    dd ? }
 
 struc D3D12_DEPTH_STENCILOP_DESC {
-    .StencilFailOp      dd p0
-    .StencilDepthFailOp dd p1
-    .StencilPassOp      dd p2
-    .StencilFunc        dd p3 }
+    .StencilFailOp      dd ?
+    .StencilDepthFailOp dd ?
+    .StencilPassOp      dd ?
+    .StencilFunc        dd ? }
 
 struc D3D12_DEPTH_STENCIL_DESC {
     .DepthEnable      dd                         ?

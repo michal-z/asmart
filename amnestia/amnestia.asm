@@ -47,35 +47,35 @@ entry start
   k_funcparam12 = k_funcparam11 + 8
 
 struc POINT {
-  .x dd 0
-  .y dd 0 }
+  .x dd ?
+  .y dd ? }
 
 struc MSG {
-  .hwnd dq 0
-  .message dd 0,0
-  .wParam dq 0
-  .lParam dq 0
-  .time dd 0
+  .hwnd dq ?
+  .message dd ?,?
+  .wParam dq ?
+  .lParam dq ?
+  .time dd ?
   .pt POINT
-  dd 0 }
+  dd ? }
 
-struc WNDCLASS proc,name {
-  .style dd 0,0
-  .lpfnWndProc dq proc
-  .cbClsExtra dd 0
-  .cbWndExtra dd 0
-  .hInstance dq 0
-  .hIcon dq 0
-  .hCursor dq 0
-  .hbrBackground dq 0
-  .lpszMenuName dq 0
-  .lpszClassName dq name }
+struc WNDCLASS {
+  .style dd ?,?
+  .lpfnWndProc dq ?
+  .cbClsExtra dd ?
+  .cbWndExtra dd ?
+  .hInstance dq ?
+  .hIcon dq ?
+  .hCursor dq ?
+  .hbrBackground dq ?
+  .lpszMenuName dq ?
+  .lpszClassName dq ? }
 
-struc RECT l,t,r,b {
-  .left dd l
-  .top dd t
-  .right dd r
-  .bottom dd b }
+struc RECT {
+  .left dd ?
+  .top dd ?
+  .right dd ?
+  .bottom dd ? }
 
 struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
   .wFormatTag dw p0
@@ -267,7 +267,7 @@ get_time:
 FALIGN
 update_frame_stats:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2-8
+  .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
         mov rax,[.prev_time]
         test rax,rax
@@ -311,44 +311,59 @@ FALIGN
 init:
 ;-----------------------------------------------------------------------------
 virtual at 0
-  rb 32*4
-  .k_stack_size = $-16
+  rq 12
+  .wc WNDCLASS
+  align 8
+  .rect RECT
+  align 32
+  .k_stack_size = $+16
 end virtual
         push rsi
         sub rsp,.k_stack_size
+        vpxor ymm0,ymm0,ymm0
+        xor eax,eax
+        mov ecx,.k_stack_size/32
+    @@: vmovdqa [rsp+rax],ymm0
+        add eax,32
+        sub ecx,1
+        jnz @b
   ; check CPU
         call check_cpu_extensions
         test eax,eax
         jz .error
-  ; process heap
+  ; get process heap
         call [GetProcessHeap]
         mov [process_heap],rax
         test rax,rax
         jz .error
-  ; window class
+  ; create window class
+        lea rax,[winproc]
+        mov [.wc.lpfnWndProc+rsp],rax
+        lea rax,[win_title]
+        mov [.wc.lpszClassName+rsp],rax
         xor ecx,ecx
         call [GetModuleHandle]
-        mov [win_class.hInstance],rax
-
+        mov [.wc.hInstance+rsp],rax
         xor ecx,ecx
         mov edx,IDC_ARROW
         call [LoadCursor]
-        mov [win_class.hCursor],rax
-
-        lea rcx,[win_class]
+        mov [.wc.hCursor+rsp],rax
+        lea rcx,[.wc+rsp]
         call [RegisterClass]
         test eax,eax
         jz .error
-  ; window
-        lea rcx,[win_rect]
+  ; create window
+        mov [.rect.right+rsp],k_win_width
+        mov [.rect.bottom+rsp],k_win_height
+        lea rcx,[.rect+rsp]
         mov edx,k_win_style
         xor r8d,r8d
         call [AdjustWindowRect]
 
-        mov r10d,[win_rect.right]
-        mov r11d,[win_rect.bottom]
-        sub r10d,[win_rect.left]
-        sub r11d,[win_rect.top]
+        mov r10d,[.rect.right+rsp]
+        mov r11d,[.rect.bottom+rsp]
+        sub r10d,[.rect.left+rsp]
+        sub r11d,[.rect.top+rsp]
 
         xor ecx,ecx
         lea rdx,[win_title]
@@ -361,7 +376,7 @@ end virtual
         mov [k_funcparam8+rsp],r11d
         mov [k_funcparam9+rsp],ecx
         mov [k_funcparam10+rsp],ecx
-        mov rax,[win_class.hInstance]
+        mov rax,[.wc.hInstance+rsp]
         mov [k_funcparam11+rsp],rax
         mov [k_funcparam12+rsp],ecx
         call [CreateWindowEx]
@@ -402,7 +417,12 @@ update:
 FALIGN
 start:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2
+virtual at 0
+  rq 5
+  .msg MSG
+  align 32
+  .k_stack_size = $
+end virtual
         and rsp,-32
         sub rsp,.k_stack_size
         ;DEBUG_BREAK
@@ -414,7 +434,7 @@ start:
         test eax,eax
         jz .quit
   .main_loop:
-        lea rcx,[win_msg]
+        lea rcx,[.msg+rsp]
         xor edx,edx
         xor r8d,r8d
         xor r9d,r9d
@@ -424,9 +444,9 @@ start:
         test eax,eax
         jz .update
 
-        lea rcx,[win_msg]
+        lea rcx,[.msg+rsp]
         call [DispatchMessage]
-        cmp [win_msg.message],WM_QUIT
+        cmp [.msg.message+rsp],WM_QUIT
         je .quit
 
         jmp .main_loop
@@ -508,14 +528,9 @@ align 8
   audio_buffer_size_in_frames dd 0,0
 
 align 8
-  hglrc dq 0
   win_handle dq 0
-  win_hdc dq 0
   win_title db 'amnestia', 64 dup 0
   win_title_fmt db '[%d fps  %d us] amnestia',0
-  win_msg MSG
-  win_class WNDCLASS winproc,win_title
-  win_rect RECT 0,0,k_win_width,k_win_height
 
 align 8
   process_heap dq 0
