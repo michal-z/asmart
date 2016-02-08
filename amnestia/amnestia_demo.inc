@@ -98,7 +98,7 @@ end virtual
         mov rax,[rcx]
         call [ID3D12Device.GetDescriptorHandleIncrementSize+rax]
         mov [cbv_srv_uav_size],eax
-  ; RTV descriptor heap
+  ; swapchain descriptor heap
         mov [.swapchain_heap_desc.Type+rsp],D3D12_DESCRIPTOR_HEAP_TYPE_RTV
         mov [.swapchain_heap_desc.NumDescriptors+rsp],k_swapchain_buffer_count
         mov rcx,[device]
@@ -115,6 +115,30 @@ end virtual
         call [ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart+rax]
         mov rax,[rax]
         mov [swapchain_heap_start],rax
+  ; swapchain buffer descriptors
+        xor esi,esi
+  .for_each_swap_buffer:
+        mov rcx,[swapchain]
+        mov edx,esi
+        lea r8,[IID_ID3D12Resource]
+        lea r9,[swapchain_buffer+rsi*8]
+        mov rax,[rcx]
+        call [IDXGISwapChain3.GetBuffer+rax]
+        test eax,eax
+        js .error
+
+        mov rcx,[device]
+        mov rdx,[swapchain_buffer+rsi*8]
+        xor r8d,r8d
+        mov r9d,esi
+        imul r9d,[rtv_size]
+        add r9,[swapchain_heap_start]
+        mov rax,[rcx]
+        call [ID3D12Device.CreateRenderTargetView+rax]
+
+        add esi,1
+        cmp esi,k_swapchain_buffer_count
+        jb .for_each_swap_buffer
   ; audio
         call audio_play
         test eax,eax

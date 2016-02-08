@@ -251,43 +251,41 @@ struc D3D12_DESCRIPTOR_HEAP_DESC {
     .NodeMask       dd ? }
 
 struc D3D12_RESOURCE_TRANSITION_BARRIER {
-    .pResource   dq ?
-    .Subresource dd ?
-    .StateBefore dd ?
-    .StateAfter  dd ?
-                 dd ? }
+  .pResource dq ?
+  .Subresource dd ?
+  .StateBefore dd ?
+  .StateAfter dd ?,? }
 
 struc D3D12_RESOURCE_ALIASING_BARRIER {
-    .pResourceBefore dq ?
-    .pResourceAfter  dq ? }
+  .pResourceBefore dq ?
+  .pResourceAfter dq ? }
 
 struc D3D12_RESOURCE_UAV_BARRIER {
-    .pResource dq ? }
+  .pResource dq ? }
 
 struc D3D12_RESOURCE_BARRIER {
-    .Type       dd                                ?
-    .Flags      dd                                ?
-    .Transition D3D12_RESOURCE_TRANSITION_BARRIER
+  .Type dd ?
+  .Flags dd ?
+  .Transition D3D12_RESOURCE_TRANSITION_BARRIER
 
-    virtual at .Transition
-    .Aliasing   D3D12_RESOURCE_ALIASING_BARRIER
-    end virtual
+virtual at .Transition
+  .Aliasing D3D12_RESOURCE_ALIASING_BARRIER
+end virtual
 
-    virtual at .Transition
-    .UAV        D3D12_RESOURCE_UAV_BARRIER
-    end virtual }
+virtual at .Transition
+  .UAV D3D12_RESOURCE_UAV_BARRIER
+end virtual }
 
 struc D3D12_DESCRIPTOR_RANGE {
-    .RangeType                         dd ?
-    .NumDescriptors                    dd ?
-    .BaseShaderRegister                dd ?
-    .RegisterSpace                     dd ?
-    .OffsetInDescriptorsFromTableStart dd ? }
+  .RangeType dd ?
+  .NumDescriptors dd ?
+  .BaseShaderRegister dd ?
+  .RegisterSpace dd ?
+  .OffsetInDescriptorsFromTableStart dd ? }
 
 struc D3D12_ROOT_DESCRIPTOR_TABLE {
-    .NumDescriptorRanges dd ?
-                         dd ?
-    .pDescriptorRanges   dq ? }
+  .NumDescriptorRanges dd ?,?
+  .pDescriptorRanges dq ? }
 
 struc D3D12_ROOT_CONSTANTS {
     .ShaderRegister dd ?
