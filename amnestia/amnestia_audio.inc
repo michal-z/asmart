@@ -134,7 +134,7 @@ end virtual
   ; compute new period and initialize again
         GET_BUFFER_SIZE
         vxorpd xmm0,xmm0,xmm0
-        vcvtsi2sd xmm0,xmm0,dword[audio__buffer_size_in_frames]
+        vcvtsi2sd xmm0,xmm0,[audio__buffer_size_in_frames]
         vmulsd xmm0,xmm0,[.k_10000000_0]
         vdivsd xmm0,xmm0,[.k_44100_0]
         vaddsd xmm0,xmm0,[.k_0_5]
