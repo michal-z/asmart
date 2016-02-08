@@ -242,7 +242,7 @@ check_cpu_extensions:
 FALIGN
 get_time:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2-8
+  .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
         mov rax,[.perf_freq]
         test rax,rax
@@ -267,7 +267,12 @@ get_time:
 FALIGN
 update_frame_stats:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*1+24
+virtual at 0
+  rq 4
+  .text rb 64
+  align 32
+  .k_stack_size = $+24
+end virtual
         sub rsp,.k_stack_size
         mov rax,[.prev_time]
         test rax,rax
@@ -295,13 +300,13 @@ update_frame_stats:
         vdivsd xmm1,xmm2,xmm1
         vmulsd xmm1,xmm1,[.k_1000000_0]
         mov [.frame],0
-        lea rcx,[win_title]
-        lea rdx,[win_title_fmt]
+        lea rcx,[.text+rsp]
+        lea rdx,[_win_text_fmt]
         vcvtsd2si r8,xmm0
         vcvtsd2si r9,xmm1
         call [wsprintf]
         mov rcx,[win_handle]
-        lea rdx,[win_title]
+        lea rdx,[.text+rsp]
         call [SetWindowText]
   @@:   add [.frame],1
         add rsp,.k_stack_size
@@ -319,11 +324,12 @@ virtual at 0
   .k_stack_size = $+16
 end virtual
         push rsi
+  ; alloc and clear the stack
         sub rsp,.k_stack_size
         vpxor ymm0,ymm0,ymm0
         xor eax,eax
         mov ecx,.k_stack_size/32
-    @@: vmovdqa [rsp+rax],ymm0
+  @@:   vmovdqa [rsp+rax],ymm0
         add eax,32
         sub ecx,1
         jnz @b
@@ -339,7 +345,7 @@ end virtual
   ; create window class
         lea rax,[winproc]
         mov [.wc.lpfnWndProc+rsp],rax
-        lea rax,[win_title]
+        lea rax,[_win_class_name]
         mov [.wc.lpszClassName+rsp],rax
         xor ecx,ecx
         call [GetModuleHandle]
@@ -366,7 +372,7 @@ end virtual
         sub r11d,[.rect.top+rsp]
 
         xor ecx,ecx
-        lea rdx,[win_title]
+        lea rdx,[_win_class_name]
         mov r8,rdx
         mov r9d,WS_VISIBLE+k_win_style
         mov eax,CW_USEDEFAULT
@@ -397,7 +403,7 @@ end virtual
 FALIGN
 deinit:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2-8
+  .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
         add rsp,.k_stack_size
         ret
@@ -405,7 +411,7 @@ deinit:
 FALIGN
 update:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2-8
+  .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
         call update_frame_stats
         call demo_update
@@ -463,7 +469,7 @@ end virtual
 FALIGN
 winproc:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 16*3-8
+  .k_stack_size = 16*2+8
         sub rsp,.k_stack_size
         cmp edx,WM_KEYDOWN
         je .keydown
@@ -512,6 +518,10 @@ align 8
   IID_ID3D12RootSignature GUID 0xc54a6b66,0x72df,0x4ee8,0x8b,0xe5,0xa9,0x46,0xa1,0x42,0x92,0x14
   IID_ID3D12PipelineState GUID 0x765a30f3,0xf624,0x4c6f,0xa8,0x28,0xac,0xe9,0x48,0x62,0x24,0x45
 
+align 1
+  _win_text_fmt db '[%d fps  %d us] amnestia',0
+  _win_class_name db 'amnestia',0
+
 include 'amnestia_const.inc'
 ;========================================================================
 section '.data' data readable writeable
@@ -529,8 +539,6 @@ align 8
 
 align 8
   win_handle dq 0
-  win_title db 'amnestia', 64 dup 0
-  win_title_fmt db '[%d fps  %d us] amnestia',0
 
 align 8
   process_heap dq 0

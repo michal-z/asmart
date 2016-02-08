@@ -2,7 +2,7 @@
 FALIGN
 demo_init:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2-8
+  .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
   ; audio
         call audio_play
@@ -20,7 +20,7 @@ demo_init:
 FALIGN
 demo_deinit:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2-8
+  .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
         call audio_stop
         add rsp,.k_stack_size
@@ -29,7 +29,7 @@ demo_deinit:
 FALIGN
 demo_update:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2-8
+  .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
 
         add rsp,.k_stack_size

@@ -77,7 +77,7 @@ virtual at 0
   .ptr dq ?
   .read_bytes dd ?,?
   align 32
-  .k_stack_size = $-16
+  .k_stack_size = $+16
 end virtual
 	push rsi
 	sub rsp,.k_stack_size
@@ -218,7 +218,7 @@ purge ACTIVATE_DEVICE,INIT_CLIENT,GET_BUFFER_SIZE,CREATE_EVENT
 FALIGN
 audio_stop:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 4*8
+  .k_stack_size = 32*1+16
 	push rsi
 	sub rsp,.k_stack_size
 	mov rsi,rcx
@@ -257,7 +257,8 @@ virtual at 0
   .read_bytes dd ?
   .task_index dd ?
   .wait_array dq ?,?
-  .k_stack_size = $+8
+  align 32
+  .k_stack_size = $+16
 end virtual
 	push rsi
 	sub rsp,.k_stack_size
