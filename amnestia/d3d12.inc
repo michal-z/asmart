@@ -288,176 +288,162 @@ struc D3D12_ROOT_DESCRIPTOR_TABLE {
   .pDescriptorRanges dq ? }
 
 struc D3D12_ROOT_CONSTANTS {
-    .ShaderRegister dd ?
-    .RegisterSpace  dd ?
-    .Num32BitValues dd ? }
+  .ShaderRegister dd ?
+  .RegisterSpace dd ?
+  .Num32BitValues dd ? }
 
 struc D3D12_ROOT_DESCRIPTOR {
-    .ShaderRegister dd ?
-    .RegisterSpace  dd ? }
+  .ShaderRegister dd ?
+  .RegisterSpace dd ? }
 
 struc D3D12_ROOT_PARAMETER {
-    .ParameterType    dd                          ?
-                      dd                          ?
-    .DescriptorTable  D3D12_ROOT_DESCRIPTOR_TABLE
+  .ParameterType dd ?,?
+  .DescriptorTable D3D12_ROOT_DESCRIPTOR_TABLE
 
-    virtual at .DescriptorTable
-    .Constants        D3D12_ROOT_CONSTANTS
-    end virtual
+virtual at .DescriptorTable
+  .Constants D3D12_ROOT_CONSTANTS
+end virtual
 
-    virtual at .DescriptorTable
-    .Descriptor       D3D12_ROOT_DESCRIPTOR
-    end virtual
+virtual at .DescriptorTable
+  .Descriptor D3D12_ROOT_DESCRIPTOR
+end virtual
 
-    .ShaderVisibility dd                          ?
-                      dd                          ? }
+  .ShaderVisibility dd ?,? }
 
 struc D3D12_STATIC_SAMPLER_DESC {
-    .Filter           dd ?
-    .AddressU         dd ?
-    .AddressV         dd ?
-    .AddressW         dd ?
-    .MipLODBias       dd ?
-    .MaxAnisotropy    dd ?
-    .ComparisonFunc   dd ?
-    .BorderColor      dd ?
-    .MinLOD           dd ?
-    .MaxLOD           dd ?
-    .ShaderRegister   dd ?
-    .RegisterSpace    dd ?
-    .ShaderVisibility dd ? }
+  .Filter dd ?
+  .AddressU dd ?
+  .AddressV dd ?
+  .AddressW dd ?
+  .MipLODBias dd ?
+  .MaxAnisotropy dd ?
+  .ComparisonFunc dd ?
+  .BorderColor dd ?
+  .MinLOD dd ?
+  .MaxLOD dd ?
+  .ShaderRegister dd ?
+  .RegisterSpace dd ?
+  .ShaderVisibility dd ? }
 
 struc D3D12_ROOT_SIGNATURE_DESC {
-    .NumParameters     dd ?
-                       dd ?
-    .pParameters       dq ?
-    .NumStaticSamplers dd ?
-                       dd ?
-    .pStaticSamplers   dq ?
-    .Flags             dd ?
-                       dd ? }
+  .NumParameters dd ?,?
+  .pParameters dq ?
+  .NumStaticSamplers dd ?,?
+  .pStaticSamplers dq ?
+  .Flags dd ?,? }
 
 struc D3D12_SHADER_BYTECODE {
-    .pShaderBytecode dq ?
-    .BytecodeLength  dq ? }
+  .pShaderBytecode dq ?
+  .BytecodeLength dq ? }
 
 struc D3D12_SO_DECLARATION_ENTRY {
-    .Stream         dd ?
-                    dd ?
-    .SemanticName   dq ?
-    .SemanticIndex  dd ?
-    .StartComponent db ?
-    .ComponentCount db ?
-    .OutputSlot     db ?
-                    db ? }
+  .Stream dd ?,?
+  .SemanticName dq ?
+  .SemanticIndex dd ?
+  .StartComponent db ?
+  .ComponentCount db ?
+  .OutputSlot db ?,? }
 
 struc D3D12_STREAM_OUTPUT_DESC {
-    .pSODeclaration   dq ?
-    .NumEntries       dd ?
-                      dd ?
-    .pBufferStrides   dq ?
-    .NumStrides       dd ?
-    .RasterizedStream dd ? }
+  .pSODeclaration dq ?
+  .NumEntries dd ?,?
+  .pBufferStrides dq ?
+  .NumStrides dd ?
+  .RasterizedStream dd ? }
 
 struc D3D12_RENDER_TARGET_BLEND_DESC {
-    .BlendEnable           dd ?
-    .LogicOpEnable         dd ?
-    .SrcBlend              dd ?
-    .DestBlend             dd ?
-    .BlendOp               dd ?
-    .SrcBlendAlpha         dd ?
-    .DestBlendAlpha        dd ?
-    .BlendOpAlpha          dd ?
-    .LogicOp               dd ?
-    .RenderTargetWriteMask db ?
-                           rb 3 }
+  .BlendEnable dd ?
+  .LogicOpEnable dd ?
+  .SrcBlend dd ?
+  .DestBlend dd ?
+  .BlendOp dd ?
+  .SrcBlendAlpha dd ?
+  .DestBlendAlpha dd ?
+  .BlendOpAlpha dd ?
+  .LogicOp dd ?
+  .RenderTargetWriteMask db ?,?,?,? }
 
 struc D3D12_BLEND_DESC {
-    .AlphaToCoverageEnable  dd                             ?
-    .IndependentBlendEnable dd                             ?
-    .RenderTarget0          D3D12_RENDER_TARGET_BLEND_DESC
-    .RenderTarget1          D3D12_RENDER_TARGET_BLEND_DESC
-    .RenderTarget2          D3D12_RENDER_TARGET_BLEND_DESC
-    .RenderTarget3          D3D12_RENDER_TARGET_BLEND_DESC
-    .RenderTarget4          D3D12_RENDER_TARGET_BLEND_DESC
-    .RenderTarget5          D3D12_RENDER_TARGET_BLEND_DESC
-    .RenderTarget6          D3D12_RENDER_TARGET_BLEND_DESC
-    .RenderTarget7          D3D12_RENDER_TARGET_BLEND_DESC }
+  .AlphaToCoverageEnable dd ?
+  .IndependentBlendEnable dd ?
+  .RenderTarget0 D3D12_RENDER_TARGET_BLEND_DESC
+  .RenderTarget1 D3D12_RENDER_TARGET_BLEND_DESC
+  .RenderTarget2 D3D12_RENDER_TARGET_BLEND_DESC
+  .RenderTarget3 D3D12_RENDER_TARGET_BLEND_DESC
+  .RenderTarget4 D3D12_RENDER_TARGET_BLEND_DESC
+  .RenderTarget5 D3D12_RENDER_TARGET_BLEND_DESC
+  .RenderTarget6 D3D12_RENDER_TARGET_BLEND_DESC
+  .RenderTarget7 D3D12_RENDER_TARGET_BLEND_DESC }
 
 struc D3D12_RASTERIZER_DESC {
-    .FillMode              dd ?
-    .CullMode              dd ?
-    .FrontCounterClockwise dd ?
-    .DepthBias             dd ?
-    .DepthBiasClamp        dd ?
-    .SlopeScaledDepthBias  dd ?
-    .DepthClipEnable       dd ?
-    .MultisampleEnable     dd ?
-    .AntialiasedLineEnable dd ?
-    .ForcedSampleCount     dd ?
-    .ConservativeRaster    dd ? }
+  .FillMode dd ?
+  .CullMode dd ?
+  .FrontCounterClockwise dd ?
+  .DepthBias dd ?
+  .DepthBiasClamp dd ?
+  .SlopeScaledDepthBias dd ?
+  .DepthClipEnable dd ?
+  .MultisampleEnable dd ?
+  .AntialiasedLineEnable dd ?
+  .ForcedSampleCount dd ?
+  .ConservativeRaster dd ? }
 
 struc D3D12_DEPTH_STENCILOP_DESC {
-    .StencilFailOp      dd ?
-    .StencilDepthFailOp dd ?
-    .StencilPassOp      dd ?
-    .StencilFunc        dd ? }
+  .StencilFailOp dd ?
+  .StencilDepthFailOp dd ?
+  .StencilPassOp dd ?
+  .StencilFunc dd ? }
 
 struc D3D12_DEPTH_STENCIL_DESC {
-    .DepthEnable      dd                         ?
-    .DepthWriteMask   dd                         ?
-    .DepthFunc        dd                         ?
-    .StencilEnable    dd                         ?
-    .StencilReadMask  db                         ?
-    .StencilWriteMask db                         ?
-                      rb 2
-    .FrontFace        D3D12_DEPTH_STENCILOP_DESC
-    .BackFace         D3D12_DEPTH_STENCILOP_DESC
-}
+  .DepthEnable dd ?
+  .DepthWriteMask dd ?
+  .DepthFunc dd ?
+  .StencilEnable dd ?
+  .StencilReadMask db ?
+  .StencilWriteMask db ?,?,?
+  .FrontFace D3D12_DEPTH_STENCILOP_DESC
+  .BackFace D3D12_DEPTH_STENCILOP_DESC }
 
 struc D3D12_INPUT_ELEMENT_DESC {
-    .SemanticName         dq ?
-    .SemanticIndex        dd ?
-    .Format               dd ?
-    .InputSlot            dd ?
-    .AlignedByteOffset    dd ?
-    .InputSlotClass       dd ?
-    .InstanceDataStepRate dd ? }
+  .SemanticName dq ?
+  .SemanticIndex dd ?
+  .Format dd ?
+  .InputSlot dd ?
+  .AlignedByteOffset dd ?
+  .InputSlotClass dd ?
+  .InstanceDataStepRate dd ? }
 
 struc D3D12_INPUT_LAYOUT_DESC {
-    .pInputElementDescs dq ?
-    .NumElements        dd ?
-                        dd ? }
+  .pInputElementDescs dq ?
+  .NumElements dd ?,? }
 
 struc D3D12_CACHED_PIPELINE_STATE {
-    .pCachedBlob           dq ?
-    .CachedBlobSizeInBytes dq ? }
+  .pCachedBlob dq ?
+  .CachedBlobSizeInBytes dq ? }
 
 struc D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-    .pRootSignature        dq                          ?
-    .VS                    D3D12_SHADER_BYTECODE
-    .PS                    D3D12_SHADER_BYTECODE
-    .DS                    D3D12_SHADER_BYTECODE
-    .HS                    D3D12_SHADER_BYTECODE
-    .GS                    D3D12_SHADER_BYTECODE
-    .StreamOutput          D3D12_STREAM_OUTPUT_DESC
-    .BlendState            D3D12_BLEND_DESC
-    .SampleMask            dd                          ?
-    .RasterizerState       D3D12_RASTERIZER_DESC
-    .DepthStencilState     D3D12_DEPTH_STENCIL_DESC
-                           dd                          ?
-    .InputLayout           D3D12_INPUT_LAYOUT_DESC
-    .IBStripCutValue       dd                          ?
-    .PrimitiveTopologyType dd                          ?
-    .NumRenderTargets      dd                          ?
-    .RTVFormats            dd                          ?
-    .DSVFormat             dd                          ?
-    .SampleDesc            DXGI_SAMPLE_DESC
-    .NodeMask              dd                          ?
-                           dd                          ?
-    .CachedPSO             D3D12_CACHED_PIPELINE_STATE
-    .Flags                 dd                          ?
-                           dd                          ? }
+  .pRootSignature dq ?
+  .VS D3D12_SHADER_BYTECODE
+  .PS D3D12_SHADER_BYTECODE
+  .DS D3D12_SHADER_BYTECODE
+  .HS D3D12_SHADER_BYTECODE
+  .GS D3D12_SHADER_BYTECODE
+  .StreamOutput D3D12_STREAM_OUTPUT_DESC
+  .BlendState D3D12_BLEND_DESC
+  .SampleMask dd ?
+  .RasterizerState D3D12_RASTERIZER_DESC
+  .DepthStencilState D3D12_DEPTH_STENCIL_DESC
+  dd ?
+  .InputLayout D3D12_INPUT_LAYOUT_DESC
+  .IBStripCutValue dd ?
+  .PrimitiveTopologyType dd ?
+  .NumRenderTargets dd ?
+  .RTVFormats dd 8 dup ?
+  .DSVFormat dd ?
+  .SampleDesc DXGI_SAMPLE_DESC
+  .NodeMask dd ?,?
+  .CachedPSO D3D12_CACHED_PIPELINE_STATE
+  .Flags dd ?,? }
 
 virtual at 0
   ID3D12Device.QueryInterface rq 1

@@ -4,7 +4,7 @@ FALIGN
 demo_init:
 ;-----------------------------------------------------------------------------
 virtual at 0
-  rq 4
+  rq 5
   .dbgi dq ?
   align 8
   .cmdqueue_desc D3D12_COMMAND_QUEUE_DESC
@@ -139,6 +139,26 @@ end virtual
         add esi,1
         cmp esi,k_swapchain_buffer_count
         jb .for_each_swap_buffer
+  ; frame fence
+        mov rcx,[device]
+        xor edx,edx
+        mov r8d,D3D12_FENCE_FLAG_NONE
+        lea r9,[IID_ID3D12Fence]
+        lea rax,[frame_fence]
+        mov [k_funcparam5+rsp],rax
+        mov rax,[rcx]
+        call [ID3D12Device.CreateFence+rax]
+        test eax,eax
+        js .error
+  ; frame fence event
+        xor ecx,ecx
+        xor edx,edx
+        xor r8d,r8d
+        mov r9d,EVENT_ALL_ACCESS
+        call [CreateEventEx]
+        mov [frame_fence_event],rax
+        test rax,rax
+        jz .error
   ; audio
         call audio_play
         test eax,eax
@@ -183,6 +203,8 @@ align 8
   swapchain_heap dq 0
   swapchain_heap_start dq 0
   swapchain_buffer dq k_swapchain_buffer_count dup 0
+  frame_fence dq 0
+  frame_fence_event dq 0
 
 align 4
   rtv_size dd 0
