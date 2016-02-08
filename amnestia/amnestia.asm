@@ -155,7 +155,6 @@ virtual at 0
   IAudioRenderClient.ReleaseBuffer rq 1
 end virtual
 
-section '.text' code readable executable
 ;========================================================================
 macro EMIT [inst] {
   forward
@@ -210,6 +209,9 @@ macro DEBUG_BREAK {
         int3
         nop }
 ;=============================================================================
+section '.text' code readable executable
+program_section = 'code'
+
 include 'amnestia_demo.inc'
 include 'amnestia_audio.inc'
 include 'amnestia_math.inc'
@@ -313,7 +315,7 @@ end virtual
         ret
 ;=============================================================================
 FALIGN
-init:
+init_window:
 ;-----------------------------------------------------------------------------
 virtual at 0
   rq 12
@@ -333,15 +335,6 @@ end virtual
         add eax,32
         sub ecx,1
         jnz @b
-  ; check CPU
-        call check_cpu_extensions
-        test eax,eax
-        jz .error
-  ; get process heap
-        call [GetProcessHeap]
-        mov [process_heap],rax
-        test rax,rax
-        jz .error
   ; create window class
         lea rax,[winproc]
         mov [.wc.lpfnWndProc+rsp],rax
@@ -358,19 +351,18 @@ end virtual
         call [RegisterClass]
         test eax,eax
         jz .error
-  ; create window
+  ; compute window size
         mov [.rect.right+rsp],k_win_width
         mov [.rect.bottom+rsp],k_win_height
         lea rcx,[.rect+rsp]
         mov edx,k_win_style
         xor r8d,r8d
         call [AdjustWindowRect]
-
         mov r10d,[.rect.right+rsp]
         mov r11d,[.rect.bottom+rsp]
         sub r10d,[.rect.left+rsp]
         sub r11d,[.rect.top+rsp]
-
+  ; create window
         xor ecx,ecx
         lea rdx,[_win_class_name]
         mov r8,rdx
@@ -389,8 +381,8 @@ end virtual
         mov [win_handle],rax
         test rax,rax
         jz .error
-
-        mov eax,1                           ; success
+  ; success
+        mov eax,1
         add rsp,.k_stack_size
         pop rsi
         ret
@@ -401,10 +393,42 @@ end virtual
         ret
 ;=============================================================================
 FALIGN
+init:
+;-----------------------------------------------------------------------------
+  .k_stack_size = 32*1+24
+        sub rsp,.k_stack_size
+  ; check CPU
+        call check_cpu_extensions
+        test eax,eax
+        jz .error
+  ; get process heap
+        call [GetProcessHeap]
+        mov [process_heap],rax
+        test rax,rax
+        jz .error
+  ; create window
+        call init_window
+        test eax,eax
+        jz .error
+  ; init demo
+        call demo_init
+        test eax,eax
+        jz .error
+  ; success
+        mov eax,1
+        add rsp,.k_stack_size
+        ret
+  .error:
+        xor eax,eax
+        add rsp,.k_stack_size
+        ret
+;=============================================================================
+FALIGN
 deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
+        call demo_deinit
         add rsp,.k_stack_size
         ret
 ;=============================================================================
@@ -431,14 +455,10 @@ virtual at 0
 end virtual
         and rsp,-32
         sub rsp,.k_stack_size
-        ;DEBUG_BREAK
         call init
         test eax,eax
-        jz .quit_deinit
-
-        call demo_init
-        test eax,eax
         jz .quit
+
   .main_loop:
         lea rcx,[.msg+rsp]
         xor edx,edx
@@ -460,8 +480,6 @@ end virtual
         call update
         jmp .main_loop
   .quit:
-        call demo_deinit
-  .quit_deinit:
         call deinit
         xor ecx,ecx
         call [ExitProcess]
@@ -525,17 +543,10 @@ align 1
 include 'amnestia_const.inc'
 ;========================================================================
 section '.data' data readable writeable
+program_section = 'data'
 
-align 8
-  audio_stream dq 0
-  audio_thread dq 0
-  audio_shutdown_event dq 0
-  audio_buffer_ready_event dq 0
-  audio_render_client dq 0
-  audio_client dq 0
-  audio_device dq 0
-  audio_enumerator dq 0
-  audio_buffer_size_in_frames dd 0,0
+include 'amnestia_audio.inc'
+include 'amnestia_demo.inc'
 
 align 8
   win_handle dq 0
