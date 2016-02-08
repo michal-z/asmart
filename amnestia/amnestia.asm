@@ -515,6 +515,7 @@ section '.data' data readable
   k_win_width = 800
   k_win_height = 800
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+  k_swapchain_buffer_count = 4
 
 align 8
   CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E

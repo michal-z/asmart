@@ -10,9 +10,12 @@ virtual at 0
   .cmdqueue_desc D3D12_COMMAND_QUEUE_DESC
   align 8
   .swapchain_desc DXGI_SWAP_CHAIN_DESC
+  align 8
+  .swapchain_heap_desc D3D12_DESCRIPTOR_HEAP_DESC
   align 32
-  .k_stack_size = $+24
+  .k_stack_size = $+16
 end virtual
+        push rsi
   ; alloc and clear the stack
         sub rsp,.k_stack_size
         vpxor ymm0,ymm0,ymm0
@@ -30,7 +33,7 @@ end virtual
         js @f
         mov rcx,[.dbgi+rsp]
         mov rax,[rcx]
-        call [rax+ID3D12Debug.EnableDebugLayer]
+        call [ID3D12Debug.EnableDebugLayer+rax]
         SAFE_RELEASE [.dbgi+rsp]
   @@:
   ; DXGI factory
@@ -71,7 +74,7 @@ end virtual
         mov [.swapchain_desc.BufferDesc.Height+rsp],k_win_height
         mov [.swapchain_desc.BufferDesc.Format+rsp],DXGI_FORMAT_R8G8B8A8_UNORM
         mov [.swapchain_desc.SampleDesc.Count+rsp],1
-        mov [.swapchain_desc.BufferCount+rsp],4
+        mov [.swapchain_desc.BufferCount+rsp],k_swapchain_buffer_count
         mov rax,[win_handle]
         mov [.swapchain_desc.OutputWindow+rsp],rax
         mov [.swapchain_desc.Windowed+rsp],1
@@ -84,6 +87,34 @@ end virtual
         call [IDXGIFactory4.CreateSwapChain+rax]
         test eax,eax
         js .error
+  ; get descriptor sizes
+        mov rcx,[device]
+        mov edx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        mov rax,[rcx]
+        call [ID3D12Device.GetDescriptorHandleIncrementSize+rax]
+        mov [rtv_size],eax
+        mov rcx,[device]
+        mov edx,D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+        mov rax,[rcx]
+        call [ID3D12Device.GetDescriptorHandleIncrementSize+rax]
+        mov [cbv_srv_uav_size],eax
+  ; RTV descriptor heap
+        mov [.swapchain_heap_desc.Type+rsp],D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+        mov [.swapchain_heap_desc.NumDescriptors+rsp],k_swapchain_buffer_count
+        mov rcx,[device]
+        lea rdx,[.swapchain_heap_desc+rsp]
+        lea r8,[IID_ID3D12DescriptorHeap]
+        lea r9,[swapchain_heap]
+        mov rax,[rcx]
+        call [ID3D12Device.CreateDescriptorHeap+rax]
+        test eax,eax
+        js .error
+        mov rcx,[swapchain_heap]
+        lea rdx,[swapchain_heap_start]
+        mov rax,[rcx]
+        call [ID3D12DescriptorHeap.GetCPUDescriptorHandleForHeapStart+rax]
+        mov rax,[rax]
+        mov [swapchain_heap_start],rax
   ; audio
         call audio_play
         test eax,eax
@@ -91,10 +122,12 @@ end virtual
   ; success
         mov eax,1
         add rsp,.k_stack_size
+        pop rsi
         ret
   .error:
         xor eax,eax
         add rsp,.k_stack_size
+        pop rsi
         ret
 ;=============================================================================
 FALIGN
@@ -123,6 +156,13 @@ align 8
   cmdqueue dq 0
   cmdallocator dq 0
   swapchain dq 0
+  swapchain_heap dq 0
+  swapchain_heap_start dq 0
+  swapchain_buffer dq k_swapchain_buffer_count dup 0
+
+align 4
+  rtv_size dd 0
+  cbv_srv_uav_size dd 0
 
 end if
 ;=============================================================================
