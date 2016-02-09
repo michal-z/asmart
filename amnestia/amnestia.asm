@@ -180,9 +180,6 @@ macro FREE ptr {
         mov r8,ptr
         call [HeapFree] }
 
-macro LN txt {
-        db txt,13,10 }
-
 macro SAFE_CLOSE handle {
   local .end
         mov rcx,handle
@@ -215,6 +212,7 @@ program_section = 'code'
 include 'amnestia_demo.inc'
 include 'amnestia_audio.inc'
 include 'amnestia_math.inc'
+include 'amnestia_scene1.inc'
 ;=============================================================================
 FALIGN
 check_cpu_extensions:
@@ -439,8 +437,6 @@ update:
         sub rsp,.k_stack_size
         call update_frame_stats
         call demo_update
-        mov ecx,1
-        call [Sleep]
         add rsp,.k_stack_size
         ret
 ;=============================================================================
@@ -516,6 +512,7 @@ section '.data' data readable
   k_win_height = 800
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
   k_swapchain_buffer_count = 4
+  k_frame_count = 3
 
 align 8
   CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
@@ -548,6 +545,7 @@ program_section = 'data'
 
 include 'amnestia_audio.inc'
 include 'amnestia_demo.inc'
+include 'amnestia_scene1.inc'
 
 align 8
   win_handle dq 0

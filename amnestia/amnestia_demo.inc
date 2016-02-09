@@ -4,7 +4,7 @@ FALIGN
 demo_init:
 ;-----------------------------------------------------------------------------
 virtual at 0
-  rq 5
+  rq 7
   .dbgi dq ?
   align 8
   .cmdqueue_desc D3D12_COMMAND_QUEUE_DESC
@@ -60,15 +60,19 @@ end virtual
         call [ID3D12Device.CreateCommandQueue+rax]
         test eax,eax
         js .error
-  ; command allocator
-        mov rcx,[device]
+  ; command allocators
+        xor esi,esi
+  @@:   mov rcx,[device]
         mov edx,D3D12_COMMAND_LIST_TYPE_DIRECT
         lea r8,[IID_ID3D12CommandAllocator]
-        lea r9,[cmdallocator]
+        lea r9,[cmdallocator+rsi*8]
         mov rax,[rcx]
         call [ID3D12Device.CreateCommandAllocator+rax]
         test eax,eax
         js .error
+        add esi,1
+        cmp esi,k_frame_count
+        jb @b
   ; swapchain
         mov [.swapchain_desc.BufferDesc.Width+rsp],k_win_width
         mov [.swapchain_desc.BufferDesc.Height+rsp],k_win_height
@@ -141,7 +145,7 @@ end virtual
         jb .for_each_swap_buffer
   ; frame fence
         mov rcx,[device]
-        xor edx,edx
+        mov edx,1
         mov r8d,D3D12_FENCE_FLAG_NONE
         lea r9,[IID_ID3D12Fence]
         lea rax,[frame_fence]
@@ -159,6 +163,58 @@ end virtual
         mov [frame_fence_event],rax
         test rax,rax
         jz .error
+  ; create command list
+        mov rcx,[device]
+        xor edx,edx
+        mov r8d,D3D12_COMMAND_LIST_TYPE_DIRECT
+        mov r9,[cmdallocator]
+        mov qword[k_funcparam5+rsp],0
+        lea rax,[IID_ID3D12GraphicsCommandList]
+        mov [k_funcparam6+rsp],rax
+        lea rax,[cmdlist]
+        mov [k_funcparam7+rsp],rax
+        mov rax,[rcx]
+        call [ID3D12Device.CreateCommandList+rax]
+        test eax,eax
+        js .error
+  ; init scene
+        lea rax,[scene1_init]
+        mov [scene_init],rax
+        lea rax,[scene1_deinit]
+        mov [scene_deinit],rax
+        lea rax,[scene1_update]
+        mov [scene_update],rax
+        call [scene_init]
+        test eax,eax
+        jz .error
+  ; close command list
+        mov rcx,[cmdlist]
+        mov rax,[rcx]
+        call [ID3D12GraphicsCommandList.Close+rax]
+        test eax,eax
+        js .error
+  ; execute command list
+        mov rcx,[cmdqueue]
+        mov edx,1
+        lea r8,[cmdlist]
+        mov rax,[rcx]
+        call [ID3D12CommandQueue.ExecuteCommandLists+rax]
+        test eax,eax
+        js .error
+  ; wait for the GPU
+        mov rcx,[cmdqueue]
+        mov rdx,[frame_fence]
+        xor r8d,r8d
+        mov rax,[rcx]
+        call [ID3D12CommandQueue.Signal+rax]
+        mov rcx,[frame_fence]
+        xor edx,edx
+        mov r8,[frame_fence_event]
+        mov rax,[rcx]
+        call [ID3D12Fence.SetEventOnCompletion+rax]
+        mov rcx,[frame_fence_event]
+        mov edx,INFINITE
+        call [WaitForSingleObject]
   ; audio
         call audio_play
         test eax,eax
@@ -179,6 +235,11 @@ demo_deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
         sub rsp,.k_stack_size
+        mov rcx,[scene_deinit]
+        test rcx,rcx
+        jz @f
+        call rcx
+  @@:
         call audio_stop
         add rsp,.k_stack_size
         ret
@@ -186,10 +247,52 @@ demo_deinit:
 FALIGN
 demo_update:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*1+24
+  .k_stack_size = 32*1+16
+        push rsi
         sub rsp,.k_stack_size
-
+        call [scene_update]
+  ; present
+        mov rcx,[swapchain]
+        xor edx,edx
+        xor r8d,r8d
+        mov rax,[rcx]
+        call [IDXGISwapChain3.Present+rax]
+        add [cpu_completed_frames],1
+        mov rcx,[cmdqueue]
+        mov rdx,[frame_fence]
+        mov r8,[cpu_completed_frames]
+        mov rax,[rcx]
+        call [ID3D12CommandQueue.Signal+rax]
+        mov rcx,[frame_fence]
+        mov rax,[rcx]
+        call [ID3D12Fence.GetCompletedValue+rax]
+        mov rsi,rax
+        mov rax,[cpu_completed_frames]
+        sub rax,rsi
+        cmp eax,k_frame_count
+        jb @f
+  ; wait for the GPU to finish one frame
+        mov rcx,[frame_fence]
+        mov rdx,rsi
+        add rdx,1
+        mov r8,[frame_fence_event]
+        mov rax,[rcx]
+        call [ID3D12Fence.SetEventOnCompletion+rax]
+        mov rcx,[frame_fence_event]
+        mov edx,INFINITE
+        call [WaitForSingleObject]
+  @@:
+        mov rcx,[swapchain]
+        mov rax,[rcx]
+        call [IDXGISwapChain3.GetCurrentBackBufferIndex+rax]
+        mov [swap_buffer_index],eax
+        xor edx,edx
+        mov rax,[cpu_completed_frames]
+        mov ecx,k_frame_count
+        div rcx
+        mov [frame_index],edx
         add rsp,.k_stack_size
+        pop rsi
         ret
 ;=============================================================================
 else if program_section = 'data'
@@ -198,17 +301,25 @@ align 8
   dxgifactory dq 0
   device dq 0
   cmdqueue dq 0
-  cmdallocator dq 0
+  cmdallocator dq k_frame_count dup 0
+  cmdlist dq 0
   swapchain dq 0
   swapchain_heap dq 0
   swapchain_heap_start dq 0
   swapchain_buffer dq k_swapchain_buffer_count dup 0
   frame_fence dq 0
   frame_fence_event dq 0
+  cpu_completed_frames dq 0
+
+  scene_init dq 0
+  scene_deinit dq 0
+  scene_update dq 0
 
 align 4
   rtv_size dd 0
   cbv_srv_uav_size dd 0
+  swap_buffer_index dd 0
+  frame_index dd 0
 
 end if
 ;=============================================================================
