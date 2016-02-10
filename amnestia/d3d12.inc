@@ -228,6 +228,32 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH     = 4
 D3D12_PIPELINE_STATE_FLAG_NONE       = 0
 D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG = 0x1
 
+struc DXGI_RATIONAL {
+  .Numerator dd ?
+  .Denominator dd ? }
+
+struc DXGI_MODE_DESC {
+  .Width dd ?
+  .Height dd ?
+  .RefreshRate DXGI_RATIONAL
+  .Format dd ?
+  .ScanlineOrdering dd ?
+  .Scaling dd ? }
+
+struc DXGI_SAMPLE_DESC {
+  .Count dd ?
+  .Quality dd ? }
+
+struc DXGI_SWAP_CHAIN_DESC {
+  .BufferDesc DXGI_MODE_DESC
+  .SampleDesc DXGI_SAMPLE_DESC
+  .BufferUsage dd ?
+  .BufferCount dd ?,?
+  .OutputWindow dq ?
+  .Windowed dd ?
+  .SwapEffect dd ?
+  .Flags dd ?,? }
+
 struc D3D12_VIEWPORT {
     .TopLeftX dd ?
     .TopLeftY dd ?
@@ -259,6 +285,7 @@ struc D3D12_RESOURCE_TRANSITION_BARRIER {
 struc D3D12_RESOURCE_ALIASING_BARRIER {
   .pResourceBefore dq ?
   .pResourceAfter dq ? }
+STRUC_INFO D3D12_RESOURCE_ALIASING_BARRIER
 
 struc D3D12_RESOURCE_UAV_BARRIER {
   .pResource dq ? }
@@ -275,6 +302,7 @@ end virtual
 virtual at .Transition
   .UAV D3D12_RESOURCE_UAV_BARRIER
 end virtual }
+STRUC_INFO D3D12_RESOURCE_BARRIER
 
 struc D3D12_DESCRIPTOR_RANGE {
   .RangeType dd ?
@@ -444,15 +472,7 @@ struc D3D12_GRAPHICS_PIPELINE_STATE_DESC {
   .NodeMask dd ?,?
   .CachedPSO D3D12_CACHED_PIPELINE_STATE
   .Flags dd ?,? }
-
-virtual at 0
-  D3D12_RESOURCE_ALIASING_BARRIER D3D12_RESOURCE_ALIASING_BARRIER
-  sizeof.D3D12_RESOURCE_ALIASING_BARRIER = $
-end virtual
-virtual at 0
-  D3D12_RESOURCE_BARRIER D3D12_RESOURCE_BARRIER
-  sizeof.D3D12_RESOURCE_BARRIER = $
-end virtual
+STRUC_INFO D3D12_GRAPHICS_PIPELINE_STATE_DESC
 
 virtual at 0
   ID3D12Device.QueryInterface rq 1
@@ -814,34 +834,6 @@ DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL = 3
 DXGI_SWAP_EFFECT_FLIP_DISCARD    = 4
 
 DXGI_PRESENT_RESTART = 0x00000004
-
-struc DXGI_RATIONAL {
-    .Numerator   dd ?
-    .Denominator dd ? }
-
-struc DXGI_MODE_DESC {
-    .Width            dd            ?
-    .Height           dd            ?
-    .RefreshRate      DXGI_RATIONAL
-    .Format           dd            ?
-    .ScanlineOrdering dd            ?
-    .Scaling          dd            ? }
-
-struc DXGI_SAMPLE_DESC {
-    .Count   dd ?
-    .Quality dd ? }
-
-struc DXGI_SWAP_CHAIN_DESC {
-    .BufferDesc   DXGI_MODE_DESC
-    .SampleDesc   DXGI_SAMPLE_DESC
-    .BufferUsage  dd               ?
-    .BufferCount  dd               ?
-                  dd               ?
-    .OutputWindow dq               ?
-    .Windowed     dd               ?
-    .SwapEffect   dd               ?
-    .Flags        dd               ?
-                  dd               ? }
 
 virtual at 0
   IDXGIFactory4.QueryInterface rq 1

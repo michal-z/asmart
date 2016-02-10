@@ -100,6 +100,12 @@ struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
   db p9
   db p10 }
 
+macro STRUC_INFO s {
+virtual at 0
+  s s
+  sizeof.#s = $
+end virtual }
+
 include 'd3d12.inc'
 
 virtual at 0
