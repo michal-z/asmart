@@ -1,4 +1,5 @@
 struc scene1 {
+  .rootsig dq 0
   .pso dq 0 }
 
 if program_section = 'code'
@@ -6,6 +7,17 @@ if program_section = 'code'
 FALIGN
 scene1_init:
 ;-----------------------------------------------------------------------------
+virtual at 0
+  rq 4
+  .rootsig_desc D3D12_ROOT_SIGNATURE_DESC
+  align 8
+  .d3dblob dq ?
+  align 32
+  .k_stack_size = $+24
+end virtual
+        sub rsp,.k_stack_size
+        ZERO_STACK .k_stack_size
+        add rsp,.k_stack_size
         ret
 ;=============================================================================
 FALIGN

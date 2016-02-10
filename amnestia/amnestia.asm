@@ -100,7 +100,7 @@ struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
   db p9
   db p10 }
 
-macro STRUC_INFO s {
+macro STRUC_OFFSETS_SIZE s {
 virtual at 0
   s s
   sizeof.#s = $
@@ -216,6 +216,15 @@ macro TRANSITION_BARRIER ptr,res,sbefore,safter {
         mov [ptr+D3D12_RESOURCE_BARRIER.Transition.pResource],res
         mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateBefore],sbefore
         mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter }
+
+macro ZERO_STACK size {
+        vpxor ymm0,ymm0,ymm0
+        xor eax,eax
+        mov ecx,size/32
+  @@:   vmovdqa [rsp+rax],ymm0
+        add eax,32
+        sub ecx,1
+        jnz @b }
 ;=============================================================================
 section '.text' code readable executable
 program_section = 'code'

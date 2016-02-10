@@ -16,15 +16,8 @@ virtual at 0
   .k_stack_size = $+16
 end virtual
         push rsi
-  ; alloc and clear the stack
         sub rsp,.k_stack_size
-        vpxor ymm0,ymm0,ymm0
-        xor eax,eax
-        mov ecx,.k_stack_size/32
-  @@:   vmovdqa [rsp+rax],ymm0
-        add eax,32
-        sub ecx,1
-        jnz @b
+        ZERO_STACK .k_stack_size
   ; debug layer
         lea rcx,[IID_ID3D12Debug]
         lea rdx,[.dbgi+rsp]

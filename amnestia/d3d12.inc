@@ -255,26 +255,26 @@ struc DXGI_SWAP_CHAIN_DESC {
   .Flags dd ?,? }
 
 struc D3D12_VIEWPORT {
-    .TopLeftX dd ?
-    .TopLeftY dd ?
-    .Width    dd ?
-    .Height   dd ?
-    .MinDepth dd ?
-    .MaxDepth dd ? }
+  .TopLeftX dd ?
+  .TopLeftY dd ?
+  .Width dd ?
+  .Height dd ?
+  .MinDepth dd ?
+  .MaxDepth dd ? }
 
 D3D12_RECT fix RECT
 
 struc D3D12_COMMAND_QUEUE_DESC {
-    .Type     dd ?
-    .Priority dd ?
-    .Flags    dd ?
-    .NodeMask dd ? }
+  .Type dd ?
+  .Priority dd ?
+  .Flags dd ?
+  .NodeMask dd ? }
 
 struc D3D12_DESCRIPTOR_HEAP_DESC {
-    .Type           dd ?
-    .NumDescriptors dd ?
-    .Flags          dd ?
-    .NodeMask       dd ? }
+  .Type dd ?
+  .NumDescriptors dd ?
+  .Flags dd ?
+  .NodeMask dd ? }
 
 struc D3D12_RESOURCE_TRANSITION_BARRIER {
   .pResource dq ?
@@ -285,7 +285,7 @@ struc D3D12_RESOURCE_TRANSITION_BARRIER {
 struc D3D12_RESOURCE_ALIASING_BARRIER {
   .pResourceBefore dq ?
   .pResourceAfter dq ? }
-STRUC_INFO D3D12_RESOURCE_ALIASING_BARRIER
+STRUC_OFFSETS_SIZE D3D12_RESOURCE_ALIASING_BARRIER
 
 struc D3D12_RESOURCE_UAV_BARRIER {
   .pResource dq ? }
@@ -302,7 +302,7 @@ end virtual
 virtual at .Transition
   .UAV D3D12_RESOURCE_UAV_BARRIER
 end virtual }
-STRUC_INFO D3D12_RESOURCE_BARRIER
+STRUC_OFFSETS_SIZE D3D12_RESOURCE_BARRIER
 
 struc D3D12_DESCRIPTOR_RANGE {
   .RangeType dd ?
@@ -472,7 +472,7 @@ struc D3D12_GRAPHICS_PIPELINE_STATE_DESC {
   .NodeMask dd ?,?
   .CachedPSO D3D12_CACHED_PIPELINE_STATE
   .Flags dd ?,? }
-STRUC_INFO D3D12_GRAPHICS_PIPELINE_STATE_DESC
+STRUC_OFFSETS_SIZE D3D12_GRAPHICS_PIPELINE_STATE_DESC
 
 virtual at 0
   ID3D12Device.QueryInterface rq 1
