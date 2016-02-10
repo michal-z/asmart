@@ -301,7 +301,7 @@ demo_update:
         mov rcx,[swapchain]
         mov rax,[rcx]
         call [IDXGISwapChain3.GetCurrentBackBufferIndex+rax]
-        mov [swap_buffer_index],eax
+        mov [back_buffer_index],eax
         xor edx,edx
         mov rax,[cpu_completed_frames]
         mov ecx,k_frame_count
@@ -339,8 +339,9 @@ align 8
 align 4
   rtv_size dd 0
   cbv_srv_uav_size dd 0
-  swap_buffer_index dd 0
+  back_buffer_index dd 0
   frame_index dd 0
+  clear_color dd 0.0,1.0,0.0,1.0
 
 end if
 ;=============================================================================

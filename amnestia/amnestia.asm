@@ -205,6 +205,11 @@ macro FALIGN {
 macro DEBUG_BREAK {
         int3
         nop }
+
+macro TRANSITION_BARRIER ptr,res,sbefore,safter {
+        mov [ptr+D3D12_RESOURCE_BARRIER.Transition.pResource],res
+        mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateBefore],sbefore
+        mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter }
 ;=============================================================================
 section '.text' code readable executable
 program_section = 'code'

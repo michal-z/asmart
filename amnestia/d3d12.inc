@@ -446,6 +446,15 @@ struc D3D12_GRAPHICS_PIPELINE_STATE_DESC {
   .Flags dd ?,? }
 
 virtual at 0
+  D3D12_RESOURCE_ALIASING_BARRIER D3D12_RESOURCE_ALIASING_BARRIER
+  sizeof.D3D12_RESOURCE_ALIASING_BARRIER = $
+end virtual
+virtual at 0
+  D3D12_RESOURCE_BARRIER D3D12_RESOURCE_BARRIER
+  sizeof.D3D12_RESOURCE_BARRIER = $
+end virtual
+
+virtual at 0
   ID3D12Device.QueryInterface rq 1
   ID3D12Device.AddRef rq 1
   ID3D12Device.Release rq 1
