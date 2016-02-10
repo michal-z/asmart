@@ -74,8 +74,10 @@ end virtual
         cmp esi,k_frame_count
         jb @b
   ; swapchain
-        mov [.swapchain_desc.BufferDesc.Width+rsp],k_win_width
-        mov [.swapchain_desc.BufferDesc.Height+rsp],k_win_height
+        mov eax,[win_width]
+        mov [.swapchain_desc.BufferDesc.Width+rsp],eax
+        mov eax,[win_height]
+        mov [.swapchain_desc.BufferDesc.Height+rsp],eax
         mov [.swapchain_desc.BufferDesc.Format+rsp],DXGI_FORMAT_R8G8B8A8_UNORM
         mov [.swapchain_desc.SampleDesc.Count+rsp],1
         mov [.swapchain_desc.BufferCount+rsp],k_swapchain_buffer_count
@@ -91,6 +93,22 @@ end virtual
         call [IDXGIFactory4.CreateSwapChain+rax]
         test eax,eax
         js .error
+  ; viewport & scissor
+        mov [viewport.TopLeftX],dword 0.0
+        mov [viewport.TopLeftY],dword 0.0
+        vxorps xmm2,xmm2,xmm2
+        vcvtsi2ss xmm0,xmm2,[win_width]
+        vcvtsi2ss xmm1,xmm2,[win_height]
+        vmovd [viewport.Width],xmm0
+        vmovd [viewport.Height],xmm1
+        mov [viewport.MinDepth],dword 0.0
+        mov [viewport.MaxDepth],dword 1.0
+        mov [scissor.left],0
+        mov [scissor.top],0
+        mov eax,[win_width]
+        mov [scissor.right],eax
+        mov eax,[win_height]
+        mov [scissor.bottom],eax
   ; get descriptor sizes
         mov rcx,[device]
         mov edx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
@@ -130,7 +148,6 @@ end virtual
         call [IDXGISwapChain3.GetBuffer+rax]
         test eax,eax
         js .error
-
         mov rcx,[device]
         mov rdx,[swapchain_buffer+rsi*8]
         xor r8d,r8d
@@ -139,7 +156,6 @@ end virtual
         add r9,[swapchain_heap_start]
         mov rax,[rcx]
         call [ID3D12Device.CreateRenderTargetView+rax]
-
         add esi,1
         cmp esi,k_swapchain_buffer_count
         jb .for_each_swap_buffer
@@ -314,6 +330,11 @@ align 8
   scene_init dq 0
   scene_deinit dq 0
   scene_update dq 0
+
+align 8
+  viewport D3D12_VIEWPORT
+align 8
+  scissor D3D12_RECT
 
 align 4
   rtv_size dd 0

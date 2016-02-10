@@ -350,8 +350,10 @@ end virtual
         test eax,eax
         jz .error
   ; compute window size
-        mov [.rect.right+rsp],k_win_width
-        mov [.rect.bottom+rsp],k_win_height
+        mov eax,[win_width]
+        mov [.rect.right+rsp],eax
+        mov eax,[win_height]
+        mov [.rect.bottom+rsp],eax
         lea rcx,[.rect+rsp]
         mov edx,k_win_style
         xor r8d,r8d
@@ -508,8 +510,6 @@ winproc:
 ;========================================================================
 section '.data' data readable
 
-  k_win_width = 800
-  k_win_height = 800
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
   k_swapchain_buffer_count = 4
   k_frame_count = 3
@@ -549,6 +549,8 @@ include 'amnestia_scene1.inc'
 
 align 8
   win_handle dq 0
+  win_width dd 1280
+  win_height dd 720
 
 align 8
   process_heap dq 0
