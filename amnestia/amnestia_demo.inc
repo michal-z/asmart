@@ -28,9 +28,8 @@ end virtual
         mov rax,[rcx]
         call [ID3D12Debug.EnableDebugLayer+rax]
         SAFE_RELEASE [.dbgi+rsp]
-  @@:
   ; DXGI factory
-        lea rcx,[IID_IDXGIFactory4]
+  @@:   lea rcx,[IID_IDXGIFactory4]
         lea rdx,[dxgifactory]
         call [CreateDXGIFactory1]
         test eax,eax
@@ -290,8 +289,8 @@ demo_update:
         mov rcx,[frame_fence_event]
         mov edx,INFINITE
         call [WaitForSingleObject]
-  @@:
-        mov rcx,[swapchain]
+  ; back_buffer_index and frame_index
+  @@:   mov rcx,[swapchain]
         mov rax,[rcx]
         call [IDXGISwapChain3.GetCurrentBackBufferIndex+rax]
         mov [back_buffer_index],eax

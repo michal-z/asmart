@@ -51,6 +51,32 @@ end virtual
         test esi,esi
         js .error
   ; pso
+        mov rax,[scene1.rootsig]
+        mov [.pso_desc.pRootSignature+rsp],rax
+        lea rcx,[scene1.vs]
+        call load_file
+        mov [.pso_desc.VS.pShaderBytecode+rsp],rax
+        mov [.pso_desc.VS.BytecodeLength+rsp],rdx
+        lea rcx,[scene1.ps]
+        call load_file
+        mov [.pso_desc.PS.pShaderBytecode+rsp],rax
+        mov [.pso_desc.PS.BytecodeLength+rsp],rdx
+        mov [.pso_desc.BlendState.RenderTarget0.RenderTargetWriteMask+rsp],$0f
+        mov [.pso_desc.SampleMask+rsp],$ffffffff
+        mov [.pso_desc.RasterizerState.CullMode+rsp],D3D12_CULL_MODE_NONE
+        mov [.pso_desc.RasterizerState.FillMode+rsp],D3D12_FILL_MODE_SOLID
+        mov [.pso_desc.PrimitiveTopologyType+rsp],D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE
+        mov [.pso_desc.NumRenderTargets+rsp],1
+        mov [.pso_desc.RTVFormats+rsp],DXGI_FORMAT_R8G8B8A8_UNORM
+        mov [.pso_desc.SampleDesc.Count+rsp],1
+        mov rcx,[device]
+        lea rdx,[.pso_desc+rsp]
+        lea r8,[IID_ID3D12PipelineState]
+        lea r9,[scene1.pso]
+        mov rax,[rcx]
+        call [ID3D12Device.CreateGraphicsPipelineState+rax]
+        test eax,eax
+        js .error
   ; success
         mov eax,1
         add rsp,.k_stack_size
@@ -73,6 +99,8 @@ scene1_update:
 virtual at 0
   rq 5
   .barrier D3D12_RESOURCE_BARRIER
+  align 8
+  .back_buffer_handle dq ?
   align 32
   .k_stack_size = $+8
 end virtual
@@ -94,7 +122,7 @@ end virtual
         mov eax,[frame_index]
         mov rcx,rsi
         mov rdx,[cmdallocator+rax*8]
-        xor r8d,r8d
+        mov r8,[scene1.pso]
         call [ID3D12GraphicsCommandList.Reset+rdi]
         mov rcx,rsi
         mov edx,1
@@ -104,6 +132,9 @@ end virtual
         mov edx,1
         lea r8,[scissor]
         call [ID3D12GraphicsCommandList.RSSetScissorRects+rdi]
+        mov rcx,rsi
+        mov rdx,[scene1.rootsig]
+        call [ID3D12GraphicsCommandList.SetGraphicsRootSignature+rdi]
   ; back buffer to D3D12_RESOURCE_STATE_RENDER_TARGET
         mov eax,[back_buffer_index]
         mov rax,[swapchain_buffer+rax*8]
@@ -112,15 +143,35 @@ end virtual
         mov edx,1
         lea r8,[.barrier+rsp]
         call [ID3D12GraphicsCommandList.ResourceBarrier+rdi]
+  ; get back buffer handle
+        mov eax,[back_buffer_index]
+        imul eax,[rtv_size]
+        add rax,[swapchain_heap_start]
+        mov [.back_buffer_handle+rsp],rax
   ; clear back buffer
         mov rcx,rsi
-        mov edx,[back_buffer_index]
-        imul edx,[rtv_size]
-        add rdx,[swapchain_heap_start]
+        mov rdx,[.back_buffer_handle+rsp]
         lea r8,[clear_color]
         xor r9d,r9d
         mov qword[k_funcparam5+rsp],0
         call [ID3D12GraphicsCommandList.ClearRenderTargetView+rdi]
+  ; set back buffer as render target
+        mov rcx,rsi
+        mov edx,1
+        lea r8,[.back_buffer_handle+rsp]
+        mov r9d,1
+        mov qword[k_funcparam5+rsp],0
+        call [ID3D12GraphicsCommandList.OMSetRenderTargets+rdi]
+  ; draw
+        mov rcx,rsi
+        mov edx,D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+        call [ID3D12GraphicsCommandList.IASetPrimitiveTopology+rdi]
+        mov rcx,rsi
+        mov edx,3
+        mov r8d,1
+        xor r9d,r9d
+        mov dword[k_funcparam5+rsp],0
+        call [ID3D12GraphicsCommandList.DrawInstanced+rdi]
   ; back buffer to D3D12_RESOURCE_STATE_PRESENT
         mov eax,[back_buffer_index]
         mov rax,[swapchain_buffer+rax*8]
