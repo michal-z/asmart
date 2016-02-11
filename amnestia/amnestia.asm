@@ -181,13 +181,17 @@ macro MALLOC size {
         call [HeapAlloc] }
 
 macro FREE ptr {
+local .end
+        mov r8,ptr
+        test r8,r8
+        jz .end
         mov rcx,[process_heap]
         xor edx,edx
-        lea r8,[ptr]
-        call [HeapFree] }
+        call [HeapFree]
+  .end: }
 
 macro SAFE_CLOSE handle {
-  local .end
+local .end
         mov rcx,handle
         test rcx,rcx
         jz .end
@@ -196,7 +200,7 @@ macro SAFE_CLOSE handle {
   .end: }
 
 macro SAFE_RELEASE iface {
-  local .end
+local .end
         mov rcx,iface
         test rcx,rcx
         jz .end
@@ -206,7 +210,7 @@ macro SAFE_RELEASE iface {
   .end: }
 
 macro FALIGN {
-        align 16 }
+align 16 }
 
 macro DEBUG_BREAK {
         int3

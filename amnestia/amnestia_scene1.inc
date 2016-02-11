@@ -75,7 +75,10 @@ end virtual
         lea r9,[scene1.pso]
         mov rax,[rcx]
         call [ID3D12Device.CreateGraphicsPipelineState+rax]
-        test eax,eax
+        mov esi,eax
+        FREE [.pso_desc.VS.pShaderBytecode+rsp]
+        FREE [.pso_desc.PS.pShaderBytecode+rsp]
+        test esi,esi
         js .error
   ; success
         mov eax,1
