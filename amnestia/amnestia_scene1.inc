@@ -1,6 +1,9 @@
 struc scene1 {
+  .pso dq 0
   .rootsig dq 0
-  .pso dq 0 }
+align 1
+  .vs db 'data/vs_triangle.cso',0
+  .ps db 'data/ps_triangle.cso',0 }
 
 if program_section = 'code'
 ;=============================================================================
@@ -8,16 +11,55 @@ FALIGN
 scene1_init:
 ;-----------------------------------------------------------------------------
 virtual at 0
-  rq 4
+  rq 6
   .rootsig_desc D3D12_ROOT_SIGNATURE_DESC
+  align 8
+  .pso_desc D3D12_GRAPHICS_PIPELINE_STATE_DESC
   align 8
   .d3dblob dq ?
   align 32
-  .k_stack_size = $+24
+  .k_stack_size = $+16
 end virtual
+        push rsi
         sub rsp,.k_stack_size
         ZERO_STACK .k_stack_size
+  ; root signature
+        lea rcx,[.rootsig_desc+rsp]
+        mov edx,D3D_ROOT_SIGNATURE_VERSION_1
+        lea r8,[.d3dblob+rsp]
+        xor r9d,r9d
+        call [D3D12SerializeRootSignature]
+        mov rcx,[.d3dblob+rsp]
+        mov rax,[rcx]
+        call [ID3DBlob.GetBufferPointer+rax]
+        mov rsi,rax
+        mov rcx,[.d3dblob+rsp]
+        mov rax,[rcx]
+        call [ID3DBlob.GetBufferSize+rax]
+        mov rcx,[device]
+        xor edx,edx
+        mov r8,rsi
+        mov r9,rax
+        lea rax,[IID_ID3D12RootSignature]
+        mov [k_funcparam5+rsp],rax
+        lea rax,[scene1.rootsig]
+        mov [k_funcparam6+rsp],rax
+        mov rax,[rcx]
+        call [ID3D12Device.CreateRootSignature+rax]
+        mov esi,eax
+        SAFE_RELEASE [.d3dblob+rsp]
+        test esi,esi
+        js .error
+  ; pso
+  ; success
+        mov eax,1
         add rsp,.k_stack_size
+        pop rsi
+        ret
+  .error:
+        xor eax,eax
+        add rsp,.k_stack_size
+        pop rsi
         ret
 ;=============================================================================
 FALIGN
@@ -101,10 +143,11 @@ end virtual
 ;=============================================================================
 else if program_section = 'data'
 
-scene1 scene1
+align 8
+  scene1 scene1
 
 end if
-
+;=============================================================================
 restruc scene1
 ;=============================================================================
 ; vim: ft=fasm autoindent tabstop=8 softtabstop=8 shiftwidth=8 :

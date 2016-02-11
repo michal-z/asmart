@@ -183,7 +183,7 @@ macro MALLOC size {
 macro FREE ptr {
         mov rcx,[process_heap]
         xor edx,edx
-        mov r8,ptr
+        lea r8,[ptr]
         call [HeapFree] }
 
 macro SAFE_CLOSE handle {
@@ -233,6 +233,7 @@ include 'amnestia_demo.inc'
 include 'amnestia_audio.inc'
 include 'amnestia_math.inc'
 include 'amnestia_scene1.inc'
+include 'amnestia_lib.inc'
 ;=============================================================================
 FALIGN
 check_cpu_extensions:
