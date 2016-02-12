@@ -1,7 +1,14 @@
+struct transform_t
+{
+  float x, y;
+};
+ConstantBuffer<transform_t> g_transform : register(b0);
 
 float4 vs_triangle(uint id : SV_VertexID) : SV_Position
 {
   float2 verts[] = { float2(-0.7f, -0.7f), float2(0.7f, -0.7f), float2(0.0f, 0.7f) };
+  verts[id].x += g_transform.x;
+  verts[id].y += g_transform.y;
   return float4(verts[id], 0.0f, 1.0f);
 }
 

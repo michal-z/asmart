@@ -1,6 +1,7 @@
 struc scene1 {
   .pso dq 0
   .rootsig dq 0
+  .constant_buffer dq 0
 align 1
   .vs db 'data/vs_triangle.cso',0
   .ps db 'data/ps_triangle.cso',0 }
@@ -11,10 +12,16 @@ FALIGN
 scene1_init:
 ;-----------------------------------------------------------------------------
 virtual at 0
-  rq 6
+  rq 8
   .rootsig_desc D3D12_ROOT_SIGNATURE_DESC
   align 8
   .pso_desc D3D12_GRAPHICS_PIPELINE_STATE_DESC
+  align 8
+  .root_descriptor D3D12_ROOT_PARAMETER
+  align 8
+  .upload_heap_props D3D12_HEAP_PROPERTIES
+  align 8
+  .buffer_res_desc D3D12_RESOURCE_DESC
   align 8
   .d3dblob dq ?
   align 32
@@ -23,7 +30,36 @@ end virtual
         push rsi
         sub rsp,.k_stack_size
         ZERO_STACK .k_stack_size
+  ; constant buffer
+        mov [.upload_heap_props.Type+rsp],D3D12_HEAP_TYPE_UPLOAD
+        mov [.buffer_res_desc.Dimension+rsp],D3D12_RESOURCE_DIMENSION_BUFFER
+        mov [.buffer_res_desc.Width+rsp],1024
+        mov [.buffer_res_desc.Height+rsp],1
+        mov [.buffer_res_desc.DepthOrArraySize+rsp],1
+        mov [.buffer_res_desc.MipLevels+rsp],1
+        mov [.buffer_res_desc.SampleDesc.Count+rsp],1
+        mov [.buffer_res_desc.Layout+rsp],D3D12_TEXTURE_LAYOUT_ROW_MAJOR
+        mov rcx,[device]
+        lea rdx,[.upload_heap_props+rsp]
+        mov r8d,D3D12_HEAP_FLAG_NONE
+        lea r9,[.buffer_res_desc+rsp]
+        mov dword[k_funcparam5+rsp],D3D12_RESOURCE_STATE_GENERIC_READ
+        mov qword[k_funcparam6+rsp],0
+        lea rax,[IID_ID3D12Resource]
+        mov [k_funcparam7+rsp],rax
+        lea rax,[scene1.constant_buffer]
+        mov [k_funcparam8+rsp],rax
+        mov rax,[rcx]
+        call [ID3D12Device.CreateCommittedResource+rax]
+        test eax,eax
+        js .error
+  ; map constant buffer
   ; root signature
+        mov [.root_descriptor.ParameterType+rsp],D3D12_ROOT_PARAMETER_TYPE_CBV
+        mov [.root_descriptor.Descriptor.ShaderRegister+rsp],0
+        mov [.rootsig_desc.NumParameters+rsp],1
+        lea rax,[.root_descriptor+rsp]
+        mov [.rootsig_desc.pParameters+rsp],rax
         lea rcx,[.rootsig_desc+rsp]
         mov edx,D3D_ROOT_SIGNATURE_VERSION_1
         lea r8,[.d3dblob+rsp]
