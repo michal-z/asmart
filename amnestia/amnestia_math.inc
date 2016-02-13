@@ -1,95 +1,4 @@
-;=============================================================================
-FALIGN
-am_sinf:
-;-----------------------------------------------------------------------------
-macro AM_SINF {
-        movaps xmm7,xmm0
-        movss xmm1,[k4_i32_7fffffff]
-        movss xmm2,[k4_i32_80000000]
-        movss xmm3,[k4_f32_2_div_pi]
-        andps xmm0,xmm1
-        andps xmm7,xmm2
-        mulss xmm0,xmm3
-        pxor xmm3,xmm3
-        movd xmm5,[k4_i32_1]
-        movss xmm4,[k4_f32_1]
-        cvttps2dq xmm2,xmm0
-        pand xmm5,xmm2
-        movd xmm1,[k4_i32_2]
-        pcmpeqd xmm5,xmm3
-        cvtdq2ps xmm6,xmm2
-        pand xmm2,xmm1
-        pslld xmm2,30
-        subss xmm0,xmm6
-        movss xmm3,[k4_f32_sincos_p3]
-        minss xmm0,xmm4
-        subss xmm4,xmm0
-        andps xmm0,xmm5
-        andnps xmm5,xmm4
-        orps xmm0,xmm5
-        movaps xmm1,xmm0
-        movss xmm4,[k4_f32_sincos_p2]
-        mulss xmm0,xmm0
-        xorps xmm2,xmm7
-        movss xmm5,[k4_f32_sincos_p1]
-        orps xmm1,xmm2
-        movaps xmm7,xmm0
-        mulss xmm0,xmm3
-        movss xmm6,[k4_f32_sincos_p0]
-        addss xmm0,xmm4
-        mulss xmm0,xmm7
-        addss xmm0,xmm5
-        mulss xmm0,xmm7
-        addss xmm0,xmm6
-        mulss xmm0,xmm1 }
-
-        AM_SINF
-        ret
-;=============================================================================
-FALIGN
-am_cosf:
-;-----------------------------------------------------------------------------
-macro AM_COSF {
-        movss xmm1,[k4_i32_7fffffff]
-        movss xmm2,[k4_f32_pi_div_2]
-        movss xmm3,[k4_f32_2_div_pi]
-        andps xmm0,xmm1
-        addss xmm0,xmm2
-        mulss xmm0,xmm3
-        pxor xmm3,xmm3
-        movd xmm5,[k4_i32_1]
-        movss xmm4,[k4_f32_1]
-        cvttps2dq xmm2,xmm0
-        pand xmm5,xmm2
-        movd xmm1,[k4_i32_2]
-        pcmpeqd xmm5,xmm3
-        cvtdq2ps xmm6,xmm2
-        pand xmm2,xmm1
-        pslld xmm2,30
-        subss xmm0,xmm6
-        movss xmm3,[k4_f32_sincos_p3]
-        minss xmm0,xmm4
-        subss xmm4,xmm0
-        andps xmm0,xmm5
-        andnps xmm5,xmm4
-        orps xmm0,xmm5
-        movaps xmm1,xmm0
-        movss xmm4,[k4_f32_sincos_p2]
-        mulss xmm0,xmm0
-        movss xmm5,[k4_f32_sincos_p1]
-        orps xmm1,xmm2
-        movaps xmm7,xmm0
-        mulss xmm0,xmm3
-        movss xmm6,[k4_f32_sincos_p0]
-        addss xmm0,xmm4
-        mulss xmm0,xmm7
-        addss xmm0,xmm5
-        mulss xmm0,xmm7
-        addss xmm0,xmm6
-        mulss xmm0,xmm1 }
-
-        AM_COSF
-        ret
+if program_section = 'code'
 ;=============================================================================
 macro VSHUFPS_MM_SHUFFLE d*,s0*,s1*,fp3*,fp2*,fp1*,fp0* {
         vshufps d,s0,s1,(fp3 shl 6) or (fp2 shl 4) or (fp1 shl 2) or fp0 }
@@ -242,5 +151,15 @@ macro MATRIX_MUL_TRANSPOSE dst*,m0*,m1* {
 
         MATRIX_MUL_TRANSPOSE rcx,rdx,r8
         ret
+;=============================================================================
+else if program_section = 'cdata'
+
+align 16
+  k4_f32_identity_r0: dd 1.0,0.0,0.0,0.0
+  k4_f32_identity_r1: dd 0.0,1.0,0.0,0.0
+  k4_f32_identity_r2: dd 0.0,0.0,1.0,0.0
+  k4_f32_identity_r3: dd 0.0,0.0,0.0,1.0
+
+end if
 ;=============================================================================
 ; vim: ft=fasm autoindent tabstop=8 softtabstop=8 shiftwidth=8 :

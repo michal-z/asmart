@@ -534,6 +534,7 @@ winproc:
         ret
 ;========================================================================
 section '.data' data readable
+program_section = 'cdata'
 
   k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
   k_swapchain_buffer_count = 4
@@ -563,7 +564,7 @@ align 1
   _win_text_fmt db '[%d fps  %d us] amnestia',0
   _win_class_name db 'amnestia',0
 
-include 'amnestia_const.inc'
+include 'amnestia_math.inc'
 ;========================================================================
 section '.data' data readable writeable
 program_section = 'data'

@@ -2,6 +2,7 @@ struc scene1 {
   .pso dq 0
   .rootsig dq 0
   .constant_buffer dq 0
+  .constant_buffer_ptr dq 0
 align 1
   .vs db 'data/vs_triangle.cso',0
   .ps db 'data/ps_triangle.cso',0 }
@@ -23,7 +24,12 @@ virtual at 0
   align 8
   .buffer_res_desc D3D12_RESOURCE_DESC
   align 8
+  .empty_range D3D12_RANGE
+  align 8
   .d3dblob dq ?
+  align 16
+  .identity_mat: rd 16
+  .translation_mat: rd 16
   align 32
   .k_stack_size = $+16
 end virtual
@@ -53,7 +59,34 @@ end virtual
         call [ID3D12Device.CreateCommittedResource+rax]
         test eax,eax
         js .error
-  ; map constant buffer
+  ; map and fill constant buffer
+        mov rcx,[scene1.constant_buffer]
+        xor edx,edx
+        lea r8,[.empty_range+rsp]
+        lea r9,[scene1.constant_buffer_ptr]
+        mov rax,[rcx]
+        call [ID3D12Resource.Map+rax]
+        test eax,eax
+        js .error
+        vmovaps xmm0,[k4_f32_identity_r0]
+        vmovaps xmm1,[k4_f32_identity_r1]
+        vmovaps xmm2,[k4_f32_identity_r2]
+        vmovaps xmm3,[k4_f32_identity_r3]
+        vmovaps [.identity_mat+rsp],xmm0
+        vmovaps [.identity_mat+rsp+16],xmm1
+        vmovaps [.identity_mat+rsp+32],xmm2
+        vmovaps [.identity_mat+rsp+48],xmm3
+        vmovaps [.translation_mat+rsp],xmm0
+        vmovaps [.translation_mat+rsp+16],xmm1
+        vmovaps [.translation_mat+rsp+32],xmm2
+        vmovaps [.translation_mat+rsp+48],xmm3
+        mov [.translation_mat+rsp+48],dword 0.3
+        mov [.translation_mat+rsp+52],dword 0.3
+        mov [.translation_mat+rsp+56],dword 0.0
+        mov rcx,[scene1.constant_buffer_ptr]
+        lea rdx,[.identity_mat+rsp]
+        lea r8,[.translation_mat+rsp]
+        call matrix_mul_transpose
   ; root signature
         mov [.root_descriptor.ParameterType+rsp],D3D12_ROOT_PARAMETER_TYPE_CBV
         mov [.root_descriptor.Descriptor.ShaderRegister+rsp],0
@@ -171,9 +204,17 @@ end virtual
         mov edx,1
         lea r8,[scissor]
         call [ID3D12GraphicsCommandList.RSSetScissorRects+rdi]
+  ; set root signature and resources
         mov rcx,rsi
         mov rdx,[scene1.rootsig]
         call [ID3D12GraphicsCommandList.SetGraphicsRootSignature+rdi]
+        mov rcx,[scene1.constant_buffer]
+        mov rax,[rcx]
+        call [ID3D12Resource.GetGPUVirtualAddress+rax]
+        mov rcx,rsi
+        xor edx,edx
+        mov r8,rax
+        call [ID3D12GraphicsCommandList.SetGraphicsRootConstantBufferView+rdi]
   ; back buffer to D3D12_RESOURCE_STATE_RENDER_TARGET
         mov eax,[back_buffer_index]
         mov rax,[swapchain_buffer+rax*8]
