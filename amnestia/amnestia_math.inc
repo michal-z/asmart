@@ -6,11 +6,28 @@ macro VSHUFPS_MM_SHUFFLE d*,s0*,s1*,fp3*,fp2*,fp1*,fp0* {
 FALIGN
 sinf:
 ;-----------------------------------------------------------------------------
+        DEBUG_BREAK
         vmovaps xmm1,xmm0
         vmulss xmm0,xmm0,[k4_f32_reciprocal_two_pi]
         vroundss xmm0,xmm0,xmm0,0
         vmulss xmm0,xmm0,[k4_f32_two_pi]
         vsubss xmm0,xmm1,xmm0
+        vandps xmm1,xmm0,[k4_i32_negative_zero]
+        vorps xmm2,xmm1,[k4_f32_pi]
+        vandnps xmm3,xmm1,xmm0
+        vsubss xmm4,xmm2,xmm0
+        vcmpless xmm5,xmm3,[k4_f32_half_pi]
+        vandps xmm6,xmm5,xmm0
+        vandnps xmm7,xmm5,xmm4
+        vorps xmm0,xmm6,xmm7
+        vmulss xmm1,xmm0,xmm0
+        vmovss xmm2,[k4_f32_sin_coefficients1]
+        vfmadd213ss xmm2,xmm1,[k4_f32_sin_coefficients0+12]
+        vfmadd213ss xmm2,xmm1,[k4_f32_sin_coefficients0+8]
+        vfmadd213ss xmm2,xmm1,[k4_f32_sin_coefficients0+4]
+        vfmadd213ss xmm2,xmm1,[k4_f32_sin_coefficients0]
+        vfmadd213ss xmm2,xmm1,[k4_f32_one]
+        vmulss xmm0,xmm2,xmm0
         ret
 ;=============================================================================
 FALIGN
@@ -173,6 +190,13 @@ align 16
   k4_f32_pi: dd 3.141592654,3.141592654,3.141592654,3.141592654
   k4_f32_two_pi: dd 6.283185307,6.283185307,6.283185307,6.283185307
   k4_f32_reciprocal_two_pi: dd 0.159154943,0.159154943,0.159154943,0.159154943
+  k4_f32_half_pi: dd 1.570796327,1.570796327,1.570796327,1.570796327
+  k4_f32_sin_coefficients0: dd -0.16666667,0.0083333310,-0.00019840874,2.7525562e-06
+  k4_f32_sin_coefficients1: dd -2.3889859e-08,-0.16665852,0.0083139502,-0.00018524670
+  k4_f32_cos_coefficients0: dd -0.5,0.041666638,-0.0013888378,2.4760495e-05
+  k4_f32_cos_coefficients1: dd -2.6051615e-07,-0.49992746,0.041493919,-0.0012712436
+  k4_i32_negative_zero: dd 0x80000000,0x80000000,0x80000000,0x80000000
+  k4_f32_one: dd 1.0,1.0,1.0,1.0
 
 end if
 ;=============================================================================
