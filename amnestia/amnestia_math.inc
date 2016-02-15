@@ -91,17 +91,25 @@ sincosf:
         ret
 ;=============================================================================
 FALIGN
+matrix_rotation_y:
+;-----------------------------------------------------------------------------
+        call sincosf
+        vxorps xmm2,xmm2,xmm2
+        vmovss xmm0,xmm2,xmm0
+        vmovss xmm1,xmm2,xmm1
+        ret
+;=============================================================================
+FALIGN
 matrix_mul:
 ;-----------------------------------------------------------------------------
-macro MATRIX_MUL dst*,m0*,m1* {
-        vmovaps xmm8,[m0]
-        vmovaps xmm9,[m0+16]
-        vmovaps xmm10,[m0+32]
-        vmovaps xmm11,[m0+48]
-        vmovaps xmm4,[m1]
-        vmovaps xmm5,[m1+16]
-        vmovaps xmm6,[m1+32]
-        vmovaps xmm7,[m1+48]
+        vmovaps xmm8,[rdx]
+        vmovaps xmm9,[rdx+16]
+        vmovaps xmm10,[rdx+32]
+        vmovaps xmm11,[rdx+48]
+        vmovaps xmm4,[r8]
+        vmovaps xmm5,[r8+16]
+        vmovaps xmm6,[r8+32]
+        vmovaps xmm7,[r8+48]
   ; row 0
         vshufps xmm0,xmm8,xmm8,$00
         vshufps xmm1,xmm8,xmm8,$55
@@ -114,7 +122,7 @@ macro MATRIX_MUL dst*,m0*,m1* {
         vaddps xmm0,xmm0,xmm1
         vaddps xmm2,xmm2,xmm3
         vaddps xmm0,xmm0,xmm2
-        vmovaps [dst],xmm0
+        vmovaps [rcx],xmm0
   ; row 1
         vshufps xmm0,xmm9,xmm9,$00
         vshufps xmm1,xmm9,xmm9,$55
@@ -127,7 +135,7 @@ macro MATRIX_MUL dst*,m0*,m1* {
         vaddps xmm0,xmm0,xmm1
         vaddps xmm2,xmm2,xmm3
         vaddps xmm0,xmm0,xmm2
-        vmovaps [dst+16],xmm0
+        vmovaps [rcx+16],xmm0
   ; row 2
         vshufps xmm0,xmm10,xmm10,$00
         vshufps xmm1,xmm10,xmm10,$55
@@ -140,7 +148,7 @@ macro MATRIX_MUL dst*,m0*,m1* {
         vaddps xmm0,xmm0,xmm1
         vaddps xmm2,xmm2,xmm3
         vaddps xmm0,xmm0,xmm2
-        vmovaps [dst+32],xmm0
+        vmovaps [rcx+32],xmm0
   ; row 3
         vshufps xmm0,xmm11,xmm11,$00
         vshufps xmm1,xmm11,xmm11,$55
@@ -153,23 +161,20 @@ macro MATRIX_MUL dst*,m0*,m1* {
         vaddps xmm0,xmm0,xmm1
         vaddps xmm2,xmm2,xmm3
         vaddps xmm0,xmm0,xmm2
-        vmovaps [dst+48],xmm0 }
-
-        MATRIX_MUL rcx,rdx,r8
+        vmovaps [rcx+48],xmm0
         ret
 ;=============================================================================
 FALIGN
 matrix_mul_transpose:
 ;-----------------------------------------------------------------------------
-macro MATRIX_MUL_TRANSPOSE dst*,m0*,m1* {
-        vmovaps xmm8,[m0]
-        vmovaps xmm9,[m0+16]
-        vmovaps xmm10,[m0+32]
-        vmovaps xmm11,[m0+48]
-        vmovaps xmm4,[m1]
-        vmovaps xmm5,[m1+16]
-        vmovaps xmm6,[m1+32]
-        vmovaps xmm7,[m1+48]
+        vmovaps xmm8,[rdx]
+        vmovaps xmm9,[rdx+16]
+        vmovaps xmm10,[rdx+32]
+        vmovaps xmm11,[rdx+48]
+        vmovaps xmm4,[r8]
+        vmovaps xmm5,[r8+16]
+        vmovaps xmm6,[r8+32]
+        vmovaps xmm7,[r8+48]
   ; row 0
         vshufps xmm0,xmm8,xmm8,$00
         vshufps xmm1,xmm8,xmm8,$55
@@ -231,12 +236,10 @@ macro MATRIX_MUL_TRANSPOSE dst*,m0*,m1* {
         VSHUFPS_MM_SHUFFLE xmm1,xmm4,xmm5,3,1,3,1
         VSHUFPS_MM_SHUFFLE xmm2,xmm6,xmm7,2,0,2,0
         VSHUFPS_MM_SHUFFLE xmm3,xmm6,xmm7,3,1,3,1
-        vmovaps [dst],xmm0
-        vmovaps [dst+16],xmm1
-        vmovaps [dst+32],xmm2
-        vmovaps [dst+48],xmm3 }
-
-        MATRIX_MUL_TRANSPOSE rcx,rdx,r8
+        vmovaps [rcx],xmm0
+        vmovaps [rcx+16],xmm1
+        vmovaps [rcx+32],xmm2
+        vmovaps [rcx+48],xmm3
         ret
 ;=============================================================================
 else if program_section = 'cdata'
