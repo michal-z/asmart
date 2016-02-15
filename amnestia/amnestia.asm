@@ -478,10 +478,6 @@ virtual at 0
 end virtual
         and rsp,-32
         sub rsp,.k_stack_size
-        vxorps xmm0,xmm0,xmm0
-        mov eax,dword 32.56
-        vmovd xmm0,eax
-        call sinf
         call init
         test eax,eax
         jz .quit
