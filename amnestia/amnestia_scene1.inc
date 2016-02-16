@@ -27,7 +27,7 @@ virtual at 0
   .empty_range D3D12_RANGE
   align 8
   .d3dblob dq ?
-  align 16
+  align 32
   .identity_mat: rd 16
   .translation_mat: rd 16
   align 32
@@ -68,18 +68,12 @@ end virtual
         call [ID3D12Resource.Map+rax]
         test eax,eax
         js .error
-        vmovaps xmm0,[k4_f32_identity_r0]
-        vmovaps xmm1,[k4_f32_identity_r1]
-        vmovaps xmm2,[k4_f32_identity_r2]
-        vmovaps xmm3,[k4_f32_identity_r3]
-        vmovaps [.identity_mat+rsp],xmm0
-        vmovaps [.identity_mat+rsp+16],xmm1
-        vmovaps [.identity_mat+rsp+32],xmm2
-        vmovaps [.identity_mat+rsp+48],xmm3
-        vmovaps [.translation_mat+rsp],xmm0
-        vmovaps [.translation_mat+rsp+16],xmm1
-        vmovaps [.translation_mat+rsp+32],xmm2
-        vmovaps [.translation_mat+rsp+48],xmm3
+        vmovaps ymm0,[k_f32_identity_r0]
+        vmovaps ymm1,[k_f32_identity_r2]
+        vmovaps [.identity_mat+rsp],ymm0
+        vmovaps [.identity_mat+rsp+32],ymm1
+        vmovaps [.translation_mat+rsp],ymm0
+        vmovaps [.translation_mat+rsp+32],ymm1
         mov [.translation_mat+rsp+48],dword 0.3
         mov [.translation_mat+rsp+52],dword 0.3
         mov [.translation_mat+rsp+56],dword 0.0

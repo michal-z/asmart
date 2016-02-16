@@ -247,8 +247,7 @@ demo_deinit:
         test rcx,rcx
         jz @f
         call rcx
-  @@:
-        call audio_stop
+  @@:   call audio_stop
         add rsp,.k_stack_size
         ret
 ;=============================================================================
