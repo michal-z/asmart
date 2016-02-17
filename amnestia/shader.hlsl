@@ -13,5 +13,5 @@ float4 vs_triangle(uint id : SV_VertexID) : SV_Position
 
 float4 ps_triangle(float4 position : SV_Position) : SV_Target0
 {
-  return float4(0.0f, 0.2f, 0.8f, 1.0f);
+  return float4(1.0f, 0.9f, 0.0f, 1.0f);
 }

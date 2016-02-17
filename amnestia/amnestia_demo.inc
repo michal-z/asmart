@@ -332,7 +332,7 @@ align 4
   cbv_srv_uav_size dd 0
   back_buffer_index dd 0
   frame_index dd 0
-  clear_color dd 0.0,1.0,0.0,1.0
+  clear_color dd 0.0,0.2,0.4,1.0
 
 end if
 ;=============================================================================
