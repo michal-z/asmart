@@ -232,6 +232,26 @@ macro MATRIX_ROTATION_Z dst* {
         vmovss [dst+16],xmm2
         vmovss [dst+16+4],xmm1 }
 ;=============================================================================
+macro MATRIX_PERSPECTIVE_FOV dst* {
+        vmovaps xmm11,xmm1
+        vmovaps xmm12,xmm2
+        vmovaps xmm13,xmm3
+        vmulss xmm0,xmm0,[k_f32_half]
+        call sincosf
+        vdivss xmm0,xmm1,xmm0
+        vdivss xmm1,xmm0,xmm11
+        vsubss xmm2,xmm13,xmm12
+        vdivss xmm2,xmm13,xmm2
+        vmulss xmm3,xmm2,xmm12
+        vxorps ymm4,ymm4,ymm4
+        vsubss xmm3,xmm4,xmm3
+        vmovaps [dst],ymm4
+        vmovaps [dst+32],ymm4
+        vmovss [dst],xmm1
+        vmovss [dst+16+4],xmm0
+        vmovss [dst+32+8],xmm2
+        vmovss [dst+48+8],xmm3 }
+;=============================================================================
 FALIGN
 matrix_mul:
 ;-----------------------------------------------------------------------------
