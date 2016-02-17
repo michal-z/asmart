@@ -1,8 +1,8 @@
 struc scene1 {
   .pso dq 0
   .rootsig dq 0
-  .constant_buffer dq 0
-  .constant_buffer_ptr dq 0
+  .constant_buffer dq k_frame_count dup 0
+  .constant_buffer_ptr dq k_frame_count dup 0
 align 1
   .vs db 'data/vs_triangle.cso',0
   .ps db 'data/ps_triangle.cso',0 }
@@ -28,15 +28,12 @@ virtual at 0
   align 8
   .d3dblob dq ?
   align 32
-  .identity_mat: rd 16
-  .translation_mat: rd 16
-  align 32
   .k_stack_size = $+16
 end virtual
         push rsi
         sub rsp,.k_stack_size
         ZERO_STACK .k_stack_size
-  ; constant buffer
+  ; create constant buffers
         mov [.upload_heap_props.Type+rsp],D3D12_HEAP_TYPE_UPLOAD
         mov [.buffer_res_desc.Dimension+rsp],D3D12_RESOURCE_DIMENSION_BUFFER
         mov [.buffer_res_desc.Width+rsp],1024
@@ -45,7 +42,8 @@ end virtual
         mov [.buffer_res_desc.MipLevels+rsp],1
         mov [.buffer_res_desc.SampleDesc.Count+rsp],1
         mov [.buffer_res_desc.Layout+rsp],D3D12_TEXTURE_LAYOUT_ROW_MAJOR
-        mov rcx,[device]
+        xor esi,esi
+  @@:   mov rcx,[device]
         lea rdx,[.upload_heap_props+rsp]
         mov r8d,D3D12_HEAP_FLAG_NONE
         lea r9,[.buffer_res_desc+rsp]
@@ -53,34 +51,24 @@ end virtual
         mov qword[k_funcparam6+rsp],0
         lea rax,[IID_ID3D12Resource]
         mov [k_funcparam7+rsp],rax
-        lea rax,[scene1.constant_buffer]
+        lea rax,[scene1.constant_buffer+rsi*8]
         mov [k_funcparam8+rsp],rax
         mov rax,[rcx]
         call [ID3D12Device.CreateCommittedResource+rax]
         test eax,eax
         js .error
-  ; map and fill constant buffer
-        mov rcx,[scene1.constant_buffer]
+  ; map constant buffer
+        mov rcx,[scene1.constant_buffer+rsi*8]
         xor edx,edx
         lea r8,[.empty_range+rsp]
-        lea r9,[scene1.constant_buffer_ptr]
+        lea r9,[scene1.constant_buffer_ptr+rsi*8]
         mov rax,[rcx]
         call [ID3D12Resource.Map+rax]
         test eax,eax
         js .error
-        vmovaps ymm0,[k_f32_identity_r0]
-        vmovaps ymm1,[k_f32_identity_r2]
-        vmovaps [.identity_mat+rsp],ymm0
-        vmovaps [.identity_mat+rsp+32],ymm1
-        vmovaps [.translation_mat+rsp],ymm0
-        vmovaps [.translation_mat+rsp+32],ymm1
-        mov [.translation_mat+rsp+48],dword 0.3
-        mov [.translation_mat+rsp+52],dword 0.3
-        mov [.translation_mat+rsp+56],dword 0.0
-        mov rcx,[scene1.constant_buffer_ptr]
-        lea rdx,[.identity_mat+rsp]
-        lea r8,[.translation_mat+rsp]
-        call matrix_mul_transpose
+        add esi,1
+        cmp esi,k_frame_count
+        jb @b
   ; root signature
         mov [.root_descriptor.ParameterType+rsp],D3D12_ROOT_PARAMETER_TYPE_CBV
         mov [.root_descriptor.Descriptor.ShaderRegister+rsp],0
@@ -172,6 +160,11 @@ virtual at 0
 end virtual
         push rsi rdi
         sub rsp,.k_stack_size
+  ; update rotation matrix
+        mov eax,[frame_index]
+        mov rcx,[scene1.constant_buffer_ptr+rax*8]
+        vcvtsd2ss xmm0,xmm0,[time]
+        MATRIX_ROTATION_X rcx
   ; init transition barrier
         mov [.barrier.Type+rsp],D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
         mov [.barrier.Flags+rsp],0

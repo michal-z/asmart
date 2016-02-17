@@ -575,8 +575,8 @@ include 'amnestia_scene1.inc'
 
 align 8
   win_handle dq 0
-  win_width dd 1280
-  win_height dd 720
+  win_width dd 800
+  win_height dd 800
 
 align 8
   process_heap dq 0
