@@ -156,15 +156,26 @@ virtual at 0
   align 8
   .back_buffer_handle dq ?
   align 32
+  .identity_mat: rd 16
+  .rotation_mat: rd 16
+  align 32
   .k_stack_size = $+8
 end virtual
         push rsi rdi
         sub rsp,.k_stack_size
   ; update rotation matrix
+
+        vcvtsd2ss xmm0,xmm0,[time]
+        MATRIX_ROTATION_X .rotation_mat+rsp
+        vmovaps ymm0,[k_f32_identity_r0]
+        vmovaps ymm1,[k_f32_identity_r2]
+        vmovaps [.identity_mat+rsp],ymm0
+        vmovaps [.identity_mat+32+rsp],ymm1
         mov eax,[frame_index]
         mov rcx,[scene1.constant_buffer_ptr+rax*8]
-        vcvtsd2ss xmm0,xmm0,[time]
-        MATRIX_ROTATION_X rcx
+        lea rdx,[.identity_mat+rsp]
+        lea r8,[.rotation_mat+rsp]
+        call matrix_mul_transpose
   ; init transition barrier
         mov [.barrier.Type+rsp],D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
         mov [.barrier.Flags+rsp],0
