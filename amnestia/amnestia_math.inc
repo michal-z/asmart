@@ -337,22 +337,20 @@ matrix_mul_transpose:
         vaddps ymm0,ymm0,ymm2
         vmovaps ymm11,ymm0
   ; transpose and store the result
-        vmovaps xmm12,xmm10
-        vextractf128 xmm13,ymm10,1
-        vmovaps xmm14,xmm11
-        vextractf128 xmm15,ymm11,1
-        VSHUFPS_MM_SHUFFLE xmm4,xmm12,xmm13,1,0,1,0
-        VSHUFPS_MM_SHUFFLE xmm6,xmm12,xmm13,3,2,3,2
-        VSHUFPS_MM_SHUFFLE xmm5,xmm14,xmm15,1,0,1,0
-        VSHUFPS_MM_SHUFFLE xmm7,xmm14,xmm15,3,2,3,2
-        VSHUFPS_MM_SHUFFLE xmm0,xmm4,xmm5,2,0,2,0
-        VSHUFPS_MM_SHUFFLE xmm1,xmm4,xmm5,3,1,3,1
-        VSHUFPS_MM_SHUFFLE xmm2,xmm6,xmm7,2,0,2,0
-        VSHUFPS_MM_SHUFFLE xmm3,xmm6,xmm7,3,1,3,1
-        vmovaps [rcx],xmm0
-        vmovaps [rcx+16],xmm1
-        vmovaps [rcx+32],xmm2
-        vmovaps [rcx+48],xmm3
+        ;vmovaps xmm12,xmm10
+        ;vextractf128 xmm13,ymm10,1
+        ;vmovaps xmm14,xmm11
+        ;vextractf128 xmm15,ymm11,1
+        vunpcklps ymm4,ymm10,ymm11
+        vunpckhps ymm5,ymm10,ymm11
+        vperm2f128 ymm6,ymm4,ymm5,1
+        vperm2f128 ymm7,ymm4,ymm5,1
+        vunpcklps ymm4,ymm10,ymm11
+        vunpckhps ymm5,ymm10,ymm11
+        vmovaps [rcx],ymm0
+        vmovaps [rcx+32],ymm1
+        ;vmovaps [rcx+32],xmm2
+        ;vmovaps [rcx+48],xmm3
         ret
 ;=============================================================================
 else if program_section = 'cdata'
