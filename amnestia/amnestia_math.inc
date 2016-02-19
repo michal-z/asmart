@@ -252,86 +252,78 @@ macro MATRIX_PERSPECTIVE_FOV dst* {
         vmovss [dst+32+8],xmm2
         vmovss [dst+48+8],xmm3 }
 ;=============================================================================
+; in: ymm0,ymm1 = m0; ymm2,ymm3 = m1
+; out: ymm0,ymm1 = m0*m1
 FALIGN
 matrix_mul:
 ;-----------------------------------------------------------------------------
-        vmovaps ymm8,[rdx]
-        vmovaps ymm9,[rdx+32]
-        vmovaps ymm4,[r8]
-        vmovaps ymm5,[r8+32]
-        vperm2f128 ymm6,ymm4,ymm4,1
-        vperm2f128 ymm7,ymm5,ymm5,1
+        vperm2f128 ymm4,ymm2,ymm2,1
+        vperm2f128 ymm5,ymm3,ymm3,1
         vmovaps ymm12,[k_i32_perm_x0_y1]
         vmovaps ymm13,[k_i32_perm_z0_w1]
         vmovaps ymm14,[k_i32_perm_y0_x1]
         vmovaps ymm15,[k_i32_perm_w0_z1]
   ; row 0,1
-        vpermps ymm0,ymm12,ymm8
-        vpermps ymm1,ymm13,ymm8
-        vpermps ymm2,ymm14,ymm8
-        vpermps ymm3,ymm15,ymm8
-        vmulps ymm0,ymm0,ymm4
-        vmulps ymm1,ymm1,ymm5
-        vmulps ymm2,ymm2,ymm6
-        vmulps ymm3,ymm3,ymm7
-        vaddps ymm0,ymm0,ymm1
-        vaddps ymm2,ymm2,ymm3
-        vaddps ymm0,ymm0,ymm2
-        vmovaps [rcx],ymm0
+        vpermps ymm6,ymm12,ymm0
+        vpermps ymm7,ymm13,ymm0
+        vpermps ymm8,ymm14,ymm0
+        vpermps ymm9,ymm15,ymm0
+        vmulps ymm6,ymm6,ymm2
+        vmulps ymm7,ymm7,ymm3
+        vmulps ymm8,ymm8,ymm4
+        vmulps ymm9,ymm9,ymm5
+        vaddps ymm6,ymm6,ymm7
+        vaddps ymm8,ymm8,ymm9
+        vaddps ymm0,ymm6,ymm8
   ; row 2,3
-        vpermps ymm0,ymm12,ymm9
-        vpermps ymm1,ymm13,ymm9
-        vpermps ymm2,ymm14,ymm9
-        vpermps ymm3,ymm15,ymm9
-        vmulps ymm0,ymm0,ymm4
-        vmulps ymm1,ymm1,ymm5
-        vmulps ymm2,ymm2,ymm6
-        vmulps ymm3,ymm3,ymm7
-        vaddps ymm0,ymm0,ymm1
-        vaddps ymm2,ymm2,ymm3
-        vaddps ymm0,ymm0,ymm2
-        vmovaps [rcx+32],ymm0
+        vpermps ymm6,ymm12,ymm1
+        vpermps ymm7,ymm13,ymm1
+        vpermps ymm8,ymm14,ymm1
+        vpermps ymm9,ymm15,ymm1
+        vmulps ymm6,ymm6,ymm2
+        vmulps ymm7,ymm7,ymm3
+        vmulps ymm8,ymm8,ymm4
+        vmulps ymm9,ymm9,ymm5
+        vaddps ymm6,ymm6,ymm7
+        vaddps ymm8,ymm8,ymm9
+        vaddps ymm1,ymm6,ymm8
         ret
 ;=============================================================================
+; in: ymm0,ymm1 = m0; ymm2,ymm3 = m1
+; out: ymm0,ymm1 = transpose(m0*m1)
 FALIGN
 matrix_mul_transpose:
 ;-----------------------------------------------------------------------------
-        vmovaps ymm8,[rdx]
-        vmovaps ymm9,[rdx+32]
-        vmovaps ymm4,[r8]
-        vmovaps ymm5,[r8+32]
-        vperm2f128 ymm6,ymm4,ymm4,1
-        vperm2f128 ymm7,ymm5,ymm5,1
+        vperm2f128 ymm4,ymm2,ymm2,1
+        vperm2f128 ymm5,ymm3,ymm3,1
         vmovaps ymm12,[k_i32_perm_x0_y1]
         vmovaps ymm13,[k_i32_perm_z0_w1]
         vmovaps ymm14,[k_i32_perm_y0_x1]
         vmovaps ymm15,[k_i32_perm_w0_z1]
   ; row 0,1
-        vpermps ymm0,ymm12,ymm8
-        vpermps ymm1,ymm13,ymm8
-        vpermps ymm2,ymm14,ymm8
-        vpermps ymm3,ymm15,ymm8
-        vmulps ymm0,ymm0,ymm4
-        vmulps ymm1,ymm1,ymm5
-        vmulps ymm2,ymm2,ymm6
-        vmulps ymm3,ymm3,ymm7
-        vaddps ymm0,ymm0,ymm1
-        vaddps ymm2,ymm2,ymm3
-        vaddps ymm0,ymm0,ymm2
-        vmovaps ymm10,ymm0
+        vpermps ymm6,ymm12,ymm0
+        vpermps ymm7,ymm13,ymm0
+        vpermps ymm8,ymm14,ymm0
+        vpermps ymm9,ymm15,ymm0
+        vmulps ymm6,ymm6,ymm2
+        vmulps ymm7,ymm7,ymm3
+        vmulps ymm8,ymm8,ymm4
+        vmulps ymm9,ymm9,ymm5
+        vaddps ymm6,ymm6,ymm7
+        vaddps ymm8,ymm8,ymm9
+        vaddps ymm10,ymm6,ymm8
   ; row 2,3
-        vpermps ymm0,ymm12,ymm9
-        vpermps ymm1,ymm13,ymm9
-        vpermps ymm2,ymm14,ymm9
-        vpermps ymm3,ymm15,ymm9
-        vmulps ymm0,ymm0,ymm4
-        vmulps ymm1,ymm1,ymm5
-        vmulps ymm2,ymm2,ymm6
-        vmulps ymm3,ymm3,ymm7
-        vaddps ymm0,ymm0,ymm1
-        vaddps ymm2,ymm2,ymm3
-        vaddps ymm0,ymm0,ymm2
-        vmovaps ymm11,ymm0
+        vpermps ymm6,ymm12,ymm1
+        vpermps ymm7,ymm13,ymm1
+        vpermps ymm8,ymm14,ymm1
+        vpermps ymm9,ymm15,ymm1
+        vmulps ymm6,ymm6,ymm2
+        vmulps ymm7,ymm7,ymm3
+        vmulps ymm8,ymm8,ymm4
+        vmulps ymm9,ymm9,ymm5
+        vaddps ymm6,ymm6,ymm7
+        vaddps ymm8,ymm8,ymm9
+        vaddps ymm11,ymm6,ymm8
   ; transpose and store the result
         vunpcklps ymm4,ymm10,ymm11
         vunpckhps ymm5,ymm10,ymm11
@@ -341,8 +333,6 @@ matrix_mul_transpose:
         vunpckhps ymm5,ymm10,ymm11
         vperm2f128 ymm0,ymm4,ymm5,$20
         vperm2f128 ymm1,ymm4,ymm5,$31
-        vmovaps [rcx],ymm0
-        vmovaps [rcx+32],ymm1
         ret
 ;=============================================================================
 else if program_section = 'cdata'
