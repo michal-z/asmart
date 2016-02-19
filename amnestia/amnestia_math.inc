@@ -261,15 +261,15 @@ matrix_mul:
         vmovaps ymm5,[r8+32]
         vperm2f128 ymm6,ymm4,ymm4,1
         vperm2f128 ymm7,ymm5,ymm5,1
+        vmovaps ymm12,[k_i32_perm_x0_y1]
+        vmovaps ymm13,[k_i32_perm_z0_w1]
+        vmovaps ymm14,[k_i32_perm_y0_x1]
+        vmovaps ymm15,[k_i32_perm_w0_z1]
   ; row 0,1
-        vshufps ymm0,ymm8,ymm8,$55
-        vshufps xmm0,xmm8,xmm8,$00
-        vshufps ymm1,ymm8,ymm8,$ff
-        vshufps xmm1,xmm8,xmm8,$aa
-        vshufps ymm2,ymm8,ymm8,$00
-        vshufps xmm2,xmm8,xmm8,$55
-        vshufps ymm3,ymm8,ymm8,$aa
-        vshufps xmm3,xmm8,xmm8,$ff
+        vpermps ymm0,ymm12,ymm8
+        vpermps ymm1,ymm13,ymm8
+        vpermps ymm2,ymm14,ymm8
+        vpermps ymm3,ymm15,ymm8
         vmulps ymm0,ymm0,ymm4
         vmulps ymm1,ymm1,ymm5
         vmulps ymm2,ymm2,ymm6
@@ -279,14 +279,10 @@ matrix_mul:
         vaddps ymm0,ymm0,ymm2
         vmovaps [rcx],ymm0
   ; row 2,3
-        vshufps ymm0,ymm9,ymm9,$55
-        vshufps xmm0,xmm9,xmm9,$00
-        vshufps ymm1,ymm9,ymm9,$ff
-        vshufps xmm1,xmm9,xmm9,$aa
-        vshufps ymm2,ymm9,ymm9,$00
-        vshufps xmm2,xmm9,xmm9,$55
-        vshufps ymm3,ymm9,ymm9,$aa
-        vshufps xmm3,xmm9,xmm9,$ff
+        vpermps ymm0,ymm12,ymm9
+        vpermps ymm1,ymm13,ymm9
+        vpermps ymm2,ymm14,ymm9
+        vpermps ymm3,ymm15,ymm9
         vmulps ymm0,ymm0,ymm4
         vmulps ymm1,ymm1,ymm5
         vmulps ymm2,ymm2,ymm6
@@ -337,20 +333,16 @@ matrix_mul_transpose:
         vaddps ymm0,ymm0,ymm2
         vmovaps ymm11,ymm0
   ; transpose and store the result
-        ;vmovaps xmm12,xmm10
-        ;vextractf128 xmm13,ymm10,1
-        ;vmovaps xmm14,xmm11
-        ;vextractf128 xmm15,ymm11,1
         vunpcklps ymm4,ymm10,ymm11
         vunpckhps ymm5,ymm10,ymm11
-        vperm2f128 ymm6,ymm4,ymm5,1
-        vperm2f128 ymm7,ymm4,ymm5,1
+        vperm2f128 ymm10,ymm4,ymm5,$20
+        vperm2f128 ymm11,ymm4,ymm5,$31
         vunpcklps ymm4,ymm10,ymm11
         vunpckhps ymm5,ymm10,ymm11
+        vperm2f128 ymm0,ymm4,ymm5,$20
+        vperm2f128 ymm1,ymm4,ymm5,$31
         vmovaps [rcx],ymm0
         vmovaps [rcx+32],ymm1
-        ;vmovaps [rcx+32],xmm2
-        ;vmovaps [rcx+48],xmm3
         ret
 ;=============================================================================
 else if program_section = 'cdata'
