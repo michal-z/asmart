@@ -164,10 +164,8 @@ end virtual
         sub rsp,.k_stack_size
   ; update rotation matrix
         vcvtsd2ss xmm0,xmm0,[time]
-        MATRIX_ROTATION_X .rotation_mat+rsp
+        MATRIX_ROTATION_X
 
-        vmovaps ymm0,[.rotation_mat+rsp]
-        vmovaps ymm1,[.rotation_mat+32+rsp]
         vmovaps ymm2,[k_f32_identity_r0]
         vmovaps ymm3,[k_f32_identity_r2]
         call matrix_mul_transpose

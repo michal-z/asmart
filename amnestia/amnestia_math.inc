@@ -193,44 +193,51 @@ sincos8f:
         vmulps ymm1,ymm3,ymm15
         ret
 ;=============================================================================
-macro MATRIX_ROTATION_X dst* {
+; in: xmm0.x angle
+; out: ymm0 = 0 sin cos 0  0 0 0 1
+;      ymm1 = 1 0 0 0  0 cos -sin 0
+macro MATRIX_ROTATION_X {
         call sincosf
-        vmovaps ymm2,[k_f32_identity_r0]
+        vxorps xmm2,xmm2,xmm2
+        vmovss xmm0,xmm2,xmm0
+        vmovss xmm1,xmm2,xmm1
+        VSHUFPS_MM_SHUFFLE xmm2,xmm1,xmm0,3,0,0,3
+        vmovaps xmm3,[k_f32_identity_r0]
+        vinsertf128 ymm0,ymm3,xmm2,1
+        VSHUFPS_MM_SHUFFLE xmm2,xmm2,xmm2,3,1,2,0
+        vxorps xmm2,xmm2,[k_i32_negative_zero_y0]
         vmovaps ymm3,[k_f32_identity_r2]
-        vmovaps [dst],ymm2
-        vmovaps [dst+32],ymm3
-        vxorps ymm2,ymm2,ymm2
-        vsubps ymm2,ymm2,ymm0
-        vmovss [dst+16+4],xmm1
-        vmovss [dst+16+8],xmm0
-        vmovss [dst+32+4],xmm2
-        vmovss [dst+32+8],xmm1 }
+        vinsertf128 ymm1,ymm3,xmm2,0 }
 ;=============================================================================
-macro MATRIX_ROTATION_Y dst* {
+; in: xmm0.x angle
+; out: ymm0 = 0 0 1 0  0 -sin 0 cos
+;      ymm1 = 1 0 0 0  0 cos 0 sin
+macro MATRIX_ROTATION_Y {
         call sincosf
-        vmovaps ymm2,[k_f32_identity_r0]
+        vxorps xmm2,xmm2,xmm2
+        vmovss xmm0,xmm2,xmm0
+        vmovss xmm1,xmm2,xmm1
+        VSHUFPS_MM_SHUFFLE xmm2,xmm0,xmm1,3,0,3,0
         vmovaps ymm3,[k_f32_identity_r2]
-        vmovaps [dst],ymm2
-        vmovaps [dst+32],ymm3
-        vxorps ymm2,ymm2,ymm2
-        vsubps ymm2,ymm2,ymm0
-        vmovss [dst],xmm1
-        vmovss [dst+8],xmm2
-        vmovss [dst+32],xmm0
-        vmovss [dst+32+8],xmm1 }
+        vinsertf128 ymm1,ymm3,xmm2,0
+        VSHUFPS_MM_SHUFFLE xmm2,xmm2,xmm2,3,0,1,2
+        vxorps xmm2,xmm2,[k_i32_negative_zero_z0]
+        vmovaps ymm3,[k_f32_identity_r0]
+        vinsertf128 ymm0,ymm3,xmm2,0 }
 ;=============================================================================
-macro MATRIX_ROTATION_Z dst* {
+; in: xmm0.x angle
+; out: ymm0 = 0 0 cos -sin  0 0 sin cos
+;      ymm1 = 1 0 0 0  0 1 0 0
+macro MATRIX_ROTATION_Z {
         call sincosf
-        vmovaps ymm2,[k_f32_identity_r0]
-        vmovaps ymm3,[k_f32_identity_r2]
-        vmovaps [dst],ymm2
-        vmovaps [dst+32],ymm3
-        vxorps ymm2,ymm2,ymm2
-        vsubps ymm2,ymm2,ymm0
-        vmovss [dst],xmm1
-        vmovss [dst+4],xmm0
-        vmovss [dst+16],xmm2
-        vmovss [dst+16+4],xmm1 }
+        vxorps xmm2,xmm2,xmm2
+        vmovss xmm0,xmm2,xmm0
+        vmovss xmm1,xmm2,xmm1
+        vunpcklps xmm2,xmm1,xmm0
+        VSHUFPS_MM_SHUFFLE xmm3,xmm2,xmm2,3,2,0,1
+        vxorps xmm3,xmm3,[k_i32_negative_zero_x0]
+        vinsertf128 ymm0,ymm2,xmm3,1
+        vmovaps ymm1,[k_f32_identity_r2] }
 ;=============================================================================
 macro MATRIX_PERSPECTIVE_FOV dst* {
         vmovaps xmm11,xmm1
@@ -350,6 +357,9 @@ align 64
   k_f32_sin_coefficients: dd -0.16666667,0.0083333310,-0.00019840874,2.7525562e-06,-2.3889859e-08,-0.16665852,0.0083139502,-0.00018524670
   k_f32_cos_coefficients: dd -0.5,0.041666638,-0.0013888378,2.4760495e-05,-2.6051615e-07,-0.49992746,0.041493919,-0.0012712436
   k_i32_negative_zero: dd 8 dup 0x80000000
+  k_i32_negative_zero_x0: dd 0x80000000,0,0,0,0,0,0,0
+  k_i32_negative_zero_y0: dd 0,0x80000000,0,0,0,0,0,0
+  k_i32_negative_zero_z0: dd 0,0,0x80000000,0,0,0,0,0
   k_f32_one: dd 8 dup 1.0
   k_f32_negative_one: dd 8 dup -1.0
   k_i32_perm_x0_y1: dd 0,0,0,0,5,5,5,5
