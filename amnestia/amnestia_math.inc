@@ -193,6 +193,14 @@ sincos8f:
         vmulps ymm1,ymm3,ymm15
         ret
 ;=============================================================================
+macro VECTOR3_DOT {
+        vmulps xmm1,xmm0,xmm1
+        vshufps xmm0,xmm1,xmm1,$00
+        vshufps xmm2,xmm1,xmm1,$55
+        vaddps xmm0,xmm0,xmm2
+        vshufps xmm2,xmm1,xmm1,$aa
+        vaddps xmm0,xmm0,xmm2 }
+;=============================================================================
 ; in: xmm0.x offsetx, xmm1.x offsety, xmm2.x offsetz
 ; out: ymm0 = 0 0 1 0  0 0 0 1
 ;      ymm1 = 1 offsetz offsety offsetx  0 1 0 0
