@@ -288,7 +288,7 @@ demo_update:
         mov rcx,[frame_fence_event]
         mov edx,INFINITE
         call [WaitForSingleObject]
-  ; back_buffer_index and frame_index
+  ; update back_buffer_index and frame_index
   @@:   mov rcx,[swapchain]
         mov rax,[rcx]
         call [IDXGISwapChain3.GetCurrentBackBufferIndex+rax]
