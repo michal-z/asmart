@@ -163,39 +163,27 @@ end virtual
         push rsi rdi
         sub rsp,.k_stack_size
   ; update rotation matrix
-        mov eax,1.047197533
-        vmovd xmm0,eax
-        mov eax,1.0
-        vmovd xmm1,eax
-        mov eax,1.0
-        vmovd xmm2,eax
-        mov eax,100.0
-        vmovd xmm3,eax
+        LOADXIM xmm0,1.047197533 ; pi / 3
+        LOADXIM xmm1,1.0
+        LOADXIM xmm2,1.0
+        LOADXIM xmm3,100.0
         MATRIX_PERSPECTIVE_FOV
         vmovaps [.mat+rsp],ymm0
         vmovaps [.mat+32+rsp],ymm1
-
-        mov eax,0.0
-        vmovd xmm0,eax
-        mov eax,0.0
-        vmovd xmm1,eax
-        mov eax,4.0
-        vmovd xmm2,eax
+        LOADXIM xmm0,0.0
+        LOADXIM xmm1,0.0
+        LOADXIM xmm2,4.0
         MATRIX_TRANSLATION
-
         vmovaps ymm2,[.mat+rsp]
         vmovaps ymm3,[.mat+32+rsp]
         call matrix_mul ; translation*perspective
         vmovaps [.mat+rsp],ymm0
         vmovaps [.mat+32+rsp],ymm1
-
         vcvtsd2ss xmm0,xmm0,[time]
         MATRIX_ROTATION_X
-
         vmovaps ymm2,[.mat+rsp]
         vmovaps ymm3,[.mat+32+rsp]
         call matrix_mul_transpose ; transpose(rotation*translation*perspective)
-
         mov eax,[frame_index]
         mov rcx,[scene1.constant_buffer_ptr+rax*8]
         vmovaps [rcx],ymm0

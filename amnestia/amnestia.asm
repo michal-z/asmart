@@ -229,6 +229,10 @@ macro ZERO_STACK size {
         add eax,32
         sub ecx,1
         jnz @b }
+
+macro LOADXIM xmm,imm {
+        mov eax,imm
+        vmovd xmm,eax }
 ;=============================================================================
 section '.text' code readable executable
 program_section = 'code'
