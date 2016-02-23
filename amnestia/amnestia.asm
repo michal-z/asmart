@@ -160,7 +160,6 @@ virtual at 0
   IAudioRenderClient.GetBuffer rq 1
   IAudioRenderClient.ReleaseBuffer rq 1
 end virtual
-
 ;========================================================================
 macro EMIT [inst] {
   forward
@@ -174,13 +173,13 @@ macro IACA_END {
         mov ebx,222
         db $64,$67,$90 }
 
-macro MALLOC size {
+macro MALLOC size* {
         mov rcx,[process_heap]
         xor edx,edx
         mov r8d,size
         call [HeapAlloc] }
 
-macro FREE ptr {
+macro FREE ptr* {
 local .end
         mov r8,ptr
         test r8,r8
@@ -190,7 +189,7 @@ local .end
         call [HeapFree]
   .end: }
 
-macro SAFE_CLOSE handle {
+macro SAFE_CLOSE handle* {
 local .end
         mov rcx,handle
         test rcx,rcx
@@ -199,7 +198,7 @@ local .end
         mov handle,0
   .end: }
 
-macro SAFE_RELEASE iface {
+macro SAFE_RELEASE iface* {
 local .end
         mov rcx,iface
         test rcx,rcx
@@ -216,12 +215,12 @@ macro DEBUG_BREAK {
         int3
         nop }
 
-macro TRANSITION_BARRIER ptr,res,sbefore,safter {
+macro TRANSITION_BARRIER ptr*,res*,sbefore*,safter* {
         mov [ptr+D3D12_RESOURCE_BARRIER.Transition.pResource],res
         mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateBefore],sbefore
         mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter }
 
-macro ZERO_STACK size {
+macro ZERO_STACK size* {
         vpxor ymm0,ymm0,ymm0
         xor eax,eax
         mov ecx,size/32
@@ -230,7 +229,7 @@ macro ZERO_STACK size {
         sub ecx,1
         jnz @b }
 
-macro LOADXIM xmm,imm {
+macro LOADXIM xmm*,imm* {
         mov eax,imm
         vmovd xmm,eax }
 ;=============================================================================

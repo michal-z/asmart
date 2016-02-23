@@ -156,33 +156,37 @@ virtual at 0
   align 8
   .back_buffer_handle dq ?
   align 32
-  .mat: rd 16
-  align 32
   .k_stack_size = $+8
 end virtual
         push rsi rdi
         sub rsp,.k_stack_size
   ; update rotation matrix
-        LOADXIM xmm0,1.047197533 ; pi / 3
-        LOADXIM xmm1,1.0
+        vcvtsd2ss xmm0,xmm0,[time]
+        call sincosf
+        vmovd ecx,xmm0
+        vmovd edx,xmm1
+        LOADXIM xmm0,0.52359876 ; pi / 6
+        call sincosf
         LOADXIM xmm2,1.0
-        LOADXIM xmm3,100.0
+        LOADXIM xmm3,1.0
+        LOADXIM xmm4,100.0
         MATRIX_PERSPECTIVE_FOV
-        vmovaps [.mat+rsp],ymm0
-        vmovaps [.mat+32+rsp],ymm1
+        vmovaps ymm5,ymm0
+        vmovaps ymm6,ymm1
         LOADXIM xmm0,0.0
         LOADXIM xmm1,0.0
         LOADXIM xmm2,4.0
         MATRIX_TRANSLATION
-        vmovaps ymm2,[.mat+rsp]
-        vmovaps ymm3,[.mat+32+rsp]
+        vmovaps ymm2,ymm5
+        vmovaps ymm3,ymm6
         call matrix_mul ; translation*perspective
-        vmovaps [.mat+rsp],ymm0
-        vmovaps [.mat+32+rsp],ymm1
-        vcvtsd2ss xmm0,xmm0,[time]
+        vmovaps ymm5,ymm0
+        vmovaps ymm6,ymm1
+        vmovd xmm0,ecx
+        vmovd xmm1,edx
         MATRIX_ROTATION_X
-        vmovaps ymm2,[.mat+rsp]
-        vmovaps ymm3,[.mat+32+rsp]
+        vmovaps ymm2,ymm5
+        vmovaps ymm3,ymm6
         call matrix_mul_transpose ; transpose(rotation*translation*perspective)
         mov eax,[frame_index]
         mov rcx,[scene1.constant_buffer_ptr+rax*8]

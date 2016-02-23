@@ -193,98 +193,92 @@ sincos8f:
         vmulps ymm1,ymm3,ymm15
         ret
 ;=============================================================================
+; in: xmm0.xyz vector a, xmm1.xyz vector b
+; out: xmm0.xyzw = dot(a, b)
+; uses: xmm15
 macro VECTOR3_DOT {
         vmulps xmm1,xmm0,xmm1
         vshufps xmm0,xmm1,xmm1,$00
-        vshufps xmm2,xmm1,xmm1,$55
-        vaddps xmm0,xmm0,xmm2
-        vshufps xmm2,xmm1,xmm1,$aa
-        vaddps xmm0,xmm0,xmm2 }
+        vshufps xmm15,xmm1,xmm1,$55
+        vaddps xmm0,xmm0,xmm15
+        vshufps xmm15,xmm1,xmm1,$aa
+        vaddps xmm0,xmm0,xmm15 }
 ;=============================================================================
 ; in: xmm0.x offsetx, xmm1.x offsety, xmm2.x offsetz
 ; out: ymm0 = 0 0 1 0  0 0 0 1
 ;      ymm1 = 1 offsetz offsety offsetx  0 1 0 0
+; uses: xmm15
 macro MATRIX_TRANSLATION {
-        vmovaps xmm3,[k_f32_identity_r3]
-        vinsertps xmm3,xmm3,xmm0,00000000b
-        vinsertps xmm3,xmm3,xmm1,00010000b
-        vinsertps xmm3,xmm3,xmm2,00100000b
+        vmovaps xmm15,[k_f32_identity_r3]
+        vinsertps xmm15,xmm15,xmm0,00000000b
+        vinsertps xmm15,xmm15,xmm1,00010000b
+        vinsertps xmm15,xmm15,xmm2,00100000b
         vmovaps xmm2,[k_f32_identity_r2]
         vmovaps ymm0,[k_f32_identity_r0]
-        vinsertf128 ymm1,ymm2,xmm3,1 }
+        vinsertf128 ymm1,ymm2,xmm15,1 }
 ;=============================================================================
-; in: xmm0.x angle
+; in: xmm0.x sin(angle), xmm1.x cos(angle)
 ; out: ymm0 = 0 sin cos 0  0 0 0 1
 ;      ymm1 = 1 0 0 0  0 cos -sin 0
+; uses: xmm15
 macro MATRIX_ROTATION_X {
-        call sincosf
-        vxorps xmm2,xmm2,xmm2
-        vmovss xmm0,xmm2,xmm0
-        vmovss xmm1,xmm2,xmm1
-        VSHUFPS_MM_SHUFFLE xmm2,xmm1,xmm0,3,0,0,3
-        vmovaps xmm3,[k_f32_identity_r0]
-        vinsertf128 ymm0,ymm3,xmm2,1
-        VSHUFPS_MM_SHUFFLE xmm2,xmm2,xmm2,3,1,2,0
-        vxorps xmm2,xmm2,[k_i32_negative_zero_y0]
-        vmovaps ymm3,[k_f32_identity_r2]
-        vinsertf128 ymm1,ymm3,xmm2,0 }
+        vxorps xmm15,xmm15,xmm15
+        vmovss xmm0,xmm15,xmm0
+        vmovss xmm1,xmm15,xmm1
+        VSHUFPS_MM_SHUFFLE xmm15,xmm1,xmm0,3,0,0,3
+        vmovaps xmm0,[k_f32_identity_r0]
+        vinsertf128 ymm0,ymm0,xmm15,1
+        VSHUFPS_MM_SHUFFLE xmm15,xmm15,xmm15,3,1,2,0
+        vxorps xmm15,xmm15,[k_i32_negative_zero_y0]
+        vmovaps ymm1,[k_f32_identity_r2]
+        vinsertf128 ymm1,ymm1,xmm15,0 }
 ;=============================================================================
-; in: xmm0.x angle
+; in: xmm0.x sin(angle), xmm1.x cos(angle)
 ; out: ymm0 = 0 0 1 0  0 -sin 0 cos
 ;      ymm1 = 1 0 0 0  0 cos 0 sin
+; uses: xmm15
 macro MATRIX_ROTATION_Y {
-        call sincosf
-        vxorps xmm2,xmm2,xmm2
-        vmovss xmm0,xmm2,xmm0
-        vmovss xmm1,xmm2,xmm1
-        VSHUFPS_MM_SHUFFLE xmm2,xmm0,xmm1,3,0,3,0
-        vmovaps ymm3,[k_f32_identity_r2]
-        vinsertf128 ymm1,ymm3,xmm2,0
-        VSHUFPS_MM_SHUFFLE xmm2,xmm2,xmm2,3,0,1,2
-        vxorps xmm2,xmm2,[k_i32_negative_zero_z0]
-        vmovaps ymm3,[k_f32_identity_r0]
-        vinsertf128 ymm0,ymm3,xmm2,0 }
+        vxorps xmm15,xmm15,xmm15
+        vmovss xmm0,xmm15,xmm0
+        vmovss xmm1,xmm15,xmm1
+        VSHUFPS_MM_SHUFFLE xmm15,xmm0,xmm1,3,0,3,0
+        vmovaps ymm1,[k_f32_identity_r2]
+        vinsertf128 ymm1,ymm1,xmm15,0
+        VSHUFPS_MM_SHUFFLE xmm15,xmm15,xmm15,3,0,1,2
+        vxorps xmm15,xmm15,[k_i32_negative_zero_z0]
+        vmovaps ymm0,[k_f32_identity_r0]
+        vinsertf128 ymm0,ymm0,xmm15,0 }
 ;=============================================================================
-; in: xmm0.x angle
+; in: xmm0.x sin(angle), xmm1.x cos(angle)
 ; out: ymm0 = 0 0 cos -sin  0 0 sin cos
 ;      ymm1 = 1 0 0 0  0 1 0 0
+; uses: xmm15
 macro MATRIX_ROTATION_Z {
-        call sincosf
-        vxorps xmm2,xmm2,xmm2
-        vmovss xmm0,xmm2,xmm0
-        vmovss xmm1,xmm2,xmm1
-        vunpcklps xmm2,xmm1,xmm0
-        VSHUFPS_MM_SHUFFLE xmm3,xmm2,xmm2,3,2,0,1
-        vxorps xmm3,xmm3,[k_i32_negative_zero_x0]
-        vinsertf128 ymm0,ymm2,xmm3,1
+        vxorps xmm15,xmm15,xmm15
+        vmovss xmm0,xmm15,xmm0
+        vmovss xmm1,xmm15,xmm1
+        vunpcklps xmm15,xmm1,xmm0
+        VSHUFPS_MM_SHUFFLE xmm0,xmm15,xmm15,3,2,0,1
+        vxorps xmm0,xmm0,[k_i32_negative_zero_x0]
+        vinsertf128 ymm0,ymm15,xmm0,1
         vmovaps ymm1,[k_f32_identity_r2] }
 ;=============================================================================
-; in: xmm0.x fovy, xmm1.x aspect, xmm2.x near z, xmm3.x far z
+; in: xmm0.x sin(fovy/2), xmm1.x cos(fovy/2), xmm2.x aspect, xmm3.x near z, xmm4.x far z
 ; out: ymm0,ymm1 perspective matrix
+; uses: xmm15
 macro MATRIX_PERSPECTIVE_FOV {
-        sub rsp,32
-        vmovss [rsp],xmm1
-        vmovss [rsp+4],xmm2
-        vmovss [rsp+8],xmm3
-        vmulss xmm0,xmm0,[k_f32_half]
-        call sincosf
-        vxorps xmm2,xmm2,xmm2
-        vmovss xmm0,xmm2,xmm0
-        vmovss xmm1,xmm2,xmm1
+        vxorps xmm15,xmm15,xmm15
+        vmovss xmm0,xmm15,xmm0
+        vmovss xmm1,xmm15,xmm1
         vdivss xmm1,xmm1,xmm0 ; row 1 [0 0 0 h]
-        vmovss xmm2,[rsp]
-        vmovaps xmm7,[k_f32_identity_r3] ; xmm7 = [1 0 0 0]
+        vmovaps xmm15,[k_f32_identity_r3] ; xmm15 = [1 0 0 0]
         vdivss xmm0,xmm1,xmm2 ; row 0 [0 0 0 w]
-        vinsertps xmm1,xmm7,xmm1,00011101b ; row 1 [0 0 h 0]
-        vmovss xmm4,[rsp+4]
-        vmovss xmm5,[rsp+8]
-        add rsp,32
-        vsubss xmm2,xmm5,xmm4
-        vdivss xmm2,xmm5,xmm2 ; row 2 [0 0 0 range]
-        vmovaps xmm3,xmm2
-        vmulss xmm3,xmm3,xmm4 ; row 3 [0 0 0 range*near_z]
-        vinsertps xmm2,xmm7,xmm2,00100011b ; row 2 [1 range 0 0]
-        vinsertps xmm3,xmm7,xmm3,00101011b
+        vinsertps xmm1,xmm15,xmm1,00011101b ; row 1 [0 0 h 0]
+        vsubss xmm2,xmm4,xmm3
+        vdivss xmm2,xmm4,xmm2 ; row 2 [0 0 0 range]
+        vmulss xmm3,xmm2,xmm3 ; row 3 [0 0 0 range*near_z]
+        vinsertps xmm2,xmm15,xmm2,00100011b ; row 2 [1 range 0 0]
+        vinsertps xmm3,xmm15,xmm3,00101011b
         vxorps xmm3,xmm3,[k_i32_negative_zero_z0] ; row 3 [0 0 -range*near_z 0]
         vinsertf128 ymm0,ymm0,xmm1,1
         vinsertf128 ymm1,ymm2,xmm3,1 }
@@ -379,7 +373,6 @@ align 64
   k_f32_identity_r1: dd 0.0,1.0,0.0,0.0
   k_f32_identity_r2: dd 0.0,0.0,1.0,0.0
   k_f32_identity_r3: dd 0.0,0.0,0.0,1.0
-
   k_f32_pi: dd 8 dup 3.141592654
   k_f32_two_pi: dd 8 dup 6.283185307
   k_f32_reciprocal_two_pi: dd 8 dup 0.159154943
@@ -387,12 +380,12 @@ align 64
   k_f32_half: dd 8 dup 0.5
   k_f32_sin_coefficients: dd -0.16666667,0.0083333310,-0.00019840874,2.7525562e-06,-2.3889859e-08,-0.16665852,0.0083139502,-0.00018524670
   k_f32_cos_coefficients: dd -0.5,0.041666638,-0.0013888378,2.4760495e-05,-2.6051615e-07,-0.49992746,0.041493919,-0.0012712436
+  k_f32_one: dd 8 dup 1.0
+  k_f32_negative_one: dd 8 dup -1.0
   k_i32_negative_zero: dd 8 dup 0x80000000
   k_i32_negative_zero_x0: dd 0x80000000,0,0,0,0,0,0,0
   k_i32_negative_zero_y0: dd 0,0x80000000,0,0,0,0,0,0
   k_i32_negative_zero_z0: dd 0,0,0x80000000,0,0,0,0,0
-  k_f32_one: dd 8 dup 1.0
-  k_f32_negative_one: dd 8 dup -1.0
   k_i32_perm_x0_y1: dd 0,0,0,0,5,5,5,5
   k_i32_perm_z0_w1: dd 2,2,2,2,7,7,7,7
   k_i32_perm_y0_x1: dd 1,1,1,1,4,4,4,4
