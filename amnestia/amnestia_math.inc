@@ -193,53 +193,53 @@ sincos8f:
         vmulps ymm1,ymm3,ymm15
         ret
 ;=============================================================================
-; in: xmma.xyz vector a, xmmb.xyz vector b
-; out: xmma.xyzw = dot(a, b)
+; in: xmmA.xyz vector a, xmmB.xyz vector b
+; out: xmmB.xyzw = dot(a, b)
 ; uses: xmm14 xmm15
-macro VECTOR3_DOT a*,b* {
-        vmulps xmm14,xmm#a,xmm#b
-        vshufps xmm#a,xmm14,xmm14,$00
+macro VECTOR3_DOT xmmA*,xmmB* {
+        vmulps xmm14,xmmA,xmmB
+        vshufps xmmA,xmm14,xmm14,$00
         vshufps xmm15,xmm14,xmm14,$55
-        vaddps xmm#a,xmm#a,xmm15
+        vaddps xmmA,xmmA,xmm15
         vshufps xmm15,xmm14,xmm14,$aa
-        vaddps xmm#a,xmm#a,xmm15 }
-;=============================================================================
-; in: xmm0.xyz vector a
-; out: xmm0.xyzw = sqrt(dot(a, a))
-; uses: xmm14 xmm15
-macro VECTOR3_LENGTH a* {
-        vmulps xmm14,xmm#a,xmm#a
-        vshufps xmm#a,xmm14,xmm14,$00
-        vshufps xmm15,xmm14,xmm14,$55
-        vaddps xmm#a,xmm#a,xmm15
-        vshufps xmm15,xmm14,xmm14,$aa
-        vaddps xmm#a,xmm#a,xmm15
-        vsqrtps xmm#a,xmm#a }
+        vaddps xmmA,xmmA,xmm15 }
 ;=============================================================================
 ; in: xmmA.xyz vector a
-; out: xmm0.xyz = normalize(a)
+; out: xmmA.xyzw = sqrt(dot(a, a))
+; uses: xmm14 xmm15
+macro VECTOR3_LENGTH xmmA* {
+        vmulps xmm14,xmmA,xmmA
+        vshufps xmmA,xmm14,xmm14,$00
+        vshufps xmm15,xmm14,xmm14,$55
+        vaddps xmmA,xmmA,xmm15
+        vshufps xmm15,xmm14,xmm14,$aa
+        vaddps xmmA,xmmA,xmm15
+        vsqrtps xmmA,xmmA }
+;=============================================================================
+; in: xmmA.xyz vector a
+; out: xmmA.xyz = normalize(a)
 ; uses: xmm13 xmm14 xmm15
-macro VECTOR3_NORMALIZE_EST a* {
-        vmulps xmm14,xmm#a,xmm#a
+macro VECTOR3_NORMALIZE_EST xmmA* {
+        vmulps xmm14,xmmA,xmmA
         vshufps xmm13,xmm14,xmm14,$00
         vshufps xmm15,xmm14,xmm14,$55
         vaddps xmm13,xmm13,xmm15
         vshufps xmm15,xmm14,xmm14,$aa
         vaddps xmm13,xmm13,xmm15
         vrsqrtps xmm13,xmm13
-        vmulps xmm#a,xmm#a,xmm13 }
+        vmulps xmmA,xmmA,xmm13 }
 ;=============================================================================
-; in: xmm0.xyz vector a, xmm1.xyz vector b
-; out: xmm0.xyz = cross(a, b)
+; in: xmmA.xyz vector a, xmmB.xyz vector b
+; out: xmmA.xyz = cross(a, b)
 ; uses: xmm13 xmm14 xmm15
-macro VECTOR3_CROSS a*,b* {
-        VSHUFPS_MM_SHUFFLE xmm14,xmm#a,xmm#a,3,1,0,2
-        VSHUFPS_MM_SHUFFLE xmm15,xmm#b,xmm#b,3,0,2,1
-        VSHUFPS_MM_SHUFFLE xmm#a,xmm#a,xmm#a,3,0,2,1
-        VSHUFPS_MM_SHUFFLE xmm13,xmm#b,xmm#b,3,1,0,2
+macro VECTOR3_CROSS xmmA*,xmmB* {
+        VSHUFPS_MM_SHUFFLE xmm14,xmmA,xmmA,3,1,0,2
+        VSHUFPS_MM_SHUFFLE xmm15,xmmB,xmmB,3,0,2,1
+        VSHUFPS_MM_SHUFFLE xmmA,xmmA,xmmA,3,0,2,1
+        VSHUFPS_MM_SHUFFLE xmm13,xmmB,xmmB,3,1,0,2
         vmulps xmm14,xmm14,xmm15
-        vmulps xmm#a,xmm#a,xmm13
-        vsubps xmm#a,xmm#a,xmm14 }
+        vmulps xmmA,xmmA,xmm13
+        vsubps xmmA,xmmA,xmm14 }
 ;=============================================================================
 ; in: xmm0.xyz eye position, xmm1.xyz look at position, xmm2.xyz up vector
 ; out: ymm0,ymm1 "look at" matrix
@@ -247,18 +247,18 @@ FALIGN
 matrix_look_at:
 ;-----------------------------------------------------------------------------
         vsubps xmm1,xmm1,xmm0 ; eye direction
-        VECTOR3_NORMALIZE_EST 1 ; xmm1 = zaxis
-        VECTOR3_CROSS 2,1
-        VECTOR3_NORMALIZE_EST 2 ; xmm2 = xaxis
+        VECTOR3_NORMALIZE_EST xmm1 ; xmm1 = zaxis
+        VECTOR3_CROSS xmm2,xmm1
+        VECTOR3_NORMALIZE_EST xmm2 ; xmm2 = xaxis
         vmovaps xmm3,xmm1
-        VECTOR3_CROSS 3,2 ; xmm3 = yaxis
+        VECTOR3_CROSS xmm3,xmm2 ; xmm3 = yaxis
         vxorps xmm0,xmm0,[k_i32_negative_zero] ; xmm0 = neg(eye position)
         vmovaps xmm5,xmm2
         vmovaps xmm6,xmm3
         vmovaps xmm4,xmm1
-        VECTOR3_DOT 5,0
-        VECTOR3_DOT 6,0
-        VECTOR3_DOT 4,0
+        VECTOR3_DOT xmm5,xmm0
+        VECTOR3_DOT xmm6,xmm0
+        VECTOR3_DOT xmm4,xmm0
         vblendps xmm0,xmm5,xmm2,00000111b
         vblendps xmm2,xmm4,xmm1,00000111b
         vblendps xmm1,xmm6,xmm3,00000111b
@@ -276,9 +276,9 @@ matrix_look_at:
         vinsertf128 ymm1,ymm2,xmm3,1
         ret
 ;=============================================================================
-; in: xmmA.x offsetx, xmmB.x offsety, xmmC.x offsetz
-; out: ymmA = 0 0 1 0  0 0 0 1
-;      ymmB = 1 offsetz offsety offsetx  0 1 0 0
+; in: xmm0.x offsetx, xmm1.x offsety, xmm2.x offsetz
+; out: ymm0 = 0 0 1 0  0 0 0 1
+;      ymm1 = 1 offsetz offsety offsetx  0 1 0 0
 ; uses: xmm15
 macro MATRIX_TRANSLATION {
         vmovaps xmm15,[k_f32_identity_r3]
