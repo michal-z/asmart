@@ -3,10 +3,14 @@ struc scene1 {
   .rootsig dq 0
   .constant_buffer dq k_frame_count dup 0
   .constant_buffer_ptr dq k_frame_count dup 0
+align 4
+  .eye_half_fovy dd 0.52359876 ; pi / 6
+  .eye_nearz dd 1.0
+  .eye_farz dd 100.0
 align 16
-  .vec0: dd 3.0,3.0,-3.0,1.0
-  .vec1: dd 0.0,0.0,0.0,1.0
-  .vec2: dd 0.0,1.0,0.0,0.0
+  .eye_position: dd 1.7,1.7,-1.7,1.0
+  .eye_focus: dd 0.0,0.0,0.0,1.0
+  .eye_up: dd 0.0,1.0,0.0,0.0
 align 1
   .vs db 'data/vs_triangle.cso',0
   .ps db 'data/ps_triangle.cso',0 }
@@ -167,23 +171,24 @@ end virtual
         push rsi rdi
         sub rsp,.k_stack_size
   ; update rotation matrix
-        LOADXIM xmm0,0.52359876 ; pi / 6
+        vmovss xmm0,[scene1.eye_half_fovy]
         call sincosf
-        LOADXIM xmm2,1.0
-        LOADXIM xmm3,1.0
-        LOADXIM xmm4,100.0
+        vmovss xmm2,[viewport.Width]
+        vdivss xmm2,xmm2,[viewport.Height]
+        vmovss xmm3,[scene1.eye_nearz]
+        vmovss xmm4,[scene1.eye_farz]
         MATRIX_PERSPECTIVE_FOV
         vmovaps [.mat+rsp],ymm0
         vmovaps [.mat+rsp+32],ymm1
 
-        vmovaps xmm0,[scene1.vec0]
-        vmovaps xmm1,[scene1.vec1]
-        vmovaps xmm2,[scene1.vec2]
+        vmovaps xmm0,[scene1.eye_position]
+        vmovaps xmm1,[scene1.eye_focus]
+        vmovaps xmm2,[scene1.eye_up]
         call matrix_look_at
 
         vmovaps ymm2,[.mat+rsp]
         vmovaps ymm3,[.mat+32+rsp]
-        call matrix_mul ; translation*perspective
+        call matrix_mul ; lookat*perspective
         vmovaps [.mat+rsp],ymm0
         vmovaps [.mat+32+rsp],ymm1
 
@@ -192,7 +197,7 @@ end virtual
         MATRIX_ROTATION_X
         vmovaps ymm2,[.mat+rsp]
         vmovaps ymm3,[.mat+32+rsp]
-        call matrix_mul_transpose ; transpose(rotation*translation*perspective)
+        call matrix_mul_transpose ; transpose(rotation*lookat*perspective)
 
         mov eax,[frame_index]
         mov rcx,[scene1.constant_buffer_ptr+rax*8]
