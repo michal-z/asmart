@@ -12,8 +12,8 @@ align 16
   .eye_focus: dd 0.0,0.0,0.0,1.0
   .eye_up: dd 0.0,1.0,0.0,0.0
 align 1
-  .vs db 'data/vs_triangle.cso',0
-  .ps db 'data/ps_triangle.cso',0 }
+  .vs db 'data/vs_transform.cso',0
+  .ps db 'data/ps_shade.cso',0 }
 
 if program_section = 'code'
 ;=============================================================================
