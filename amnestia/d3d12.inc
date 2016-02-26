@@ -394,14 +394,8 @@ struc D3D12_RENDER_TARGET_BLEND_DESC {
 struc D3D12_BLEND_DESC {
   .AlphaToCoverageEnable dd ?
   .IndependentBlendEnable dd ?
-  .RenderTarget0 D3D12_RENDER_TARGET_BLEND_DESC
-  .RenderTarget1 D3D12_RENDER_TARGET_BLEND_DESC
-  .RenderTarget2 D3D12_RENDER_TARGET_BLEND_DESC
-  .RenderTarget3 D3D12_RENDER_TARGET_BLEND_DESC
-  .RenderTarget4 D3D12_RENDER_TARGET_BLEND_DESC
-  .RenderTarget5 D3D12_RENDER_TARGET_BLEND_DESC
-  .RenderTarget6 D3D12_RENDER_TARGET_BLEND_DESC
-  .RenderTarget7 D3D12_RENDER_TARGET_BLEND_DESC }
+rept 8 n:0 \{
+  .RenderTarget\#n D3D12_RENDER_TARGET_BLEND_DESC \} }
 
 struc D3D12_RASTERIZER_DESC {
   .FillMode dd ?
@@ -477,6 +471,16 @@ STRUC_OFFSETS_SIZE D3D12_GRAPHICS_PIPELINE_STATE_DESC
 struc D3D12_RANGE {
   .Begin dq ?
   .End dq ? }
+
+struc D3D12_VERTEX_BUFFER_VIEW {
+  .BufferLocation dq ?
+  .SizeInBytes dd ?
+  .StrideInBytes dd ? }
+
+struc D3D12_INDEX_BUFFER_VIEW {
+  .BufferLocation dq ?
+  .SizeInBytes dd ?
+  .Format dd ? }
 
 D3D12_HEAP_TYPE_DEFAULT = 1
 D3D12_HEAP_TYPE_UPLOAD = 2

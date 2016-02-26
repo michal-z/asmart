@@ -1,6 +1,7 @@
 @echo off
 
 ..\fasm\fasm.exe amnestia.asm
+:: ..\fasm\fasm.exe -s amnestia.fas amnestia.asm
 if errorlevel 1 goto eof
 
 set FXC=..\fxc\fxc.exe

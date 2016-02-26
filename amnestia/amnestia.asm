@@ -37,14 +37,14 @@ entry start
   AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000
   AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED = 0x88890019
 
-  k_funcparam5 = 32
-  k_funcparam6 = k_funcparam5 + 8
-  k_funcparam7 = k_funcparam6 + 8
-  k_funcparam8 = k_funcparam7 + 8
-  k_funcparam9 = k_funcparam8 + 8
-  k_funcparam10 = k_funcparam9 + 8
-  k_funcparam11 = k_funcparam10 + 8
-  k_funcparam12 = k_funcparam11 + 8
+  k_funcparam5 equ 32
+  k_funcparam6 equ k_funcparam5 + 8
+  k_funcparam7 equ k_funcparam6 + 8
+  k_funcparam8 equ k_funcparam7 + 8
+  k_funcparam9 equ k_funcparam8 + 8
+  k_funcparam10 equ k_funcparam9 + 8
+  k_funcparam11 equ k_funcparam10 + 8
+  k_funcparam12 equ k_funcparam11 + 8
 
 struc POINT {
   .x dd ?
@@ -232,6 +232,23 @@ macro ZERO_STACK size* {
 macro LOADXIM xmm*,imm* {
         mov eax,imm
         vmovd xmm,eax }
+
+macro HRCALL target {
+        call target
+        test eax,eax
+        js .error }
+
+macro LRM dst,src {
+        lea rax,src
+        mov dst,rax }
+
+macro MRM dst,src {
+        mov rax,src
+        mov dst,rax }
+
+k_frame_count equ 3
+k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+k_swapchain_buffer_count equ 4
 ;=============================================================================
 section '.text' code readable executable
 program_section = 'code'
@@ -538,10 +555,6 @@ winproc:
 ;========================================================================
 section '.data' data readable
 program_section = 'cdata'
-
-  k_win_style = WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
-  k_swapchain_buffer_count = 4
-  k_frame_count = 3
 
 align 8
   CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E

@@ -1,20 +1,3 @@
-struc scene1 {
-  .pso dq 0
-  .rootsig dq 0
-  .constant_buffer dq k_frame_count dup 0
-  .constant_buffer_ptr dq k_frame_count dup 0
-align 4
-  .eye_half_fovy dd 0.52359876 ; pi / 6
-  .eye_nearz dd 1.0
-  .eye_farz dd 100.0
-align 16
-  .eye_position: dd 1.7,1.7,-1.7,1.0
-  .eye_focus: dd 0.0,0.0,0.0,1.0
-  .eye_up: dd 0.0,1.0,0.0,0.0
-align 1
-  .vs db 'data/vs_transform.cso',0
-  .ps db 'data/ps_shade.cso',0 }
-
 if program_section = 'code'
 ;=============================================================================
 FALIGN
@@ -34,6 +17,8 @@ virtual at 0
   align 8
   .empty_range D3D12_RANGE
   align 8
+  .input_element_desc D3D12_INPUT_ELEMENT_DESC
+  align 8
   .d3dblob dq ?
   align 32
   .k_stack_size = $+16
@@ -41,7 +26,7 @@ end virtual
         push rsi
         sub rsp,.k_stack_size
         ZERO_STACK .k_stack_size
-  ; create constant buffers
+
         mov [.upload_heap_props.Type+rsp],D3D12_HEAP_TYPE_UPLOAD
         mov [.buffer_res_desc.Dimension+rsp],D3D12_RESOURCE_DIMENSION_BUFFER
         mov [.buffer_res_desc.Width+rsp],1024
@@ -50,44 +35,66 @@ end virtual
         mov [.buffer_res_desc.MipLevels+rsp],1
         mov [.buffer_res_desc.SampleDesc.Count+rsp],1
         mov [.buffer_res_desc.Layout+rsp],D3D12_TEXTURE_LAYOUT_ROW_MAJOR
+
         xor esi,esi
+  ; create constant buffer
   @@:   mov rcx,[device]
         lea rdx,[.upload_heap_props+rsp]
         mov r8d,D3D12_HEAP_FLAG_NONE
         lea r9,[.buffer_res_desc+rsp]
         mov dword[k_funcparam5+rsp],D3D12_RESOURCE_STATE_GENERIC_READ
         mov qword[k_funcparam6+rsp],0
-        lea rax,[IID_ID3D12Resource]
-        mov [k_funcparam7+rsp],rax
-        lea rax,[scene1.constant_buffer+rsi*8]
-        mov [k_funcparam8+rsp],rax
+        LRM [k_funcparam7+rsp],[IID_ID3D12Resource]
+        LRM [k_funcparam8+rsp],[scene1.constant_buffer+rsi*8]
         mov rax,[rcx]
-        call [ID3D12Device.CreateCommittedResource+rax]
-        test eax,eax
-        js .error
+        HRCALL [ID3D12Device.CreateCommittedResource+rax]
+
+  ; create vertex buffer
+        mov rcx,[device]
+        lea rdx,[.upload_heap_props+rsp]
+        mov r8d,D3D12_HEAP_FLAG_NONE
+        lea r9,[.buffer_res_desc+rsp]
+        mov dword[k_funcparam5+rsp],D3D12_RESOURCE_STATE_GENERIC_READ
+        mov qword[k_funcparam6+rsp],0
+        LRM [k_funcparam7+rsp],[IID_ID3D12Resource]
+        LRM [k_funcparam8+rsp],[scene1.vertex_buffer+rsi*8]
+        mov rax,[rcx]
+        HRCALL [ID3D12Device.CreateCommittedResource+rax]
+
   ; map constant buffer
         mov rcx,[scene1.constant_buffer+rsi*8]
         xor edx,edx
         lea r8,[.empty_range+rsp]
         lea r9,[scene1.constant_buffer_ptr+rsi*8]
         mov rax,[rcx]
-        call [ID3D12Resource.Map+rax]
-        test eax,eax
-        js .error
+        HRCALL [ID3D12Resource.Map+rax]
+
+  ; map vertex buffer
+        mov rcx,[scene1.vertex_buffer+rsi*8]
+        xor edx,edx
+        lea r8,[.empty_range+rsp]
+        lea r9,[scene1.vertex_buffer_ptr+rsi*8]
+        mov rax,[rcx]
+        HRCALL [ID3D12Resource.Map+rax]
+
         add esi,1
         cmp esi,k_frame_count
         jb @b
+
   ; root signature
         mov [.root_descriptor.ParameterType+rsp],D3D12_ROOT_PARAMETER_TYPE_CBV
         mov [.root_descriptor.Descriptor.ShaderRegister+rsp],0
+
         mov [.rootsig_desc.NumParameters+rsp],1
-        lea rax,[.root_descriptor+rsp]
-        mov [.rootsig_desc.pParameters+rsp],rax
+        LRM [.rootsig_desc.pParameters+rsp],[.root_descriptor+rsp]
+        mov [.rootsig_desc.Flags+rsp],D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+
         lea rcx,[.rootsig_desc+rsp]
         mov edx,D3D_ROOT_SIGNATURE_VERSION_1
         lea r8,[.d3dblob+rsp]
         xor r9d,r9d
         call [D3D12SerializeRootSignature]
+
         mov rcx,[.d3dblob+rsp]
         mov rax,[rcx]
         call [ID3DBlob.GetBufferPointer+rax]
@@ -95,31 +102,41 @@ end virtual
         mov rcx,[.d3dblob+rsp]
         mov rax,[rcx]
         call [ID3DBlob.GetBufferSize+rax]
+
         mov rcx,[device]
         xor edx,edx
         mov r8,rsi
         mov r9,rax
-        lea rax,[IID_ID3D12RootSignature]
-        mov [k_funcparam5+rsp],rax
-        lea rax,[scene1.rootsig]
-        mov [k_funcparam6+rsp],rax
+        LRM [k_funcparam5+rsp],[IID_ID3D12RootSignature]
+        LRM [k_funcparam6+rsp],[scene1.rootsig]
         mov rax,[rcx]
         call [ID3D12Device.CreateRootSignature+rax]
         mov esi,eax
         SAFE_RELEASE [.d3dblob+rsp]
         test esi,esi
         js .error
+
+  ; pso input elements
+        LRM [.input_element_desc.SemanticName+rsp],[scene1.s_position]
+        mov [.input_element_desc.SemanticIndex+rsp],0
+        mov [.input_element_desc.Format+rsp],DXGI_FORMAT_R32G32B32A32_FLOAT
+        mov [.input_element_desc.InputSlot+rsp],0
+        mov [.input_element_desc.AlignedByteOffset+rsp],0
+
   ; pso
-        mov rax,[scene1.rootsig]
-        mov [.pso_desc.pRootSignature+rsp],rax
-        lea rcx,[scene1.vs]
+        lea rcx,[scene1.s_vs]
         call load_file
         mov [.pso_desc.VS.pShaderBytecode+rsp],rax
         mov [.pso_desc.VS.BytecodeLength+rsp],rdx
-        lea rcx,[scene1.ps]
+
+        lea rcx,[scene1.s_ps]
         call load_file
         mov [.pso_desc.PS.pShaderBytecode+rsp],rax
         mov [.pso_desc.PS.BytecodeLength+rsp],rdx
+
+        MRM [.pso_desc.pRootSignature+rsp],[scene1.rootsig]
+        LRM [.pso_desc.InputLayout.pInputElementDescs+rsp],[.input_element_desc+rsp]
+        mov [.pso_desc.InputLayout.NumElements+rsp],1
         mov [.pso_desc.BlendState.RenderTarget0.RenderTargetWriteMask+rsp],$0f
         mov [.pso_desc.SampleMask+rsp],$ffffffff
         mov [.pso_desc.RasterizerState.CullMode+rsp],D3D12_CULL_MODE_NONE
@@ -128,6 +145,7 @@ end virtual
         mov [.pso_desc.NumRenderTargets+rsp],1
         mov [.pso_desc.RTVFormats+rsp],DXGI_FORMAT_R8G8B8A8_UNORM
         mov [.pso_desc.SampleDesc.Count+rsp],1
+
         mov rcx,[device]
         lea rdx,[.pso_desc+rsp]
         lea r8,[IID_ID3D12PipelineState]
@@ -233,13 +251,17 @@ end virtual
         mov rcx,rsi
         mov rdx,[scene1.rootsig]
         call [ID3D12GraphicsCommandList.SetGraphicsRootSignature+rdi]
-        mov rcx,[scene1.constant_buffer]
+
+        mov eax,[frame_index]
+        mov rcx,[scene1.constant_buffer+rax*8]
         mov rax,[rcx]
         call [ID3D12Resource.GetGPUVirtualAddress+rax]
         mov rcx,rsi
         xor edx,edx
         mov r8,rax
         call [ID3D12GraphicsCommandList.SetGraphicsRootConstantBufferView+rdi]
+  ; vertex buffer view
+        ;mov rcx,[scene1.
   ; back buffer to D3D12_RESOURCE_STATE_RENDER_TARGET
         mov eax,[back_buffer_index]
         mov rax,[swapchain_buffer+rax*8]
@@ -299,11 +321,37 @@ end virtual
 ;=============================================================================
 else if program_section = 'data'
 
+struc scene1 {
+  .pso dq 0
+  .rootsig dq 0
+
+  .constant_buffer dq k_frame_count dup 0
+  .constant_buffer_ptr dq k_frame_count dup 0
+
+  .vertex_buffer dq k_frame_count dup 0
+  .vertex_buffer_ptr dq k_frame_count dup 0
+
+rept k_frame_count n:0 \{
+  .vertex_buffer_view\#n D3D12_VERTEX_BUFFER_VIEW \}
+
+align 4
+  .eye_half_fovy dd 0.52359876 ; pi / 6
+  .eye_nearz dd 1.0
+  .eye_farz dd 100.0
+align 16
+  .eye_position: dd 1.7,1.7,-1.7,1.0
+  .eye_focus: dd 0.0,0.0,0.0,1.0
+  .eye_up: dd 0.0,1.0,0.0,0.0
+align 1
+  .s_position db 'POSITION',0
+  .s_vs db 'data/vs_transform.cso',0
+  .s_ps db 'data/ps_shade.cso',0 }
+
 align 8
   scene1 scene1
 
-end if
-;=============================================================================
 restruc scene1
+
+end if
 ;=============================================================================
 ; vim: ft=fasm autoindent tabstop=8 softtabstop=8 shiftwidth=8 :
