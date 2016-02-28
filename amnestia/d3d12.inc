@@ -476,11 +476,13 @@ struc D3D12_VERTEX_BUFFER_VIEW {
   .BufferLocation dq ?
   .SizeInBytes dd ?
   .StrideInBytes dd ? }
+STRUC_OFFSETS_SIZE D3D12_VERTEX_BUFFER_VIEW
 
 struc D3D12_INDEX_BUFFER_VIEW {
   .BufferLocation dq ?
   .SizeInBytes dd ?
   .Format dd ? }
+STRUC_OFFSETS_SIZE D3D12_INDEX_BUFFER_VIEW
 
 D3D12_HEAP_TYPE_DEFAULT = 1
 D3D12_HEAP_TYPE_UPLOAD = 2

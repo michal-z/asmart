@@ -21,9 +21,9 @@ virtual at 0
   align 8
   .d3dblob dq ?
   align 32
-  .k_stack_size = $+16
+  .k_stack_size = $+8
 end virtual
-        push rsi
+        push rsi rbx
         sub rsp,.k_stack_size
         ZERO_STACK .k_stack_size
 
@@ -36,16 +36,18 @@ end virtual
         mov [.buffer_res_desc.SampleDesc.Count+rsp],1
         mov [.buffer_res_desc.Layout+rsp],D3D12_TEXTURE_LAYOUT_ROW_MAJOR
 
-        xor esi,esi
-  ; create constant buffer
-  @@:   mov rcx,[device]
+  ; create frame resources
+        mov esi,k_frame_count
+        lea rbx,[scene1.frame_resources0]
+  .frame_resources_loop:
+        mov rcx,[device]
         lea rdx,[.upload_heap_props+rsp]
         mov r8d,D3D12_HEAP_FLAG_NONE
         lea r9,[.buffer_res_desc+rsp]
         mov dword[k_funcparam5+rsp],D3D12_RESOURCE_STATE_GENERIC_READ
         mov qword[k_funcparam6+rsp],0
         LRM [k_funcparam7+rsp],[IID_ID3D12Resource]
-        LRM [k_funcparam8+rsp],[scene1.constant_buffer+rsi*8]
+        LRM [k_funcparam8+rsp],[rbx+SCENE1_FRAME_RESOURCES.constant_buffer]
         mov rax,[rcx]
         HRCALL [ID3D12Device.CreateCommittedResource+rax]
 
@@ -57,29 +59,41 @@ end virtual
         mov dword[k_funcparam5+rsp],D3D12_RESOURCE_STATE_GENERIC_READ
         mov qword[k_funcparam6+rsp],0
         LRM [k_funcparam7+rsp],[IID_ID3D12Resource]
-        LRM [k_funcparam8+rsp],[scene1.vertex_buffer+rsi*8]
+        LRM [k_funcparam8+rsp],[rbx+SCENE1_FRAME_RESOURCES.vertex_buffer]
         mov rax,[rcx]
         HRCALL [ID3D12Device.CreateCommittedResource+rax]
 
   ; map constant buffer
-        mov rcx,[scene1.constant_buffer+rsi*8]
+        mov rcx,[rbx+SCENE1_FRAME_RESOURCES.constant_buffer]
         xor edx,edx
         lea r8,[.empty_range+rsp]
-        lea r9,[scene1.constant_buffer_ptr+rsi*8]
+        lea r9,[rbx+SCENE1_FRAME_RESOURCES.constant_buffer_ptr]
         mov rax,[rcx]
         HRCALL [ID3D12Resource.Map+rax]
 
   ; map vertex buffer
-        mov rcx,[scene1.vertex_buffer+rsi*8]
+        mov rcx,[rbx+SCENE1_FRAME_RESOURCES.vertex_buffer]
         xor edx,edx
         lea r8,[.empty_range+rsp]
-        lea r9,[scene1.vertex_buffer_ptr+rsi*8]
+        lea r9,[rbx+SCENE1_FRAME_RESOURCES.vertex_buffer_ptr]
         mov rax,[rcx]
         HRCALL [ID3D12Resource.Map+rax]
 
-        add esi,1
-        cmp esi,k_frame_count
-        jb @b
+        mov rcx,[rbx+SCENE1_FRAME_RESOURCES.constant_buffer]
+        mov rax,[rcx]
+        call [ID3D12Resource.GetGPUVirtualAddress+rax]
+        mov [rbx+SCENE1_FRAME_RESOURCES.constant_buffer_gpu_ptr],rax
+
+        mov rcx,[rbx+SCENE1_FRAME_RESOURCES.vertex_buffer]
+        mov rax,[rcx]
+        call [ID3D12Resource.GetGPUVirtualAddress+rax]
+        mov [rbx+SCENE1_FRAME_RESOURCES.vertex_buffer_view.BufferLocation],rax
+        mov [rbx+SCENE1_FRAME_RESOURCES.vertex_buffer_view.SizeInBytes],1024
+        mov [rbx+SCENE1_FRAME_RESOURCES.vertex_buffer_view.StrideInBytes],16
+
+        add rbx,sizeof.SCENE1_FRAME_RESOURCES
+        sub esi,1
+        jnz .frame_resources_loop
 
   ; root signature
         mov [.root_descriptor.ParameterType+rsp],D3D12_ROOT_PARAMETER_TYPE_CBV
@@ -160,12 +174,12 @@ end virtual
   ; success
         mov eax,1
         add rsp,.k_stack_size
-        pop rsi
+        pop rbx rsi
         ret
   .error:
         xor eax,eax
         add rsp,.k_stack_size
-        pop rsi
+        pop rbx rsi
         ret
 ;=============================================================================
 FALIGN
@@ -184,10 +198,13 @@ virtual at 0
   align 32
   .mat: rd 16
   align 32
-  .k_stack_size = $+8
+  .k_stack_size = $
 end virtual
-        push rsi rdi
+        push rsi rdi r12
         sub rsp,.k_stack_size
+        mov r12d,[frame_index]
+        imul r12d,sizeof.SCENE1_FRAME_RESOURCES
+        lea r12,[r12+scene1.frame_resources0]
   ; update rotation matrix
         vmovss xmm0,[scene1.eye_half_fovy]
         call sincosf
@@ -217,10 +234,17 @@ end virtual
         vmovaps ymm3,[.mat+32+rsp]
         call matrix_mul_transpose ; transpose(rotation*lookat*perspective)
 
-        mov eax,[frame_index]
-        mov rcx,[scene1.constant_buffer_ptr+rax*8]
+        mov rcx,[r12+SCENE1_FRAME_RESOURCES.constant_buffer_ptr]
         vmovaps [rcx],ymm0
         vmovaps [rcx+32],ymm1
+  ; update vertex buffer
+        mov rcx,[r12+SCENE1_FRAME_RESOURCES.vertex_buffer_ptr]
+        vmovaps xmm0,[scene1.tri_v0]
+        vmovaps [rcx],xmm0
+        vmovaps xmm0,[scene1.tri_v1]
+        vmovaps [rcx+16],xmm0
+        vmovaps xmm0,[scene1.tri_v2]
+        vmovaps [rcx+32],xmm0
   ; init transition barrier
         mov [.barrier.Type+rsp],D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
         mov [.barrier.Flags+rsp],0
@@ -252,16 +276,16 @@ end virtual
         mov rdx,[scene1.rootsig]
         call [ID3D12GraphicsCommandList.SetGraphicsRootSignature+rdi]
 
-        mov eax,[frame_index]
-        mov rcx,[scene1.constant_buffer+rax*8]
-        mov rax,[rcx]
-        call [ID3D12Resource.GetGPUVirtualAddress+rax]
         mov rcx,rsi
         xor edx,edx
-        mov r8,rax
+        mov r8,[r12+SCENE1_FRAME_RESOURCES.constant_buffer_gpu_ptr]
         call [ID3D12GraphicsCommandList.SetGraphicsRootConstantBufferView+rdi]
   ; vertex buffer view
-        ;mov rcx,[scene1.
+        mov rcx,rsi
+        xor edx,edx
+        mov r8d,1
+        lea r9,[r12+SCENE1_FRAME_RESOURCES.vertex_buffer_view]
+        call [ID3D12GraphicsCommandList.IASetVertexBuffers+rdi]
   ; back buffer to D3D12_RESOURCE_STATE_RENDER_TARGET
         mov eax,[back_buffer_index]
         mov rax,[swapchain_buffer+rax*8]
@@ -316,23 +340,27 @@ end virtual
         mov rax,[rcx]
         call [ID3D12CommandQueue.ExecuteCommandLists+rax]
         add rsp,.k_stack_size
-        pop rdi rsi
+        pop r12 rdi rsi
         ret
 ;=============================================================================
 else if program_section = 'data'
 
-struc scene1 {
+struc SCENE1_FRAME_RESOURCES {
+  .constant_buffer dq 0
+  .constant_buffer_ptr dq 0
+  .constant_buffer_gpu_ptr dq 0
+  .vertex_buffer dq 0
+  .vertex_buffer_ptr dq 0
+  .vertex_buffer_view D3D12_VERTEX_BUFFER_VIEW }
+STRUC_OFFSETS_SIZE SCENE1_FRAME_RESOURCES
+
+struc SCENE1 {
   .pso dq 0
   .rootsig dq 0
 
-  .constant_buffer dq k_frame_count dup 0
-  .constant_buffer_ptr dq k_frame_count dup 0
-
-  .vertex_buffer dq k_frame_count dup 0
-  .vertex_buffer_ptr dq k_frame_count dup 0
-
+  align 8
 rept k_frame_count n:0 \{
-  .vertex_buffer_view\#n D3D12_VERTEX_BUFFER_VIEW \}
+  .frame_resources\#n SCENE1_FRAME_RESOURCES \}
 
 align 4
   .eye_half_fovy dd 0.52359876 ; pi / 6
@@ -342,15 +370,18 @@ align 16
   .eye_position: dd 1.7,1.7,-1.7,1.0
   .eye_focus: dd 0.0,0.0,0.0,1.0
   .eye_up: dd 0.0,1.0,0.0,0.0
+  .tri_v0: dd -0.7,-0.7,0.0,1.0
+  .tri_v1: dd 0.0,0.7,0.0,1.0
+  .tri_v2: dd 0.7,-0.7,0.0,1.0
 align 1
   .s_position db 'POSITION',0
   .s_vs db 'data/vs_transform.cso',0
   .s_ps db 'data/ps_shade.cso',0 }
 
 align 8
-  scene1 scene1
+  scene1 SCENE1
 
-restruc scene1
+restruc SCENE1,SCENE1_FRAME_RESOURCES
 
 end if
 ;=============================================================================
