@@ -326,12 +326,12 @@ end virtual
                        call   get_time
                      vmovsd   [.prev_time],xmm0
                      vmovsd   [.prev_update_time],xmm0
-  @@:                  call   get_time                       ; xmm0 = (0,time)
+  @@:                  call   get_time                     ; xmm0 = (0,time)
                      vmovsd   [time],xmm0
                      vsubsd   xmm1,xmm0,[.prev_time]       ; xmm1 = (0,time_delta)
                      vmovsd   [.prev_time],xmm0
                      vxorps   xmm2,xmm2,xmm2
-                  vcvtsd2ss   xmm1,xmm2,xmm1            ; xmm1 = (0,0,0,time_delta)
+                  vcvtsd2ss   xmm1,xmm2,xmm1               ; xmm1 = (0,0,0,time_delta)
                      vmovss   [time_delta],xmm1
                      vmovsd   xmm1,[.prev_update_time]     ; xmm1 = (0,prev_update_time)
                      vsubsd   xmm2,xmm0,xmm1               ; xmm2 = (0,time-prev_update_time)
@@ -341,7 +341,7 @@ end virtual
                      vmovsd   [.prev_update_time],xmm0
                         mov   eax,[.frame]
                      vxorpd   xmm1,xmm1,xmm1
-                  vcvtsi2sd   xmm1,xmm1,eax             ; xmm1 = (0,frame)
+                  vcvtsi2sd   xmm1,xmm1,eax                ; xmm1 = (0,frame)
                      vdivsd   xmm0,xmm1,xmm2               ; xmm0 = (0,frame/(time-prev_update_time))
                      vdivsd   xmm1,xmm2,xmm1
                      vmulsd   xmm1,xmm1,[.k_1000000_0]
@@ -396,47 +396,47 @@ end virtual
                        test   eax,eax
                          jz   .error
   ; compute window size
-        mov eax,[win_width]
-        mov [.rect.right+rsp],eax
-        mov eax,[win_height]
-        mov [.rect.bottom+rsp],eax
-        lea rcx,[.rect+rsp]
-        mov edx,k_win_style
-        xor r8d,r8d
-        call [AdjustWindowRect]
-        mov r10d,[.rect.right+rsp]
-        mov r11d,[.rect.bottom+rsp]
-        sub r10d,[.rect.left+rsp]
-        sub r11d,[.rect.top+rsp]
+                        mov   eax,[win_width]
+                        mov   [.rect.right+rsp],eax
+                        mov   eax,[win_height]
+                        mov   [.rect.bottom+rsp],eax
+                        lea   rcx,[.rect+rsp]
+                        mov   edx,k_win_style
+                        xor   r8d,r8d
+                       call   [AdjustWindowRect]
+                        mov   r10d,[.rect.right+rsp]
+                        mov   r11d,[.rect.bottom+rsp]
+                        sub   r10d,[.rect.left+rsp]
+                        sub   r11d,[.rect.top+rsp]
   ; create window
-        xor ecx,ecx
-        lea rdx,[_win_class_name]
-        mov r8,rdx
-        mov r9d,WS_VISIBLE+k_win_style
-        mov eax,CW_USEDEFAULT
-        mov [k_funcparam5+rsp],eax
-        mov [k_funcparam6+rsp],eax
-        mov [k_funcparam7+rsp],r10d
-        mov [k_funcparam8+rsp],r11d
-        mov [k_funcparam9+rsp],ecx
-        mov [k_funcparam10+rsp],ecx
-        mov rax,[.wc.hInstance+rsp]
-        mov [k_funcparam11+rsp],rax
-        mov [k_funcparam12+rsp],ecx
-        call [CreateWindowEx]
-        mov [win_handle],rax
-        test rax,rax
-        jz .error
+                        xor   ecx,ecx
+                        lea   rdx,[_win_class_name]
+                        mov   r8,rdx
+                        mov   r9d,WS_VISIBLE+k_win_style
+                        mov   eax,CW_USEDEFAULT
+                        mov   [k_funcparam5+rsp],eax
+                        mov   [k_funcparam6+rsp],eax
+                        mov   [k_funcparam7+rsp],r10d
+                        mov   [k_funcparam8+rsp],r11d
+                        mov   [k_funcparam9+rsp],ecx
+                        mov   [k_funcparam10+rsp],ecx
+                        mov   rax,[.wc.hInstance+rsp]
+                        mov   [k_funcparam11+rsp],rax
+                        mov   [k_funcparam12+rsp],ecx
+                       call   [CreateWindowEx]
+                        mov   [win_handle],rax
+                       test   rax,rax
+                         jz   .error
   ; success
-        mov eax,1
-        add rsp,.k_stack_size
-        pop rsi
-        ret
+                        mov   eax,1
+                        add   rsp,.k_stack_size
+                        pop   rsi
+                        ret
   .error:
-        xor eax,eax
-        add rsp,.k_stack_size
-        pop rsi
-        ret
+                        xor   eax,eax
+                        add   rsp,.k_stack_size
+                        pop   rsi
+                        ret
 ;=============================================================================
 FALIGN
 init:
