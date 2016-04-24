@@ -48,8 +48,8 @@ entry start
 
 struc POINT {
   .x dd ?
-  .y dd ? }
-
+  .y dd ?
+}
 struc MSG {
   .hwnd dq ?
   .message dd ?,?
@@ -57,8 +57,8 @@ struc MSG {
   .lParam dq ?
   .time dd ?
   .pt POINT
-  dd ? }
-
+  dd ?
+}
 struc WNDCLASS {
   .style dd ?,?
   .lpfnWndProc dq ?
@@ -69,14 +69,14 @@ struc WNDCLASS {
   .hCursor dq ?
   .hbrBackground dq ?
   .lpszMenuName dq ?
-  .lpszClassName dq ? }
-
+  .lpszClassName dq ?
+}
 struc RECT {
   .left dd ?
   .top dd ?
   .right dd ?
-  .bottom dd ? }
-
+  .bottom dd ?
+}
 struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
   .wFormatTag dw p0
   .nChannels dw p1
@@ -85,8 +85,8 @@ struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
   .nBlockAlign dw p4
   .wBitsPerSample dw p5
   .cbSize dw 0
-  dw 0 }
-
+  dw 0
+}
 struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
   dd p0
   dw p1
@@ -98,13 +98,14 @@ struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
   db p7
   db p8
   db p9
-  db p10 }
-
+  db p10
+}
 macro STRUC_OFFSETS_SIZE s {
 virtual at 0
   s s
   sizeof.#s = $
-end virtual }
+end virtual
+}
 
 include 'd3d12.inc'
 
@@ -163,89 +164,89 @@ end virtual
 ;========================================================================
 macro EMIT [inst] {
   forward
-        inst }
-
+                       inst
+}
 macro IACA_BEGIN {
-        mov ebx,111
-        db $64,$67,$90 }
-
+                        mov   ebx,111
+                         db   $64,$67,$90
+}
 macro IACA_END {
-        mov ebx,222
-        db $64,$67,$90 }
-
+                        mov   ebx,222
+                         db   $64,$67,$90
+}
 macro MALLOC size* {
-        mov rcx,[process_heap]
-        xor edx,edx
-        mov r8d,size
-        call [HeapAlloc] }
-
+                        mov   rcx,[process_heap]
+                        xor   edx,edx
+                        mov   r8d,size
+                       call   [HeapAlloc]
+}
 macro FREE ptr* {
-local .end
-        mov r8,ptr
-        test r8,r8
-        jz .end
-        mov rcx,[process_heap]
-        xor edx,edx
-        call [HeapFree]
-  .end: }
-
+  local .end
+                        mov   r8,ptr
+                       test   r8,r8
+                         jz   .end
+                        mov   rcx,[process_heap]
+                        xor   edx,edx
+                       call   [HeapFree]
+  .end:
+}
 macro SAFE_CLOSE handle* {
-local .end
-        mov rcx,handle
-        test rcx,rcx
-        jz .end
-        call [CloseHandle]
-        mov handle,0
-  .end: }
-
+  local .end
+                        mov   rcx,handle
+                       test   rcx,rcx
+                         jz   .end
+                       call   [CloseHandle]
+                        mov   handle,0
+  .end:
+}
 macro SAFE_RELEASE iface* {
-local .end
-        mov rcx,iface
-        test rcx,rcx
-        jz .end
-        mov rax,[rcx]
-        call [IUnknown.Release+rax]
-        mov iface,0
-  .end: }
-
+  local .end
+                        mov   rcx,iface
+                       test   rcx,rcx
+                         jz   .end
+                        mov   rax,[rcx]
+                       call   [IUnknown.Release+rax]
+                        mov   iface,0
+  .end:
+}
 macro FALIGN {
-align 16 }
-
+  align 16
+}
 macro DEBUG_BREAK {
-        int3
-        nop }
-
+                       int3
+                        nop
+}
 macro TRANSITION_BARRIER ptr*,res*,sbefore*,safter* {
-        mov [ptr+D3D12_RESOURCE_BARRIER.Transition.pResource],res
-        mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateBefore],sbefore
-        mov [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter }
-
+                        mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.pResource],res
+                        mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.StateBefore],sbefore
+                        mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter
+}
 macro ZERO_STACK size* {
-        vpxor ymm0,ymm0,ymm0
-        xor eax,eax
-        mov ecx,size/32
-  @@:   vmovdqa [rsp+rax],ymm0
-        add eax,32
-        sub ecx,1
-        jnz @b }
-
+                      vpxor   ymm0,ymm0,ymm0
+                        xor   eax,eax
+                        mov   ecx,size/32
+  @@:               vmovdqa   [rsp+rax],ymm0
+                        add   eax,32
+                        sub   ecx,1
+                        jnz   @b
+}
 macro LOADXIM xmm*,imm* {
-        mov eax,imm
-        vmovd xmm,eax }
-
+                        mov   eax,imm
+                      vmovd   xmm,eax
+}
 macro HRCALL target {
-        call target
-        test eax,eax
-        js .error }
-
+                       call   target
+                       test   eax,eax
+                         js   .error
+}
 macro LRM dst,src {
-        lea rax,src
-        mov dst,rax }
-
+                        lea   rax,src
+                        mov   dst,rax
+}
 macro MRM dst,src {
-        mov rax,src
-        mov dst,rax }
-
+                        mov   rax,src
+                        mov   dst,rax
+}
 k_frame_count equ 3
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 k_swapchain_buffer_count equ 4
@@ -262,52 +263,52 @@ include 'amnestia_lib.inc'
 FALIGN
 check_cpu_extensions:
 ;-----------------------------------------------------------------------------
-        mov eax,1
-        cpuid
-        and ecx,$58001000          ; check RDRAND,AVX,OSXSAVE,FMA
-        cmp ecx,$58001000
-        jne .not_supported
-        mov eax,7
-        xor ecx,ecx
-        cpuid
-        and ebx,$20                ; check AVX2
-        cmp ebx,$20
-        jne .not_supported
-        xor ecx,ecx
-        xgetbv
-        and eax,$6                 ; check OS support
-        cmp eax,$6
-        jne .not_supported
-        mov eax,1
-        jmp .ret
+                        mov   eax,1
+                      cpuid
+                        and   ecx,$58001000          ; check RDRAND,AVX,OSXSAVE,FMA
+                        cmp   ecx,$58001000
+                        jne   .not_supported
+                        mov   eax,7
+                        xor   ecx,ecx
+                      cpuid
+                        and   ebx,$20                ; check AVX2
+                        cmp   ebx,$20
+                        jne   .not_supported
+                        xor   ecx,ecx
+                     xgetbv
+                        and   eax,$6                 ; check OS support
+                        cmp   eax,$6
+                        jne   .not_supported
+                        mov   eax,1
+                        jmp   .ret
   .not_supported:
-        xor eax,eax
-  .ret: ret
+                        xor   eax,eax
+  .ret:                 ret
 ;=============================================================================
 FALIGN
 get_time:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
-        sub rsp,.k_stack_size
-        mov rax,[.perf_freq]
-        test rax,rax
-        jnz @f
-        lea rcx,[.perf_freq]
-        call [QueryPerformanceFrequency]
-        lea rcx,[.first_perf_counter]
-        call [QueryPerformanceCounter]
+                        sub   rsp,.k_stack_size
+                        mov   rax,[.perf_freq]
+                       test   rax,rax
+                        jnz   @f
+                        lea   rcx,[.perf_freq]
+                       call   [QueryPerformanceFrequency]
+                        lea   rcx,[.first_perf_counter]
+                       call   [QueryPerformanceCounter]
 
-  @@:   lea rcx,[.perf_counter]
-        call [QueryPerformanceCounter]
-        mov rcx,[.perf_counter]
-        sub rcx,[.first_perf_counter]
-        mov rdx,[.perf_freq]
-        vxorps xmm0,xmm0,xmm0
-        vcvtsi2sd xmm1,xmm0,rcx
-        vcvtsi2sd xmm2,xmm0,rdx
-        vdivsd xmm0,xmm1,xmm2
-        add rsp,.k_stack_size
-        ret
+  @@:                   lea   rcx,[.perf_counter]
+                       call   [QueryPerformanceCounter]
+                        mov   rcx,[.perf_counter]
+                        sub   rcx,[.first_perf_counter]
+                        mov   rdx,[.perf_freq]
+                     vxorps   xmm0,xmm0,xmm0
+                  vcvtsi2sd   xmm1,xmm0,rcx
+                  vcvtsi2sd   xmm2,xmm0,rdx
+                     vdivsd   xmm0,xmm1,xmm2
+                        add   rsp,.k_stack_size
+                        ret
 ;=============================================================================
 FALIGN
 update_frame_stats:
@@ -318,44 +319,44 @@ virtual at 0
   align 32
   .k_stack_size = $+24
 end virtual
-        sub rsp,.k_stack_size
-        mov rax,[.prev_time]
-        test rax,rax
-        jnz @f
-        call get_time
-        vmovsd [.prev_time],xmm0
-        vmovsd [.prev_update_time],xmm0
-  @@:   call get_time                       ; xmm0 = (0,time)
-        vmovsd [time],xmm0
-        vsubsd xmm1,xmm0,[.prev_time]       ; xmm1 = (0,time_delta)
-        vmovsd [.prev_time],xmm0
-        vxorps xmm2,xmm2,xmm2
-        vcvtsd2ss xmm1,xmm2,xmm1            ; xmm1 = (0,0,0,time_delta)
-        vmovss [time_delta],xmm1
-        vmovsd xmm1,[.prev_update_time]     ; xmm1 = (0,prev_update_time)
-        vsubsd xmm2,xmm0,xmm1               ; xmm2 = (0,time-prev_update_time)
-        vmovsd xmm3,[.k_1_0]                ; xmm3 = (0,1.0)
-        vcomisd xmm2,xmm3
-        jb @f
-        vmovsd [.prev_update_time],xmm0
-        mov eax,[.frame]
-        vxorpd xmm1,xmm1,xmm1
-        vcvtsi2sd xmm1,xmm1,eax             ; xmm1 = (0,frame)
-        vdivsd xmm0,xmm1,xmm2               ; xmm0 = (0,frame/(time-prev_update_time))
-        vdivsd xmm1,xmm2,xmm1
-        vmulsd xmm1,xmm1,[.k_1000000_0]
-        mov [.frame],0
-        lea rcx,[.text+rsp]
-        lea rdx,[_win_text_fmt]
-        vcvtsd2si r8,xmm0
-        vcvtsd2si r9,xmm1
-        call [wsprintf]
-        mov rcx,[win_handle]
-        lea rdx,[.text+rsp]
-        call [SetWindowText]
-  @@:   add [.frame],1
-        add rsp,.k_stack_size
-        ret
+                        sub   rsp,.k_stack_size
+                        mov   rax,[.prev_time]
+                       test   rax,rax
+                        jnz   @f
+                       call   get_time
+                     vmovsd   [.prev_time],xmm0
+                     vmovsd   [.prev_update_time],xmm0
+  @@:                  call   get_time                       ; xmm0 = (0,time)
+                     vmovsd   [time],xmm0
+                     vsubsd   xmm1,xmm0,[.prev_time]       ; xmm1 = (0,time_delta)
+                     vmovsd   [.prev_time],xmm0
+                     vxorps   xmm2,xmm2,xmm2
+                  vcvtsd2ss   xmm1,xmm2,xmm1            ; xmm1 = (0,0,0,time_delta)
+                     vmovss   [time_delta],xmm1
+                     vmovsd   xmm1,[.prev_update_time]     ; xmm1 = (0,prev_update_time)
+                     vsubsd   xmm2,xmm0,xmm1               ; xmm2 = (0,time-prev_update_time)
+                     vmovsd   xmm3,[.k_1_0]                ; xmm3 = (0,1.0)
+                    vcomisd   xmm2,xmm3
+                         jb   @f
+                     vmovsd   [.prev_update_time],xmm0
+                        mov   eax,[.frame]
+                     vxorpd   xmm1,xmm1,xmm1
+                  vcvtsi2sd   xmm1,xmm1,eax             ; xmm1 = (0,frame)
+                     vdivsd   xmm0,xmm1,xmm2               ; xmm0 = (0,frame/(time-prev_update_time))
+                     vdivsd   xmm1,xmm2,xmm1
+                     vmulsd   xmm1,xmm1,[.k_1000000_0]
+                        mov   [.frame],0
+                        lea   rcx,[.text+rsp]
+                        lea   rdx,[_win_text_fmt]
+                  vcvtsd2si   r8,xmm0
+                  vcvtsd2si   r9,xmm1
+                       call   [wsprintf]
+                        mov   rcx,[win_handle]
+                        lea   rdx,[.text+rsp]
+                       call   [SetWindowText]
+  @@:                   add   [.frame],1
+                        add   rsp,.k_stack_size
+                        ret
 ;=============================================================================
 FALIGN
 init_window:
@@ -370,30 +371,30 @@ virtual at 0
 end virtual
         push rsi
   ; alloc and clear the stack
-        sub rsp,.k_stack_size
-        vpxor ymm0,ymm0,ymm0
-        xor eax,eax
-        mov ecx,.k_stack_size/32
-  @@:   vmovdqa [rsp+rax],ymm0
-        add eax,32
-        sub ecx,1
-        jnz @b
+                        sub   rsp,.k_stack_size
+                      vpxor   ymm0,ymm0,ymm0
+                        xor   eax,eax
+                        mov   ecx,.k_stack_size/32
+  @@:               vmovdqa   [rsp+rax],ymm0
+                        add   eax,32
+                        sub   ecx,1
+                        jnz   @b
   ; create window class
-        lea rax,[winproc]
-        mov [.wc.lpfnWndProc+rsp],rax
-        lea rax,[_win_class_name]
-        mov [.wc.lpszClassName+rsp],rax
-        xor ecx,ecx
-        call [GetModuleHandle]
-        mov [.wc.hInstance+rsp],rax
-        xor ecx,ecx
-        mov edx,IDC_ARROW
-        call [LoadCursor]
-        mov [.wc.hCursor+rsp],rax
-        lea rcx,[.wc+rsp]
-        call [RegisterClass]
-        test eax,eax
-        jz .error
+                        lea   rax,[winproc]
+                        mov   [.wc.lpfnWndProc+rsp],rax
+                        lea   rax,[_win_class_name]
+                        mov   [.wc.lpszClassName+rsp],rax
+                        xor   ecx,ecx
+                       call   [GetModuleHandle]
+                        mov   [.wc.hInstance+rsp],rax
+                        xor   ecx,ecx
+                        mov   edx,IDC_ARROW
+                       call   [LoadCursor]
+                        mov   [.wc.hCursor+rsp],rax
+                        lea   rcx,[.wc+rsp]
+                       call   [RegisterClass]
+                       test   eax,eax
+                         jz   .error
   ; compute window size
         mov eax,[win_width]
         mov [.rect.right+rsp],eax
