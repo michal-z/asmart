@@ -442,51 +442,51 @@ FALIGN
 init:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
-        sub rsp,.k_stack_size
+                        sub   rsp,.k_stack_size
   ; check CPU
-        call check_cpu_extensions
-        test eax,eax
-        jz .error
+                       call   check_cpu_extensions
+                       test   eax,eax
+                         jz   .error
   ; get process heap
-        call [GetProcessHeap]
-        mov [process_heap],rax
-        test rax,rax
-        jz .error
+                       call   [GetProcessHeap]
+                        mov   [process_heap],rax
+                       test   rax,rax
+                         jz   .error
   ; create window
-        call init_window
-        test eax,eax
-        jz .error
+                       call   init_window
+                       test   eax,eax
+                         jz   .error
   ; init demo
-        call demo_init
-        test eax,eax
-        jz .error
+                       call   demo_init
+                       test   eax,eax
+                         jz   .error
   ; success
-        mov eax,1
-        add rsp,.k_stack_size
-        ret
+                        mov   eax,1
+                        add   rsp,.k_stack_size
+                        ret
   .error:
-        xor eax,eax
-        add rsp,.k_stack_size
-        ret
+                        xor   eax,eax
+                        add   rsp,.k_stack_size
+                        ret
 ;=============================================================================
 FALIGN
 deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
-        sub rsp,.k_stack_size
-        call demo_deinit
-        add rsp,.k_stack_size
-        ret
+                        sub   rsp,.k_stack_size
+                       call   demo_deinit
+                        add   rsp,.k_stack_size
+                        ret
 ;=============================================================================
 FALIGN
 update:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
-        sub rsp,.k_stack_size
-        call update_frame_stats
-        call demo_update
-        add rsp,.k_stack_size
-        ret
+                        sub   rsp,.k_stack_size
+                       call   update_frame_stats
+                       call   demo_update
+                        add   rsp,.k_stack_size
+                        ret
 ;=============================================================================
 FALIGN
 start:
@@ -497,62 +497,60 @@ virtual at 0
   align 32
   .k_stack_size = $
 end virtual
-        and rsp,-32
-        sub rsp,.k_stack_size
-        call init
-        test eax,eax
-        jz .quit
-
+                        and   rsp,-32
+                        sub   rsp,.k_stack_size
+                       call   init
+                       test   eax,eax
+                         jz   .quit
   .main_loop:
-        lea rcx,[.msg+rsp]
-        xor edx,edx
-        xor r8d,r8d
-        xor r9d,r9d
-        mov dword[k_funcparam5+rsp],PM_REMOVE
-        call [PeekMessage]
+                        lea   rcx,[.msg+rsp]
+                        xor   edx,edx
+                        xor   r8d,r8d
+                        xor   r9d,r9d
+                        mov   dword[k_funcparam5+rsp],PM_REMOVE
+                       call   [PeekMessage]
+                       test   eax,eax
+                         jz   .update
 
-        test eax,eax
-        jz .update
+                        lea   rcx,[.msg+rsp]
+                       call   [DispatchMessage]
+                        cmp   [.msg.message+rsp],WM_QUIT
+                         je   .quit
 
-        lea rcx,[.msg+rsp]
-        call [DispatchMessage]
-        cmp [.msg.message+rsp],WM_QUIT
-        je .quit
-
-        jmp .main_loop
+                        jmp   .main_loop
   .update:
-        call update
-        jmp .main_loop
+                       call   update
+                        jmp   .main_loop
   .quit:
-        call deinit
-        xor ecx,ecx
-        call [ExitProcess]
+                       call   deinit
+                        xor   ecx,ecx
+                       call   [ExitProcess]
 ;=============================================================================
 FALIGN
 winproc:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 16*2+8
-        sub rsp,.k_stack_size
-        cmp edx,WM_KEYDOWN
-        je .keydown
-        cmp edx,WM_DESTROY
-        je .destroy
-        call [DefWindowProc]
-        jmp .return
+                        sub   rsp,.k_stack_size
+                        cmp   edx,WM_KEYDOWN
+                         je   .keydown
+                        cmp   edx,WM_DESTROY
+                         je   .destroy
+                       call   [DefWindowProc]
+                        jmp   .return
   .keydown:
-        cmp r8d,VK_ESCAPE
-        jne .return
-        xor ecx,ecx
-        call [PostQuitMessage]
-        xor eax,eax
-        jmp .return
+                        cmp   r8d,VK_ESCAPE
+                        jne   .return
+                        xor   ecx,ecx
+                       call   [PostQuitMessage]
+                        xor   eax,eax
+                        jmp   .return
   .destroy:
-        xor ecx,ecx
-        call [PostQuitMessage]
-        xor eax,eax
+                        xor   ecx,ecx
+                       call   [PostQuitMessage]
+                        xor   eax,eax
   .return:
-        add rsp,.k_stack_size
-        ret
+                        add   rsp,.k_stack_size
+                        ret
 ;========================================================================
 section '.data' data readable
 program_section = 'cdata'
