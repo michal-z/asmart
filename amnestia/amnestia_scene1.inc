@@ -14,15 +14,14 @@ struc scene {
   .rootsig dq 0
 
   align 8
-rept k_frame_count n:0 \{
-  .frame_resources\#n frame_resources \}
+  rept k_frame_count n:0 \{ .frame_resources\#n frame_resources \}
 
-align 4
+  align 4
   .eye_half_fovy dd 0.52359876 ; pi / 6
   .eye_nearz dd 1.0
   .eye_farz dd 100.0
 
-align 16
+  align 16
   .eye_position: dd 1.7,1.7,-1.7,1.0
   .eye_focus: dd 0.0,0.0,0.0,1.0
   .eye_up: dd 0.0,1.0,0.0,0.0
@@ -30,12 +29,12 @@ align 16
   .tri_v1: dd 0.0,0.7,0.0,1.0
   .tri_v2: dd 0.7,-0.7,0.0,1.0
 
-align 1
+  align 1
   .s_position db 'POSITION',0
   .s_vs db 'data/vs_transform.cso',0
   .s_ps db 'data/ps_shade.cso',0 }
 
-align 8
+  align 8
   scene1 scene
 
 restruc scene,frame_resources
@@ -83,7 +82,7 @@ end virtual
                         lea   rbx,[scene1.frame_resources0]
   .frame_resources_loop:
                             ; constant buffer: create
-                        mov   rcx,[device]
+                        mov   rcx,[demo.device]
                         lea   rdx,[.upload_heap_props+rsp]
                         mov   r8d,D3D12_HEAP_FLAG_NONE
                         lea   r9,[.buffer_res_desc+rsp]
@@ -93,7 +92,7 @@ end virtual
                         lrm   [rsp+56],[rbx+frame_resources.constant_buffer]
                      hrcall   [ID3D12Device.CreateCommittedResource+rax]
                             ; vertex buffer: create
-                        mov   rcx,[device]
+                        mov   rcx,[demo.device]
                         lea   rdx,[.upload_heap_props+rsp]
                         mov   r8d,D3D12_HEAP_FLAG_NONE
                         lea   r9,[.buffer_res_desc+rsp]
@@ -153,7 +152,7 @@ end virtual
                         mov   rax,[rcx]
                        call   [ID3DBlob.GetBufferSize+rax]
 
-                        mov   rcx,[device]
+                        mov   rcx,[demo.device]
                         xor   edx,edx
                         mov   r8,rsi
                         mov   r9,rax
@@ -195,15 +194,15 @@ end virtual
                         mov   [.pso_desc.RTVFormats+rsp],DXGI_FORMAT_R8G8B8A8_UNORM
                         mov   [.pso_desc.SampleDesc.Count+rsp],1
 
-                        mov   rcx,[device]
+                        mov   rcx,[demo.device]
                         lea   rdx,[.pso_desc+rsp]
                         lea   r8,[IID_ID3D12PipelineState]
                         lea   r9,[scene1.pso]
                         mov   rax,[rcx]
                        call   [ID3D12Device.CreateGraphicsPipelineState+rax]    ; create pso
                         mov   esi,eax
-                   mem_free   [.pso_desc.VS.pShaderBytecode+rsp]
-                   mem_free   [.pso_desc.PS.pShaderBytecode+rsp]
+                       free   [.pso_desc.VS.pShaderBytecode+rsp]
+                       free   [.pso_desc.PS.pShaderBytecode+rsp]
                        test   esi,esi
                          js   .error
 
@@ -236,15 +235,15 @@ virtual at 0
 end virtual
                        push   rsi rdi r12
                         sub   rsp,.k_stack_size
-                        mov   r12d,[frame_index]
+                        mov   r12d,[demo.frame_index]
                        imul   r12d,sizeof.frame_resources
                         lea   r12,[r12+scene1.frame_resources0]
 
                             ; update rotation matrix
                      vmovss   xmm0,[scene1.eye_half_fovy]
                        call   sincosf
-                     vmovss   xmm2,[viewport.Width]
-                     vdivss   xmm2,xmm2,[viewport.Height]
+                     vmovss   xmm2,[demo.viewport.Width]
+                     vdivss   xmm2,xmm2,[demo.viewport.Height]
                      vmovss   xmm3,[scene1.eye_nearz]
                      vmovss   xmm4,[scene1.eye_farz]
         mat_perspective_fov
@@ -286,26 +285,26 @@ end virtual
                         mov   [.barrier.Flags+rsp],0
                         mov   [.barrier.Transition.Subresource+rsp],D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
                             ; init command list pointers
-                        mov   rsi,[cmdlist]
+                        mov   rsi,[demo.cmdlist]
                         mov   rdi,[rsi]
                             ; reset completed command allocator
-                        mov   eax,[frame_index]
-                        mov   rcx,[cmdallocator+rax*8]
+                        mov   eax,[demo.frame_index]
+                        mov   rcx,[demo.cmdalloc+rax*8]
                         mov   rax,[rcx]
                        call   [ID3D12CommandAllocator.Reset+rax]
                             ; begin commands recording
-                        mov   eax,[frame_index]
+                        mov   eax,[demo.frame_index]
                         mov   rcx,rsi
-                        mov   rdx,[cmdallocator+rax*8]
+                        mov   rdx,[demo.cmdalloc+rax*8]
                         mov   r8,[scene1.pso]
                        call   [ID3D12GraphicsCommandList.Reset+rdi]
                         mov   rcx,rsi
                         mov   edx,1
-                        lea   r8,[viewport]
+                        lea   r8,[demo.viewport]
                        call   [ID3D12GraphicsCommandList.RSSetViewports+rdi]
                         mov   rcx,rsi
                         mov   edx,1
-                        lea   r8,[scissor]
+                        lea   r8,[demo.scissor]
                        call   [ID3D12GraphicsCommandList.RSSetScissorRects+rdi]
                             ; set root signature and resources
                         mov   rcx,rsi
@@ -323,22 +322,22 @@ end virtual
                         lea   r9,[r12+frame_resources.vertex_buffer_view]
                        call   [ID3D12GraphicsCommandList.IASetVertexBuffers+rdi]
                             ; back buffer to D3D12_RESOURCE_STATE_RENDER_TARGET
-                        mov   eax,[back_buffer_index]
-                        mov   rax,[swapchain_buffer+rax*8]
+                        mov   eax,[demo.back_buffer_index]
+                        mov   rax,[demo.swapchain_buffer+rax*8]
          transition_barrier   .barrier+rsp,rax,D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET
                         mov   rcx,rsi
                         mov   edx,1
                         lea   r8,[.barrier+rsp]
                        call   [ID3D12GraphicsCommandList.ResourceBarrier+rdi]
                             ; get back buffer handle
-                        mov   eax,[back_buffer_index]
-                       imul   eax,[rtv_size]
-                        add   rax,[swapchain_heap_start]
+                        mov   eax,[demo.back_buffer_index]
+                       imul   eax,[demo.rtv_size]
+                        add   rax,[demo.swapchain_heap_start]
                         mov   [.back_buffer_handle+rsp],rax
                             ; clear back buffer
                         mov   rcx,rsi
                         mov   rdx,[.back_buffer_handle+rsp]
-                        lea   r8,[clear_color]
+                        lea   r8,[demo.clear_color]
                         xor   r9d,r9d
                         mov   qword[rsp+32],0
                        call   [ID3D12GraphicsCommandList.ClearRenderTargetView+rdi]
@@ -360,8 +359,8 @@ end virtual
                         mov   dword[rsp+32],0
                        call   [ID3D12GraphicsCommandList.DrawInstanced+rdi]
                             ; back buffer to D3D12_RESOURCE_STATE_PRESENT
-                        mov   eax,[back_buffer_index]
-                        mov   rax,[swapchain_buffer+rax*8]
+                        mov   eax,[demo.back_buffer_index]
+                        mov   rax,[demo.swapchain_buffer+rax*8]
          transition_barrier   .barrier+rsp,rax,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_PRESENT
                         mov   rcx,rsi
                         mov   edx,1
@@ -370,9 +369,9 @@ end virtual
                             ; finish recording and execute commands
                         mov   rcx,rsi
                        call   [ID3D12GraphicsCommandList.Close+rdi]
-                        mov   rcx,[cmdqueue]
+                        mov   rcx,[demo.cmdqueue]
                         mov   edx,1
-                        lea   r8,[cmdlist]
+                        lea   r8,[demo.cmdlist]
                         mov   rax,[rcx]
                        call   [ID3D12CommandQueue.ExecuteCommandLists+rax]
                         add   rsp,.k_stack_size

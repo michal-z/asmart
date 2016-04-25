@@ -28,7 +28,7 @@ end virtual
                         cmp   eax,INVALID_FILE_SIZE
                          je   .err
                         mov   ebx,eax
-                  mem_alloc   ebx
+                     malloc   ebx
                        test   rax,rax
                          jz   .err
                         mov   rdi,rax
@@ -53,7 +53,7 @@ end virtual
                        call   [CloseHandle]
   @@:                  test   rdi,rdi
                          jz   @f
-                   mem_free   rdi
+                       free   rdi
   @@:                   xor   eax,eax
                         xor   edx,edx
   .ret:                 add   rsp,.k_stack_size

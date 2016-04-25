@@ -166,12 +166,12 @@ macro iaca_begin {
 macro iaca_end {
                         mov   ebx,222
                          db   $64,$67,$90 }
-macro mem_alloc size* {
+macro malloc size* {
                         mov   rcx,[process_heap]
                         xor   edx,edx
                         mov   r8d,size
                        call   [HeapAlloc] }
-macro mem_free ptr* {
+macro free ptr* {
   local .end
                         mov   r8,ptr
                        test   r8,r8
@@ -200,8 +200,7 @@ macro safe_release iface* {
                         mov   iface,0
   .end: }
 
-macro falign {
-  align 16 }
+macro falign { align 16 }
 
 macro debug_break {
                        int3
@@ -342,9 +341,9 @@ end virtual
   @@:                   add   [.frame],1
                         add   rsp,.k_stack_size
                         ret
-align 1
+  align 1
   .k_win_text_fmt db '[%d fps  %d us] amnestia',0
-align 8
+  align 8
   .k_1000000_0 dq 1000000.0
   .k_1_0 dq 1.0
 ;=============================================================================
@@ -571,22 +570,22 @@ align 8
 ;========================================================================
 section '.data' data readable writeable
 
-program_section = 'data'
-include 'amnestia_audio.inc'
-include 'amnestia_demo.inc'
-include 'amnestia_scene1.inc'
+  program_section = 'data'
+  include 'amnestia_audio.inc'
+  include 'amnestia_demo.inc'
+  include 'amnestia_scene1.inc'
 
-align 8
+  align 8
   win_handle dq 0
   win_width dd 1280
   win_height dd 720
 
-align 8
+  align 8
   process_heap dq 0
   time dq 0
   time_delta dd 0,0
 
-align 8
+  align 8
   get_time.perf_counter dq 0
   get_time.perf_freq dq 0
   get_time.first_perf_counter dq 0
