@@ -108,10 +108,7 @@ end virtual
                         mov   rdx,[demo.cmdqueue]
                         lea   r8,[.swapchain_desc+rsp]
                         lea   r9,[demo.swapchain]
-                        mov   rax,[rcx]
-                       call   [IDXGIFactory4.CreateSwapChain+rax]
-                       test   eax,eax
-                         js   .error
+                     hrcall   [IDXGIFactory4.CreateSwapChain+rax]
                             ; viewport & scissor
                         mov   [demo.viewport.TopLeftX],dword 0.0
                         mov   [demo.viewport.TopLeftY],dword 0.0
@@ -146,10 +143,7 @@ end virtual
                         lea   rdx,[.swapchain_heap_desc+rsp]
                         lea   r8,[IID_ID3D12DescriptorHeap]
                         lea   r9,[demo.swapchain_heap]
-                        mov   rax,[rcx]
-                       call   [ID3D12Device.CreateDescriptorHeap+rax]
-                       test   eax,eax
-                         js   .error
+                     hrcall   [ID3D12Device.CreateDescriptorHeap+rax]
                         mov   rcx,[demo.swapchain_heap]
                         lea   rdx,[demo.swapchain_heap_start]
                         mov   rax,[rcx]
@@ -163,10 +157,7 @@ end virtual
                         mov   edx,esi
                         lea   r8,[IID_ID3D12Resource]
                         lea   r9,[demo.swapchain_buffer+rsi*8]
-                        mov   rax,[rcx]
-                       call   [IDXGISwapChain3.GetBuffer+rax]
-                       test   eax,eax
-                         js   .error
+                     hrcall   [IDXGISwapChain3.GetBuffer+rax]
                         mov   rcx,[demo.device]
                         mov   rdx,[demo.swapchain_buffer+rsi*8]
                         xor   r8d,r8d
