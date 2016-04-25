@@ -37,19 +37,10 @@ entry start
   AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000
   AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED = 0x88890019
 
-  k_funcparam5 equ 32
-  k_funcparam6 equ k_funcparam5 + 8
-  k_funcparam7 equ k_funcparam6 + 8
-  k_funcparam8 equ k_funcparam7 + 8
-  k_funcparam9 equ k_funcparam8 + 8
-  k_funcparam10 equ k_funcparam9 + 8
-  k_funcparam11 equ k_funcparam10 + 8
-  k_funcparam12 equ k_funcparam11 + 8
-
 struc POINT {
   .x dd ?
-  .y dd ?
-}
+  .y dd ? }
+
 struc MSG {
   .hwnd dq ?
   .message dd ?,?
@@ -57,8 +48,8 @@ struc MSG {
   .lParam dq ?
   .time dd ?
   .pt POINT
-  dd ?
-}
+  dd ? }
+
 struc WNDCLASS {
   .style dd ?,?
   .lpfnWndProc dq ?
@@ -69,14 +60,14 @@ struc WNDCLASS {
   .hCursor dq ?
   .hbrBackground dq ?
   .lpszMenuName dq ?
-  .lpszClassName dq ?
-}
+  .lpszClassName dq ? }
+
 struc RECT {
   .left dd ?
   .top dd ?
   .right dd ?
-  .bottom dd ?
-}
+  .bottom dd ? }
+
 struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
   .wFormatTag dw p0
   .nChannels dw p1
@@ -85,8 +76,8 @@ struc WAVEFORMATEX p0,p1,p2,p3,p4,p5 {
   .nBlockAlign dw p4
   .wBitsPerSample dw p5
   .cbSize dw 0
-  dw 0
-}
+  dw 0 }
+
 struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
   dd p0
   dw p1
@@ -98,89 +89,89 @@ struc GUID p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10 {
   db p7
   db p8
   db p9
-  db p10
-}
-macro STRUC_OFFSETS_SIZE s {
+  db p10 }
+
+macro struc_offsets_size s {
 virtual at 0
   s s
   sizeof.#s = $
-end virtual
-}
+end virtual }
 
 include 'd3d12.inc'
 
 virtual at 0
-  IUnknown.QueryInterface rq 1
-  IUnknown.AddRef rq 1
-  IUnknown.Release rq 1
+  IUnknown:
+    .QueryInterface rq 1
+    .AddRef rq 1
+    .Release rq 1
 end virtual
 
 virtual at 0
-  IMMDeviceEnumerator.QueryInterface rq 1
-  IMMDeviceEnumerator.AddRef rq 1
-  IMMDeviceEnumerator.Release rq 1
-  IMMDeviceEnumerator.EnumAudioEndpoints rq 1
-  IMMDeviceEnumerator.GetDefaultAudioEndpoint rq 1
-  IMMDeviceEnumerator.GetDevice rq 1
-  IMMDeviceEnumerator.RegisterEndpointNotificationCallback rq 1
-  IMMDeviceEnumerator.UnregisterEndpointNotificationCallback rq 1
+  IMMDeviceEnumerator:
+    .QueryInterface rq 1
+    .AddRef rq 1
+    .Release rq 1
+    .EnumAudioEndpoints rq 1
+    .GetDefaultAudioEndpoint rq 1
+    .GetDevice rq 1
+    .RegisterEndpointNotificationCallback rq 1
+    .UnregisterEndpointNotificationCallback rq 1
 end virtual
 
 virtual at 0
-  IMMDevice.QueryInterface rq 1
-  IMMDevice.AddRef rq 1
-  IMMDevice.Release rq 1
-  IMMDevice.Activate rq 1
-  IMMDevice.OpenPropertyStore rq 1
-  IMMDevice.GetId rq 1
-  IMMDevice.GetState rq 1
+  IMMDevice:
+    .QueryInterface rq 1
+    .AddRef rq 1
+    .Release rq 1
+    .Activate rq 1
+    .OpenPropertyStore rq 1
+    .GetId rq 1
+    .GetState rq 1
 end virtual
 
 virtual at 0
-  IAudioClient.QueryInterface rq 1
-  IAudioClient.AddRef rq 1
-  IAudioClient.Release rq 1
-  IAudioClient.Initialize rq 1
-  IAudioClient.GetBufferSize rq 1
-  IAudioClient.GetStreamLatency rq 1
-  IAudioClient.GetCurrentPadding rq 1
-  IAudioClient.IsFormatSupported rq 1
-  IAudioClient.GetMixFormat rq 1
-  IAudioClient.GetDevicePeriod rq 1
-  IAudioClient.Start rq 1
-  IAudioClient.Stop rq 1
-  IAudioClient.Reset rq 1
-  IAudioClient.SetEventHandle rq 1
-  IAudioClient.GetService rq 1
+  IAudioClient:
+    .QueryInterface rq 1
+    .AddRef rq 1
+    .Release rq 1
+    .Initialize rq 1
+    .GetBufferSize rq 1
+    .GetStreamLatency rq 1
+    .GetCurrentPadding rq 1
+    .IsFormatSupported rq 1
+    .GetMixFormat rq 1
+    .GetDevicePeriod rq 1
+    .Start rq 1
+    .Stop rq 1
+    .Reset rq 1
+    .SetEventHandle rq 1
+    .GetService rq 1
 end virtual
 
 virtual at 0
-  IAudioRenderClient.QueryInterface rq 1
-  IAudioRenderClient.AddRef rq 1
-  IAudioRenderClient.Release rq 1
-  IAudioRenderClient.GetBuffer rq 1
-  IAudioRenderClient.ReleaseBuffer rq 1
+  IAudioRenderClient:
+    .QueryInterface rq 1
+    .AddRef rq 1
+    .Release rq 1
+    .GetBuffer rq 1
+    .ReleaseBuffer rq 1
 end virtual
 ;========================================================================
-macro EMIT [inst] {
+macro emit [inst] {
   forward
-                       inst
-}
-macro IACA_BEGIN {
+                       inst }
+macro iaca_begin {
                         mov   ebx,111
-                         db   $64,$67,$90
-}
-macro IACA_END {
+                         db   $64,$67,$90 }
+macro iaca_end {
                         mov   ebx,222
-                         db   $64,$67,$90
-}
-macro MALLOC size* {
+                         db   $64,$67,$90 }
+macro mem_alloc size* {
                         mov   rcx,[process_heap]
                         xor   edx,edx
                         mov   r8d,size
-                       call   [HeapAlloc]
-}
-macro FREE ptr* {
+                       call   [HeapAlloc] }
+macro mem_free ptr* {
   local .end
                         mov   r8,ptr
                        test   r8,r8
@@ -188,18 +179,18 @@ macro FREE ptr* {
                         mov   rcx,[process_heap]
                         xor   edx,edx
                        call   [HeapFree]
-  .end:
-}
-macro SAFE_CLOSE handle* {
+  .end: }
+
+macro safe_close handle* {
   local .end
                         mov   rcx,handle
                        test   rcx,rcx
                          jz   .end
                        call   [CloseHandle]
                         mov   handle,0
-  .end:
-}
-macro SAFE_RELEASE iface* {
+  .end: }
+
+macro safe_release iface* {
   local .end
                         mov   rcx,iface
                        test   rcx,rcx
@@ -207,60 +198,54 @@ macro SAFE_RELEASE iface* {
                         mov   rax,[rcx]
                        call   [IUnknown.Release+rax]
                         mov   iface,0
-  .end:
-}
-macro FALIGN {
-  align 16
-}
-macro DEBUG_BREAK {
+  .end: }
+
+macro falign {
+  align 16 }
+
+macro debug_break {
                        int3
-                        nop
-}
-macro TRANSITION_BARRIER ptr*,res*,sbefore*,safter* {
+                        nop }
+
+macro transition_barrier ptr*,res*,sbefore*,safter* {
                         mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.pResource],res
                         mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.StateBefore],sbefore
-                        mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter
-}
-macro ZERO_STACK size* {
+                        mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter }
+
+macro zero_stack size* {
                       vpxor   ymm0,ymm0,ymm0
                         xor   eax,eax
                         mov   ecx,size/32
   @@:               vmovdqa   [rsp+rax],ymm0
                         add   eax,32
                         sub   ecx,1
-                        jnz   @b
-}
-macro LOADXIM xmm*,imm* {
-                        mov   eax,imm
-                      vmovd   xmm,eax
-}
-macro HRCALL target {
+                        jnz   @b }
+macro hrcall target {
+                        mov   rax,[rcx]
                        call   target
                        test   eax,eax
-                         js   .error
-}
-macro LRM dst,src {
+                         js   .error }
+macro lrm dst,src {
                         lea   rax,src
-                        mov   dst,rax
-}
-macro MRM dst,src {
+                        mov   dst,rax }
+macro mrm dst,src {
                         mov   rax,src
-                        mov   dst,rax
-}
+                        mov   dst,rax }
+
 k_frame_count equ 3
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 k_swapchain_buffer_count equ 4
 ;=============================================================================
 section '.text' code readable executable
-program_section = 'code'
 
+program_section = 'code'
 include 'amnestia_demo.inc'
 include 'amnestia_audio.inc'
 include 'amnestia_math.inc'
 include 'amnestia_scene1.inc'
 include 'amnestia_lib.inc'
 ;=============================================================================
-FALIGN
+falign
 check_cpu_extensions:
 ;-----------------------------------------------------------------------------
                         mov   eax,1
@@ -285,7 +270,7 @@ check_cpu_extensions:
                         xor   eax,eax
   .ret:                 ret
 ;=============================================================================
-FALIGN
+falign
 get_time:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
@@ -310,7 +295,7 @@ get_time:
                         add   rsp,.k_stack_size
                         ret
 ;=============================================================================
-FALIGN
+falign
 update_frame_stats:
 ;-----------------------------------------------------------------------------
 virtual at 0
@@ -347,7 +332,7 @@ end virtual
                      vmulsd   xmm1,xmm1,[.k_1000000_0]
                         mov   [.frame],0
                         lea   rcx,[.text+rsp]
-                        lea   rdx,[_win_text_fmt]
+                        lea   rdx,[.k_win_text_fmt]
                   vcvtsd2si   r8,xmm0
                   vcvtsd2si   r9,xmm1
                        call   [wsprintf]
@@ -357,8 +342,13 @@ end virtual
   @@:                   add   [.frame],1
                         add   rsp,.k_stack_size
                         ret
+align 1
+  .k_win_text_fmt db '[%d fps  %d us] amnestia',0
+align 8
+  .k_1000000_0 dq 1000000.0
+  .k_1_0 dq 1.0
 ;=============================================================================
-FALIGN
+falign
 init_window:
 ;-----------------------------------------------------------------------------
 virtual at 0
@@ -369,8 +359,8 @@ virtual at 0
   align 32
   .k_stack_size = $+16
 end virtual
-        push rsi
-  ; alloc and clear the stack
+                       push   rsi
+                            ; alloc and clear the stack
                         sub   rsp,.k_stack_size
                       vpxor   ymm0,ymm0,ymm0
                         xor   eax,eax
@@ -379,10 +369,10 @@ end virtual
                         add   eax,32
                         sub   ecx,1
                         jnz   @b
-  ; create window class
+                            ; create window class
                         lea   rax,[winproc]
                         mov   [.wc.lpfnWndProc+rsp],rax
-                        lea   rax,[_win_class_name]
+                        lea   rax,[k_win_class_name]
                         mov   [.wc.lpszClassName+rsp],rax
                         xor   ecx,ecx
                        call   [GetModuleHandle]
@@ -395,7 +385,7 @@ end virtual
                        call   [RegisterClass]
                        test   eax,eax
                          jz   .error
-  ; compute window size
+                            ; compute window size
                         mov   eax,[win_width]
                         mov   [.rect.right+rsp],eax
                         mov   eax,[win_height]
@@ -408,26 +398,26 @@ end virtual
                         mov   r11d,[.rect.bottom+rsp]
                         sub   r10d,[.rect.left+rsp]
                         sub   r11d,[.rect.top+rsp]
-  ; create window
+                            ; create window
                         xor   ecx,ecx
-                        lea   rdx,[_win_class_name]
+                        lea   rdx,[k_win_class_name]
                         mov   r8,rdx
                         mov   r9d,WS_VISIBLE+k_win_style
                         mov   eax,CW_USEDEFAULT
-                        mov   [k_funcparam5+rsp],eax
-                        mov   [k_funcparam6+rsp],eax
-                        mov   [k_funcparam7+rsp],r10d
-                        mov   [k_funcparam8+rsp],r11d
-                        mov   [k_funcparam9+rsp],ecx
-                        mov   [k_funcparam10+rsp],ecx
+                        mov   [rsp+32],eax
+                        mov   [rsp+40],eax
+                        mov   [rsp+48],r10d
+                        mov   [rsp+56],r11d
+                        mov   [rsp+64],ecx
+                        mov   [rsp+72],ecx
                         mov   rax,[.wc.hInstance+rsp]
-                        mov   [k_funcparam11+rsp],rax
-                        mov   [k_funcparam12+rsp],ecx
+                        mov   [rsp+80],rax
+                        mov   [rsp+88],ecx
                        call   [CreateWindowEx]
                         mov   [win_handle],rax
                        test   rax,rax
                          jz   .error
-  ; success
+                            ; success
                         mov   eax,1
                         add   rsp,.k_stack_size
                         pop   rsi
@@ -438,38 +428,37 @@ end virtual
                         pop   rsi
                         ret
 ;=============================================================================
-FALIGN
+falign
 init:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
                         sub   rsp,.k_stack_size
-  ; check CPU
+                            ; check cpu
                        call   check_cpu_extensions
                        test   eax,eax
                          jz   .error
-  ; get process heap
+                            ; get process heap
                        call   [GetProcessHeap]
                         mov   [process_heap],rax
                        test   rax,rax
                          jz   .error
-  ; create window
+                            ; create window
                        call   init_window
                        test   eax,eax
                          jz   .error
-  ; init demo
+                            ; init demo
                        call   demo_init
                        test   eax,eax
                          jz   .error
-  ; success
+                            ; success
                         mov   eax,1
                         add   rsp,.k_stack_size
                         ret
-  .error:
-                        xor   eax,eax
+  .error:               xor   eax,eax
                         add   rsp,.k_stack_size
                         ret
 ;=============================================================================
-FALIGN
+falign
 deinit:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
@@ -478,7 +467,7 @@ deinit:
                         add   rsp,.k_stack_size
                         ret
 ;=============================================================================
-FALIGN
+falign
 update:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 32*1+24
@@ -488,7 +477,7 @@ update:
                         add   rsp,.k_stack_size
                         ret
 ;=============================================================================
-FALIGN
+falign
 start:
 ;-----------------------------------------------------------------------------
 virtual at 0
@@ -507,7 +496,7 @@ end virtual
                         xor   edx,edx
                         xor   r8d,r8d
                         xor   r9d,r9d
-                        mov   dword[k_funcparam5+rsp],PM_REMOVE
+                        mov   dword[rsp+32],PM_REMOVE
                        call   [PeekMessage]
                        test   eax,eax
                          jz   .update
@@ -526,7 +515,7 @@ end virtual
                         xor   ecx,ecx
                        call   [ExitProcess]
 ;=============================================================================
-FALIGN
+falign
 winproc:
 ;-----------------------------------------------------------------------------
   .k_stack_size = 16*2+8
@@ -553,7 +542,12 @@ winproc:
                         ret
 ;========================================================================
 section '.data' data readable
+
 program_section = 'cdata'
+include 'amnestia_math.inc'
+
+align 1
+  k_win_class_name db 'amnestia',0
 
 align 8
   CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
@@ -574,16 +568,10 @@ align 8
   IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a,0x76
   IID_ID3D12RootSignature GUID 0xc54a6b66,0x72df,0x4ee8,0x8b,0xe5,0xa9,0x46,0xa1,0x42,0x92,0x14
   IID_ID3D12PipelineState GUID 0x765a30f3,0xf624,0x4c6f,0xa8,0x28,0xac,0xe9,0x48,0x62,0x24,0x45
-
-align 1
-  _win_text_fmt db '[%d fps  %d us] amnestia',0
-  _win_class_name db 'amnestia',0
-
-include 'amnestia_math.inc'
 ;========================================================================
 section '.data' data readable writeable
-program_section = 'data'
 
+program_section = 'data'
 include 'amnestia_audio.inc'
 include 'amnestia_demo.inc'
 include 'amnestia_scene1.inc'
@@ -606,8 +594,6 @@ align 8
   update_frame_stats.prev_time dq 0
   update_frame_stats.prev_update_time dq 0
   update_frame_stats.frame dd 0,0
-  update_frame_stats.k_1000000_0 dq 1000000.0
-  update_frame_stats.k_1_0 dq 1.0
 ;========================================================================
 section '.idata' import data readable writeable
 
@@ -695,57 +681,56 @@ section '.idata' import data readable writeable
   _dxgi db 'dxgi.dll',0
   _d3d12 db 'd3d12.dll',0
 
-EMIT <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
-EMIT <_ExitProcess dw 0>,<db 'ExitProcess',0>
-EMIT <_ExitThread dw 0>,<db 'ExitThread',0>
-EMIT <_QueryPerformanceFrequency dw 0>,<db 'QueryPerformanceFrequency',0>
-EMIT <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
-EMIT <_CloseHandle dw 0>,<db 'CloseHandle',0>
-EMIT <_Sleep dw 0>,<db 'Sleep',0>
-EMIT <_LoadLibrary dw 0>,<db 'LoadLibraryA',0>
-EMIT <_FreeLibrary dw 0>,<db 'FreeLibrary',0>
-EMIT <_GetProcAddress dw 0>,<db 'GetProcAddress',0>
-EMIT <_HeapAlloc dw 0>,<db 'HeapAlloc',0>
-EMIT <_HeapReAlloc dw 0>,<db 'HeapReAlloc',0>
-EMIT <_HeapFree dw 0>,<db 'HeapFree',0>
-EMIT <_CreateFile dw 0>,<db 'CreateFileA',0>
-EMIT <_ReadFile dw 0>,<db 'ReadFile',0>
-EMIT <_GetFileSize dw 0>,<db 'GetFileSize',0>
-EMIT <_GetProcessHeap dw 0>,<db 'GetProcessHeap',0>
-EMIT <_CreateEventEx dw 0>,<db 'CreateEventExA',0>
-EMIT <_CreateThread dw 0>,<db 'CreateThread',0>
-EMIT <_SetEvent dw 0>,<db 'SetEvent',0>
-EMIT <_WaitForSingleObject dw 0>,<db 'WaitForSingleObject',0>
-EMIT <_WaitForMultipleObjects dw 0>,<db 'WaitForMultipleObjects',0>
+emit <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
+emit <_ExitProcess dw 0>,<db 'ExitProcess',0>
+emit <_ExitThread dw 0>,<db 'ExitThread',0>
+emit <_QueryPerformanceFrequency dw 0>,<db 'QueryPerformanceFrequency',0>
+emit <_QueryPerformanceCounter dw 0>,<db 'QueryPerformanceCounter',0>
+emit <_CloseHandle dw 0>,<db 'CloseHandle',0>
+emit <_Sleep dw 0>,<db 'Sleep',0>
+emit <_LoadLibrary dw 0>,<db 'LoadLibraryA',0>
+emit <_FreeLibrary dw 0>,<db 'FreeLibrary',0>
+emit <_GetProcAddress dw 0>,<db 'GetProcAddress',0>
+emit <_HeapAlloc dw 0>,<db 'HeapAlloc',0>
+emit <_HeapReAlloc dw 0>,<db 'HeapReAlloc',0>
+emit <_HeapFree dw 0>,<db 'HeapFree',0>
+emit <_CreateFile dw 0>,<db 'CreateFileA',0>
+emit <_ReadFile dw 0>,<db 'ReadFile',0>
+emit <_GetFileSize dw 0>,<db 'GetFileSize',0>
+emit <_GetProcessHeap dw 0>,<db 'GetProcessHeap',0>
+emit <_CreateEventEx dw 0>,<db 'CreateEventExA',0>
+emit <_CreateThread dw 0>,<db 'CreateThread',0>
+emit <_SetEvent dw 0>,<db 'SetEvent',0>
+emit <_WaitForSingleObject dw 0>,<db 'WaitForSingleObject',0>
+emit <_WaitForMultipleObjects dw 0>,<db 'WaitForMultipleObjects',0>
 
-EMIT <_wsprintf dw 0>,<db 'wsprintfA',0>
-EMIT <_RegisterClass dw 0>,<db 'RegisterClassA',0>
-EMIT <_CreateWindowEx dw 0>,<db 'CreateWindowExA',0>
-EMIT <_DefWindowProc dw 0>,<db 'DefWindowProcA',0>
-EMIT <_PeekMessage dw 0>,<db 'PeekMessageA',0>
-EMIT <_DispatchMessage dw 0>,<db 'DispatchMessageA',0>
-EMIT <_LoadCursor dw 0>,<db 'LoadCursorA',0>
-EMIT <_SetWindowText dw 0>,<db 'SetWindowTextA',0>
-EMIT <_AdjustWindowRect dw 0>,<db 'AdjustWindowRect',0>
-EMIT <_GetDC dw 0>,<db 'GetDC',0>
-EMIT <_ReleaseDC dw 0>,<db 'ReleaseDC',0>
-EMIT <_PostQuitMessage dw 0>,<db 'PostQuitMessage',0>
-EMIT <_MessageBox dw 0>,<db 'MessageBoxA',0>
+emit <_wsprintf dw 0>,<db 'wsprintfA',0>
+emit <_RegisterClass dw 0>,<db 'RegisterClassA',0>
+emit <_CreateWindowEx dw 0>,<db 'CreateWindowExA',0>
+emit <_DefWindowProc dw 0>,<db 'DefWindowProcA',0>
+emit <_PeekMessage dw 0>,<db 'PeekMessageA',0>
+emit <_DispatchMessage dw 0>,<db 'DispatchMessageA',0>
+emit <_LoadCursor dw 0>,<db 'LoadCursorA',0>
+emit <_SetWindowText dw 0>,<db 'SetWindowTextA',0>
+emit <_AdjustWindowRect dw 0>,<db 'AdjustWindowRect',0>
+emit <_GetDC dw 0>,<db 'GetDC',0>
+emit <_ReleaseDC dw 0>,<db 'ReleaseDC',0>
+emit <_PostQuitMessage dw 0>,<db 'PostQuitMessage',0>
+emit <_MessageBox dw 0>,<db 'MessageBoxA',0>
 
-EMIT <_DeleteDC dw 0>,<db 'DeleteDC',0>
-EMIT <_SetPixelFormat dw 0>,<db 'SetPixelFormat',0>
-EMIT <_ChoosePixelFormat dw 0>,<db 'ChoosePixelFormat',0>
-EMIT <_SwapBuffers dw 0>,<db 'SwapBuffers',0>
+emit <_DeleteDC dw 0>,<db 'DeleteDC',0>
+emit <_SetPixelFormat dw 0>,<db 'SetPixelFormat',0>
+emit <_ChoosePixelFormat dw 0>,<db 'ChoosePixelFormat',0>
+emit <_SwapBuffers dw 0>,<db 'SwapBuffers',0>
 
-EMIT <_CoInitialize dw 0>,<db 'CoInitialize',0>
-EMIT <_CoCreateInstance dw 0>,<db 'CoCreateInstance',0>
+emit <_CoInitialize dw 0>,<db 'CoInitialize',0>
+emit <_CoCreateInstance dw 0>,<db 'CoCreateInstance',0>
 
-EMIT <_AvSetMmThreadCharacteristics dw 0>,<db 'AvSetMmThreadCharacteristicsA',0>
+emit <_AvSetMmThreadCharacteristics dw 0>,<db 'AvSetMmThreadCharacteristicsA',0>
 
-EMIT <_CreateDXGIFactory1 dw 0>,<db 'CreateDXGIFactory1',0>
+emit <_CreateDXGIFactory1 dw 0>,<db 'CreateDXGIFactory1',0>
 
-EMIT <_D3D12CreateDevice dw 0>,<db 'D3D12CreateDevice',0>
-EMIT <_D3D12GetDebugInterface dw 0>,<db 'D3D12GetDebugInterface',0>
-EMIT <_D3D12SerializeRootSignature dw 0>,< db 'D3D12SerializeRootSignature',0>
+emit <_D3D12CreateDevice dw 0>,<db 'D3D12CreateDevice',0>
+emit <_D3D12GetDebugInterface dw 0>,<db 'D3D12GetDebugInterface',0>
+emit <_D3D12SerializeRootSignature dw 0>,< db 'D3D12SerializeRootSignature',0>
 ;========================================================================
-; vim: ft=fasm autoindent tabstop=8 softtabstop=8 shiftwidth=8 :
