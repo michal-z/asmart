@@ -34,8 +34,8 @@ struc scene {
   .s_vs db 'data/vs_transform.cso',0
   .s_ps db 'data/ps_shade.cso',0 }
 
-  align 8
-  scene1 scene
+align 8
+scene1 scene
 
 restruc scene,frame_resources
 
@@ -88,9 +88,9 @@ end virtual
                         lea   r9,[.buffer_res_desc+rsp]
                         mov   dword[rsp+32],D3D12_RESOURCE_STATE_GENERIC_READ
                         mov   qword[rsp+40],0
-                        lrm   [rsp+48],[IID_ID3D12Resource]
-                        lrm   [rsp+56],[rbx+frame_resources.constant_buffer]
-                     hrcall   [ID3D12Device.CreateCommittedResource+rax]
+                       lea3   [rsp+48],rax,[IID_ID3D12Resource]
+                       lea3   [rsp+56],rax,[rbx+frame_resources.constant_buffer]
+                    comcall   [ID3D12Device.CreateCommittedResource+rax]
                             ; vertex buffer: create
                         mov   rcx,[demo.device]
                         lea   rdx,[.upload_heap_props+rsp]
@@ -98,27 +98,27 @@ end virtual
                         lea   r9,[.buffer_res_desc+rsp]
                         mov   dword[rsp+32],D3D12_RESOURCE_STATE_GENERIC_READ
                         mov   qword[rsp+40],0
-                        lrm   [rsp+48],[IID_ID3D12Resource]
-                        lrm   [rsp+56],[rbx+frame_resources.vertex_buffer]
-                     hrcall   [ID3D12Device.CreateCommittedResource+rax]
+                       lea3   [rsp+48],rax,[IID_ID3D12Resource]
+                       lea3   [rsp+56],rax,[rbx+frame_resources.vertex_buffer]
+                    comcall   [ID3D12Device.CreateCommittedResource+rax]
                             ; constant buffer: map (get CPU address)
                         mov   rcx,[rbx+frame_resources.constant_buffer]
                         xor   edx,edx
                         lea   r8,[.empty_range+rsp]
                         lea   r9,[rbx+frame_resources.constant_buffer_ptr]
-                     hrcall   [ID3D12Resource.Map+rax]
+                    comcall   [ID3D12Resource.Map+rax]
                             ; vertex buffer: map (get CPU address)
                         mov   rcx,[rbx+frame_resources.vertex_buffer]
                         xor   edx,edx
                         lea   r8,[.empty_range+rsp]
                         lea   r9,[rbx+frame_resources.vertex_buffer_ptr]
-                     hrcall   [ID3D12Resource.Map+rax]
-                            ; get constant
+                    comcall   [ID3D12Resource.Map+rax]
+                            ; constant buffer: get GPU address
                         mov   rcx,[rbx+frame_resources.constant_buffer]
                         mov   rax,[rcx]
                        call   [ID3D12Resource.GetGPUVirtualAddress+rax]
                         mov   [rbx+frame_resources.constant_buffer_gpu_ptr],rax
-
+                            ; vertex buffer: get GPU address
                         mov   rcx,[rbx+frame_resources.vertex_buffer]
                         mov   rax,[rcx]
                        call   [ID3D12Resource.GetGPUVirtualAddress+rax]
@@ -135,7 +135,7 @@ end virtual
                         mov   [.root_descriptor.Descriptor.ShaderRegister+rsp],0
 
                         mov   [.rootsig_desc.NumParameters+rsp],1
-                        lrm   [.rootsig_desc.pParameters+rsp],[.root_descriptor+rsp]
+                       lea3   [.rootsig_desc.pParameters+rsp],rax,[.root_descriptor+rsp]
                         mov   [.rootsig_desc.Flags+rsp],D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 
                         lea   rcx,[.rootsig_desc+rsp]
@@ -156,8 +156,8 @@ end virtual
                         xor   edx,edx
                         mov   r8,rsi
                         mov   r9,rax
-                        lrm   [rsp+32],[IID_ID3D12RootSignature]
-                        lrm   [rsp+40],[scene1.rootsig]
+                       lea3   [rsp+32],rax,[IID_ID3D12RootSignature]
+                       lea3   [rsp+40],rax,[scene1.rootsig]
                         mov   rax,[rcx]
                        call   [ID3D12Device.CreateRootSignature+rax]
                         mov   esi,eax
@@ -166,7 +166,7 @@ end virtual
                          js   .error
 
 
-                        lrm   [.input_element_desc.SemanticName+rsp],[scene1.s_position]
+                       lea3   [.input_element_desc.SemanticName+rsp],rax,[scene1.s_position]
                         mov   [.input_element_desc.SemanticIndex+rsp],0
                         mov   [.input_element_desc.Format+rsp],DXGI_FORMAT_R32G32B32A32_FLOAT
                         mov   [.input_element_desc.InputSlot+rsp],0
@@ -182,8 +182,8 @@ end virtual
                         mov   [.pso_desc.PS.pShaderBytecode+rsp],rax
                         mov   [.pso_desc.PS.BytecodeLength+rsp],rdx
                             ; PSO
-                        mrm   [.pso_desc.pRootSignature+rsp],[scene1.rootsig]
-                        lrm   [.pso_desc.InputLayout.pInputElementDescs+rsp],[.input_element_desc+rsp]
+                       mov3   [.pso_desc.pRootSignature+rsp],rax,[scene1.rootsig]
+                       lea3   [.pso_desc.InputLayout.pInputElementDescs+rsp],rax,[.input_element_desc+rsp]
                         mov   [.pso_desc.InputLayout.NumElements+rsp],1
                         mov   [.pso_desc.BlendState.RenderTarget0.RenderTargetWriteMask+rsp],$0f
                         mov   [.pso_desc.SampleMask+rsp],$ffffffff

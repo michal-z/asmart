@@ -211,6 +211,14 @@ macro transition_barrier ptr*,res*,sbefore*,safter* {
                         mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.StateBefore],sbefore
                         mov   [ptr+D3D12_RESOURCE_BARRIER.Transition.StateAfter],safter }
 
+macro mov3 dst*,reg*,mem* {
+                        mov   reg,mem
+                        mov   dst,reg }
+
+macro lea3 dst*,reg*,mem* {
+                        lea   reg,mem
+                        mov   dst,reg }
+
 macro zero_stack size* {
                       vpxor   ymm0,ymm0,ymm0
                         xor   eax,eax
@@ -219,17 +227,11 @@ macro zero_stack size* {
                         add   eax,32
                         sub   ecx,1
                         jnz   @b }
-macro hrcall target {
+macro comcall target {
                         mov   rax,[rcx]
                        call   target
                        test   eax,eax
                          js   .error }
-macro lrm dst,src {
-                        lea   rax,src
-                        mov   dst,rax }
-macro mrm dst,src {
-                        mov   rax,src
-                        mov   dst,rax }
 
 k_frame_count equ 3
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
@@ -421,8 +423,7 @@ end virtual
                         add   rsp,.k_stack_size
                         pop   rsi
                         ret
-  .error:
-                        xor   eax,eax
+  .error:               xor   eax,eax
                         add   rsp,.k_stack_size
                         pop   rsi
                         ret

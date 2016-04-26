@@ -81,50 +81,45 @@ end virtual
                         lea   rdx,[.cmdqueue_desc+rsp]
                         lea   r8,[IID_ID3D12CommandQueue]
                         lea   r9,[demo.cmdqueue]
-                     hrcall   [ID3D12Device.CreateCommandQueue+rax]
+                    comcall   [ID3D12Device.CreateCommandQueue+rax]
                             ; command allocators
                         xor   esi,esi
   @@:                   mov   rcx,[demo.device]
                         mov   edx,D3D12_COMMAND_LIST_TYPE_DIRECT
                         lea   r8,[IID_ID3D12CommandAllocator]
                         lea   r9,[demo.cmdalloc+rsi*8]
-                     hrcall   [ID3D12Device.CreateCommandAllocator+rax]
+                    comcall   [ID3D12Device.CreateCommandAllocator+rax]
                         add   esi,1
                         cmp   esi,k_frame_count
                          jb   @b
                             ; swapchain
-                        mov   eax,[win_width]
-                        mov   [.swapchain_desc.BufferDesc.Width+rsp],eax
-                        mov   eax,[win_height]
-                        mov   [.swapchain_desc.BufferDesc.Height+rsp],eax
+                       mov3   [.swapchain_desc.BufferDesc.Width+rsp],eax,[win_width]
+                       mov3   [.swapchain_desc.BufferDesc.Height+rsp],eax,[win_height]
                         mov   [.swapchain_desc.BufferDesc.Format+rsp],DXGI_FORMAT_R8G8B8A8_UNORM
                         mov   [.swapchain_desc.SampleDesc.Count+rsp],1
                         mov   [.swapchain_desc.BufferCount+rsp],k_swapchain_buffer_count
-                        mov   rax,[win_handle]
-                        mov   [.swapchain_desc.OutputWindow+rsp],rax
+                       mov3   [.swapchain_desc.OutputWindow+rsp],rax,[win_handle]
                         mov   [.swapchain_desc.Windowed+rsp],1
                         mov   [.swapchain_desc.SwapEffect+rsp],DXGI_SWAP_EFFECT_FLIP_DISCARD
                         mov   rcx,[demo.dxgifactory]
                         mov   rdx,[demo.cmdqueue]
                         lea   r8,[.swapchain_desc+rsp]
                         lea   r9,[demo.swapchain]
-                     hrcall   [IDXGIFactory4.CreateSwapChain+rax]
+                    comcall   [IDXGIFactory4.CreateSwapChain+rax]
                             ; viewport & scissor
-                        mov   [demo.viewport.TopLeftX],dword 0.0
-                        mov   [demo.viewport.TopLeftY],dword 0.0
                      vxorps   xmm2,xmm2,xmm2
                   vcvtsi2ss   xmm0,xmm2,[win_width]
                   vcvtsi2ss   xmm1,xmm2,[win_height]
+                        mov   [demo.viewport.TopLeftX],dword 0.0
+                        mov   [demo.viewport.TopLeftY],dword 0.0
                       vmovd   [demo.viewport.Width],xmm0
                       vmovd   [demo.viewport.Height],xmm1
                         mov   [demo.viewport.MinDepth],dword 0.0
                         mov   [demo.viewport.MaxDepth],dword 1.0
                         mov   [demo.scissor.left],0
                         mov   [demo.scissor.top],0
-                        mov   eax,[win_width]
-                        mov   [demo.scissor.right],eax
-                        mov   eax,[win_height]
-                        mov   [demo.scissor.bottom],eax
+                       mov3   [demo.scissor.right],eax,[win_width]
+                       mov3   [demo.scissor.bottom],eax,[win_height]
                             ; get descriptor sizes
                         mov   rcx,[demo.device]
                         mov   edx,D3D12_DESCRIPTOR_HEAP_TYPE_RTV
@@ -143,7 +138,7 @@ end virtual
                         lea   rdx,[.swapchain_heap_desc+rsp]
                         lea   r8,[IID_ID3D12DescriptorHeap]
                         lea   r9,[demo.swapchain_heap]
-                     hrcall   [ID3D12Device.CreateDescriptorHeap+rax]
+                    comcall   [ID3D12Device.CreateDescriptorHeap+rax]
                         mov   rcx,[demo.swapchain_heap]
                         lea   rdx,[demo.swapchain_heap_start]
                         mov   rax,[rcx]
@@ -157,7 +152,7 @@ end virtual
                         mov   edx,esi
                         lea   r8,[IID_ID3D12Resource]
                         lea   r9,[demo.swapchain_buffer+rsi*8]
-                     hrcall   [IDXGISwapChain3.GetBuffer+rax]
+                    comcall   [IDXGISwapChain3.GetBuffer+rax]
                         mov   rcx,[demo.device]
                         mov   rdx,[demo.swapchain_buffer+rsi*8]
                         xor   r8d,r8d
@@ -174,12 +169,8 @@ end virtual
                         mov   edx,1
                         mov   r8d,D3D12_FENCE_FLAG_NONE
                         lea   r9,[IID_ID3D12Fence]
-                        lea   rax,[demo.frame_fence]
-                        mov   [rsp+32],rax
-                        mov   rax,[rcx]
-                       call   [ID3D12Device.CreateFence+rax]
-                       test   eax,eax
-                         js   .error
+                       lea3   [rsp+32],rax,[demo.frame_fence]
+                    comcall   [ID3D12Device.CreateFence+rax]
                             ; frame fence event
                         xor   ecx,ecx
                         xor   edx,edx
@@ -195,35 +186,24 @@ end virtual
                         mov   r8d,D3D12_COMMAND_LIST_TYPE_DIRECT
                         mov   r9,[demo.cmdalloc]
                         mov   qword[rsp+32],0
-                        lea   rax,[IID_ID3D12GraphicsCommandList]
-                        mov   [rsp+40],rax
-                        lea   rax,[demo.cmdlist]
-                        mov   [rsp+48],rax
-                        mov   rax,[rcx]
-                       call   [ID3D12Device.CreateCommandList+rax]
-                       test   eax,eax
-                         js   .error
+                       lea3   [rsp+40],rax,[IID_ID3D12GraphicsCommandList]
+                       lea3   [rsp+48],rax,[demo.cmdlist]
+                    comcall   [ID3D12Device.CreateCommandList+rax]
                             ; init scene
-                        lrm   [demo.scene_init],[scene1_init]
-                        lrm   [demo.scene_deinit],[scene1_deinit]
-                        lrm   [demo.scene_update],[scene1_update]
+                       lea3   [demo.scene_init],rax,[scene1_init]
+                       lea3   [demo.scene_deinit],rax,[scene1_deinit]
+                       lea3   [demo.scene_update],rax,[scene1_update]
                        call   [demo.scene_init]
                        test   eax,eax
                          jz   .error
                             ; close command list
                         mov   rcx,[demo.cmdlist]
-                        mov   rax,[rcx]
-                       call   [ID3D12GraphicsCommandList.Close+rax]
-                       test   eax,eax
-                         js   .error
+                    comcall   [ID3D12GraphicsCommandList.Close+rax]
                             ; execute command list
                         mov   rcx,[demo.cmdqueue]
                         mov   edx,1
                         lea   r8,[demo.cmdlist]
-                        mov   rax,[rcx]
-                       call   [ID3D12CommandQueue.ExecuteCommandLists+rax]
-                       test   eax,eax
-                         js   .error
+                    comcall   [ID3D12CommandQueue.ExecuteCommandLists+rax]
                             ; wait for the GPU
                         mov   rcx,[demo.cmdqueue]
                         mov   rdx,[demo.frame_fence]
