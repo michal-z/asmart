@@ -466,6 +466,12 @@ update:
                         sub   rsp,.k_stack_size
                        call   update_frame_stats
                        call   demo_update
+                       test   eax,eax
+                         jz   .error
+                        mov   eax,1
+                        add   rsp,.k_stack_size
+                        ret
+  .error:               xor   eax,eax
                         add   rsp,.k_stack_size
                         ret
 ;=============================================================================
@@ -501,6 +507,8 @@ end virtual
                         jmp   .main_loop
   .update:
                        call   update
+                       test   eax,eax
+                         jz   .quit
                         jmp   .main_loop
   .quit:
                        call   deinit

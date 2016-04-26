@@ -272,6 +272,8 @@ demo_update:
                        push   rsi
                         sub   rsp,.k_stack_size
                       icall   demo.scene_update
+                       test   eax,eax
+                         jz   .error
 
                             ; present
                         mov   rcx,[demo.swapchain]
@@ -313,6 +315,12 @@ demo_update:
                         mov   ecx,k_frame_count
                         div   rcx
                         mov   [demo.frame_index],edx
+                            ; success
+                        mov   eax,1
+                        add   rsp,.k_stack_size
+                        pop   rsi
+                        ret
+  .error:               xor   eax,eax
                         add   rsp,.k_stack_size
                         pop   rsi
                         ret

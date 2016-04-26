@@ -91,6 +91,7 @@ end virtual
                        lea3   [rsp+48],rax,[IID_ID3D12Resource]
                        lea3   [rsp+56],rax,[rbx+frame_resources.constant_buffer]
                     comcall   ID3D12Device.CreateCommittedResource
+                    checkhr   eax,.error
 
                             ; vertex buffer: create
                         mov   rcx,[demo.device]
@@ -102,6 +103,7 @@ end virtual
                        lea3   [rsp+48],rax,[IID_ID3D12Resource]
                        lea3   [rsp+56],rax,[rbx+frame_resources.vertex_buffer]
                     comcall   ID3D12Device.CreateCommittedResource
+                    checkhr   eax,.error
 
                             ; constant buffer: map (get CPU address)
                         mov   rcx,[rbx+frame_resources.constant_buffer]
@@ -109,6 +111,7 @@ end virtual
                         lea   r8,[.empty_range+rsp]
                         lea   r9,[rbx+frame_resources.constant_buffer_ptr]
                     comcall   ID3D12Resource.Map
+                    checkhr   eax,.error
 
                             ; vertex buffer: map (get CPU address)
                         mov   rcx,[rbx+frame_resources.vertex_buffer]
@@ -116,6 +119,7 @@ end virtual
                         lea   r8,[.empty_range+rsp]
                         lea   r9,[rbx+frame_resources.vertex_buffer_ptr]
                     comcall   ID3D12Resource.Map
+                    checkhr   eax,.error
 
                             ; constant buffer: get GPU address
                         mov   rcx,[rbx+frame_resources.constant_buffer]
@@ -287,6 +291,7 @@ end virtual
                         mov   eax,[demo.frame_index]
                         mov   rcx,[demo.cmdalloc+rax*8]
                     comcall   ID3D12CommandAllocator.Reset
+                    checkhr   eax,.error
 
                             ; begin commands recording
                         mov   eax,[demo.frame_index]
@@ -294,6 +299,8 @@ end virtual
                         mov   rdx,[demo.cmdalloc+rax*8]
                         mov   r8,[scene1.pso]
                     comcall   ID3D12GraphicsCommandList.Reset
+                    checkhr   eax,.error
+
                         mov   rcx,[demo.cmdlist]
                         mov   edx,1
                         lea   r8,[demo.viewport]
@@ -374,11 +381,18 @@ end virtual
                             ; finish recording and execute commands
                         mov   rcx,[demo.cmdlist]
                     comcall   ID3D12GraphicsCommandList.Close
+                    checkhr   eax,.error
                         mov   rcx,[demo.cmdqueue]
                         mov   edx,1
                         lea   r8,[demo.cmdlist]
                     comcall   ID3D12CommandQueue.ExecuteCommandLists
 
+                            ; success
+                        mov   eax,1
+                        add   rsp,.k_stack_size
+                        pop   r12 rdi rsi
+                        ret
+  .error:               xor   eax,eax
                         add   rsp,.k_stack_size
                         pop   r12 rdi rsi
                         ret
