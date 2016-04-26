@@ -90,7 +90,8 @@ end virtual
                         mov   qword[rsp+40],0
                        lea3   [rsp+48],rax,[IID_ID3D12Resource]
                        lea3   [rsp+56],rax,[rbx+frame_resources.constant_buffer]
-                    comcall   [ID3D12Device.CreateCommittedResource+rax]
+                    comcall   ID3D12Device.CreateCommittedResource
+
                             ; vertex buffer: create
                         mov   rcx,[demo.device]
                         lea   rdx,[.upload_heap_props+rsp]
@@ -100,28 +101,30 @@ end virtual
                         mov   qword[rsp+40],0
                        lea3   [rsp+48],rax,[IID_ID3D12Resource]
                        lea3   [rsp+56],rax,[rbx+frame_resources.vertex_buffer]
-                    comcall   [ID3D12Device.CreateCommittedResource+rax]
+                    comcall   ID3D12Device.CreateCommittedResource
+
                             ; constant buffer: map (get CPU address)
                         mov   rcx,[rbx+frame_resources.constant_buffer]
                         xor   edx,edx
                         lea   r8,[.empty_range+rsp]
                         lea   r9,[rbx+frame_resources.constant_buffer_ptr]
-                    comcall   [ID3D12Resource.Map+rax]
+                    comcall   ID3D12Resource.Map
+
                             ; vertex buffer: map (get CPU address)
                         mov   rcx,[rbx+frame_resources.vertex_buffer]
                         xor   edx,edx
                         lea   r8,[.empty_range+rsp]
                         lea   r9,[rbx+frame_resources.vertex_buffer_ptr]
-                    comcall   [ID3D12Resource.Map+rax]
+                    comcall   ID3D12Resource.Map
+
                             ; constant buffer: get GPU address
                         mov   rcx,[rbx+frame_resources.constant_buffer]
-                        mov   rax,[rcx]
-                       call   [ID3D12Resource.GetGPUVirtualAddress+rax]
+                    comcall   ID3D12Resource.GetGPUVirtualAddress
                         mov   [rbx+frame_resources.constant_buffer_gpu_ptr],rax
+
                             ; vertex buffer: get GPU address
                         mov   rcx,[rbx+frame_resources.vertex_buffer]
-                        mov   rax,[rcx]
-                       call   [ID3D12Resource.GetGPUVirtualAddress+rax]
+                    comcall   ID3D12Resource.GetGPUVirtualAddress
                         mov   [rbx+frame_resources.vertex_buffer_view.BufferLocation],rax
                         mov   [rbx+frame_resources.vertex_buffer_view.SizeInBytes],1024
                         mov   [rbx+frame_resources.vertex_buffer_view.StrideInBytes],16
@@ -142,15 +145,13 @@ end virtual
                         mov   edx,D3D_ROOT_SIGNATURE_VERSION_1
                         lea   r8,[.d3dblob+rsp]
                         xor   r9d,r9d
-                       call   [D3D12SerializeRootSignature]
+                      icall   D3D12SerializeRootSignature
 
                         mov   rcx,[.d3dblob+rsp]
-                        mov   rax,[rcx]
-                       call   [ID3DBlob.GetBufferPointer+rax]
+                    comcall   ID3DBlob.GetBufferPointer
                         mov   rsi,rax
                         mov   rcx,[.d3dblob+rsp]
-                        mov   rax,[rcx]
-                       call   [ID3DBlob.GetBufferSize+rax]
+                    comcall   ID3DBlob.GetBufferSize
 
                         mov   rcx,[demo.device]
                         xor   edx,edx
@@ -158,12 +159,10 @@ end virtual
                         mov   r9,rax
                        lea3   [rsp+32],rax,[IID_ID3D12RootSignature]
                        lea3   [rsp+40],rax,[scene1.rootsig]
-                        mov   rax,[rcx]
-                       call   [ID3D12Device.CreateRootSignature+rax]
+                    comcall   ID3D12Device.CreateRootSignature
                         mov   esi,eax
                safe_release   [.d3dblob+rsp]
-                       test   esi,esi
-                         js   .error
+                    checkhr   esi,.error
 
 
                        lea3   [.input_element_desc.SemanticName+rsp],rax,[scene1.s_position]
@@ -198,14 +197,12 @@ end virtual
                         lea   rdx,[.pso_desc+rsp]
                         lea   r8,[IID_ID3D12PipelineState]
                         lea   r9,[scene1.pso]
-                        mov   rax,[rcx]
-                       call   [ID3D12Device.CreateGraphicsPipelineState+rax]    ; create pso
+                    comcall   ID3D12Device.CreateGraphicsPipelineState    ; create pso
                         mov   esi,eax
                        free   [.pso_desc.VS.pShaderBytecode+rsp]
                        free   [.pso_desc.PS.pShaderBytecode+rsp]
-                       test   esi,esi
-                         js   .error
-
+                    checkhr   esi,.error
+                            ; success
                         mov   eax,1
                         add   rsp,.k_stack_size
                         pop   rbx rsi
@@ -280,100 +277,108 @@ end virtual
                     vmovaps   [rcx+16],xmm0
                     vmovaps   xmm0,[scene1.tri_v2]
                     vmovaps   [rcx+32],xmm0
+
                             ; init transition barrier
                         mov   [.barrier.Type+rsp],D3D12_RESOURCE_BARRIER_TYPE_TRANSITION
                         mov   [.barrier.Flags+rsp],0
                         mov   [.barrier.Transition.Subresource+rsp],D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
-                            ; init command list pointers
-                        mov   rsi,[demo.cmdlist]
-                        mov   rdi,[rsi]
+
                             ; reset completed command allocator
                         mov   eax,[demo.frame_index]
                         mov   rcx,[demo.cmdalloc+rax*8]
-                        mov   rax,[rcx]
-                       call   [ID3D12CommandAllocator.Reset+rax]
+                    comcall   ID3D12CommandAllocator.Reset
+
                             ; begin commands recording
                         mov   eax,[demo.frame_index]
-                        mov   rcx,rsi
+                        mov   rcx,[demo.cmdlist]
                         mov   rdx,[demo.cmdalloc+rax*8]
                         mov   r8,[scene1.pso]
-                       call   [ID3D12GraphicsCommandList.Reset+rdi]
-                        mov   rcx,rsi
+                    comcall   ID3D12GraphicsCommandList.Reset
+                        mov   rcx,[demo.cmdlist]
                         mov   edx,1
                         lea   r8,[demo.viewport]
-                       call   [ID3D12GraphicsCommandList.RSSetViewports+rdi]
-                        mov   rcx,rsi
+                    comcall   ID3D12GraphicsCommandList.RSSetViewports
+                        mov   rcx,[demo.cmdlist]
                         mov   edx,1
                         lea   r8,[demo.scissor]
-                       call   [ID3D12GraphicsCommandList.RSSetScissorRects+rdi]
-                            ; set root signature and resources
-                        mov   rcx,rsi
-                        mov   rdx,[scene1.rootsig]
-                       call   [ID3D12GraphicsCommandList.SetGraphicsRootSignature+rdi]
+                    comcall   ID3D12GraphicsCommandList.RSSetScissorRects
 
-                        mov   rcx,rsi
+                            ; set root signature and resources
+                        mov   rcx,[demo.cmdlist]
+                        mov   rdx,[scene1.rootsig]
+                    comcall   ID3D12GraphicsCommandList.SetGraphicsRootSignature
+
+                        mov   rcx,[demo.cmdlist]
                         xor   edx,edx
                         mov   r8,[r12+frame_resources.constant_buffer_gpu_ptr]
-                       call   [ID3D12GraphicsCommandList.SetGraphicsRootConstantBufferView+rdi]
+                    comcall   ID3D12GraphicsCommandList.SetGraphicsRootConstantBufferView
+
                             ; vertex buffer view
-                        mov   rcx,rsi
+                        mov   rcx,[demo.cmdlist]
                         xor   edx,edx
                         mov   r8d,1
                         lea   r9,[r12+frame_resources.vertex_buffer_view]
-                       call   [ID3D12GraphicsCommandList.IASetVertexBuffers+rdi]
+                    comcall   ID3D12GraphicsCommandList.IASetVertexBuffers
+
                             ; back buffer to D3D12_RESOURCE_STATE_RENDER_TARGET
                         mov   eax,[demo.back_buffer_index]
                         mov   rax,[demo.swapchain_buffer+rax*8]
          transition_barrier   .barrier+rsp,rax,D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET
-                        mov   rcx,rsi
+                        mov   rcx,[demo.cmdlist]
                         mov   edx,1
                         lea   r8,[.barrier+rsp]
-                       call   [ID3D12GraphicsCommandList.ResourceBarrier+rdi]
+                    comcall   ID3D12GraphicsCommandList.ResourceBarrier
+
                             ; get back buffer handle
                         mov   eax,[demo.back_buffer_index]
                        imul   eax,[demo.rtv_size]
                         add   rax,[demo.swapchain_heap_start]
                         mov   [.back_buffer_handle+rsp],rax
+
                             ; clear back buffer
-                        mov   rcx,rsi
+                        mov   rcx,[demo.cmdlist]
                         mov   rdx,[.back_buffer_handle+rsp]
                         lea   r8,[demo.clear_color]
                         xor   r9d,r9d
                         mov   qword[rsp+32],0
-                       call   [ID3D12GraphicsCommandList.ClearRenderTargetView+rdi]
+                    comcall   ID3D12GraphicsCommandList.ClearRenderTargetView
+
                             ; set back buffer as render target
-                        mov   rcx,rsi
+                        mov   rcx,[demo.cmdlist]
                         mov   edx,1
                         lea   r8,[.back_buffer_handle+rsp]
                         mov   r9d,1
                         mov   qword[rsp+32],0
-                       call   [ID3D12GraphicsCommandList.OMSetRenderTargets+rdi]
+                    comcall   ID3D12GraphicsCommandList.OMSetRenderTargets
+
                             ; draw
-                        mov   rcx,rsi
+                        mov   rcx,[demo.cmdlist]
                         mov   edx,D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
-                       call   [ID3D12GraphicsCommandList.IASetPrimitiveTopology+rdi]
-                        mov   rcx,rsi
+                    comcall   ID3D12GraphicsCommandList.IASetPrimitiveTopology
+                        mov   rcx,[demo.cmdlist]
                         mov   edx,3
                         mov   r8d,1
                         xor   r9d,r9d
                         mov   dword[rsp+32],0
-                       call   [ID3D12GraphicsCommandList.DrawInstanced+rdi]
+                    comcall   ID3D12GraphicsCommandList.DrawInstanced
+
                             ; back buffer to D3D12_RESOURCE_STATE_PRESENT
                         mov   eax,[demo.back_buffer_index]
                         mov   rax,[demo.swapchain_buffer+rax*8]
          transition_barrier   .barrier+rsp,rax,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_PRESENT
-                        mov   rcx,rsi
+                        mov   rcx,[demo.cmdlist]
                         mov   edx,1
                         lea   r8,[.barrier+rsp]
-                       call   [ID3D12GraphicsCommandList.ResourceBarrier+rdi]
+                    comcall   ID3D12GraphicsCommandList.ResourceBarrier
+
                             ; finish recording and execute commands
-                        mov   rcx,rsi
-                       call   [ID3D12GraphicsCommandList.Close+rdi]
+                        mov   rcx,[demo.cmdlist]
+                    comcall   ID3D12GraphicsCommandList.Close
                         mov   rcx,[demo.cmdqueue]
                         mov   edx,1
                         lea   r8,[demo.cmdlist]
-                        mov   rax,[rcx]
-                       call   [ID3D12CommandQueue.ExecuteCommandLists+rax]
+                    comcall   ID3D12CommandQueue.ExecuteCommandLists
+
                         add   rsp,.k_stack_size
                         pop   r12 rdi rsi
                         ret

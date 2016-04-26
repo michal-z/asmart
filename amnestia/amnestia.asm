@@ -229,9 +229,12 @@ macro zero_stack size* {
                         jnz   @b }
 macro comcall target {
                         mov   rax,[rcx]
-                       call   target
-                       test   eax,eax
-                         js   .error }
+                       call   [rax+target] }
+macro icall target {
+                       call   [target] }
+macro checkhr res,err {
+                        test  res,res
+                          js  err }
 
 k_frame_count equ 3
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
@@ -363,18 +366,10 @@ end virtual
                        push   rsi
                             ; alloc and clear the stack
                         sub   rsp,.k_stack_size
-                      vpxor   ymm0,ymm0,ymm0
-                        xor   eax,eax
-                        mov   ecx,.k_stack_size/32
-  @@:               vmovdqa   [rsp+rax],ymm0
-                        add   eax,32
-                        sub   ecx,1
-                        jnz   @b
+                 zero_stack   .k_stack_size
                             ; create window class
-                        lea   rax,[winproc]
-                        mov   [.wc.lpfnWndProc+rsp],rax
-                        lea   rax,[k_win_class_name]
-                        mov   [.wc.lpszClassName+rsp],rax
+                       lea3   [.wc.lpfnWndProc+rsp],rax,[winproc]
+                       lea3   [.wc.lpszClassName+rsp],rax,[k_win_class_name]
                         xor   ecx,ecx
                        call   [GetModuleHandle]
                         mov   [.wc.hInstance+rsp],rax
@@ -387,10 +382,8 @@ end virtual
                        test   eax,eax
                          jz   .error
                             ; compute window size
-                        mov   eax,[win_width]
-                        mov   [.rect.right+rsp],eax
-                        mov   eax,[win_height]
-                        mov   [.rect.bottom+rsp],eax
+                       mov3   [.rect.right+rsp],eax,[win_width]
+                       mov3   [.rect.bottom+rsp],eax,[win_height]
                         lea   rcx,[.rect+rsp]
                         mov   edx,k_win_style
                         xor   r8d,r8d
@@ -411,8 +404,7 @@ end virtual
                         mov   [rsp+56],r11d
                         mov   [rsp+64],ecx
                         mov   [rsp+72],ecx
-                        mov   rax,[.wc.hInstance+rsp]
-                        mov   [rsp+80],rax
+                       mov3   [rsp+80],rax,[.wc.hInstance+rsp]
                         mov   [rsp+88],ecx
                        call   [CreateWindowEx]
                         mov   [win_handle],rax
@@ -543,13 +535,13 @@ winproc:
 ;========================================================================
 section '.data' data readable
 
-program_section = 'cdata'
-include 'amnestia_math.inc'
+  program_section = 'cdata'
+  include 'amnestia_math.inc'
 
-align 1
+  align 1
   k_win_class_name db 'amnestia',0
 
-align 8
+  align 8
   CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
   IID_IMMDeviceEnumerator GUID 0xA95664D2,0x9614,0x4F35,0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6
   IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
