@@ -174,16 +174,12 @@ end virtual
                         mov   [.input_element_desc.Format+rsp],DXGI_FORMAT_R32G32B32A32_FLOAT
                         mov   [.input_element_desc.InputSlot+rsp],0
                         mov   [.input_element_desc.AlignedByteOffset+rsp],0
-                            ; load VS
-                        lea   rcx,[scene1.s_vs]
-                       call   load_file
-                        mov   [.pso_desc.VS.pShaderBytecode+rsp],rax
-                        mov   [.pso_desc.VS.BytecodeLength+rsp],rdx
-                            ; load PS
-                        lea   rcx,[scene1.s_ps]
-                       call   load_file
-                        mov   [.pso_desc.PS.pShaderBytecode+rsp],rax
-                        mov   [.pso_desc.PS.BytecodeLength+rsp],rdx
+                            ; VS
+                       lea3   [.pso_desc.VS.pShaderBytecode+rsp],rax,[vs_transform]
+                        mov   [.pso_desc.VS.BytecodeLength+rsp],vs_transform.size
+                            ; PS
+                       lea3   [.pso_desc.PS.pShaderBytecode+rsp],rax,[ps_shade]
+                        mov   [.pso_desc.PS.BytecodeLength+rsp],ps_shade.size
                             ; PSO
                        mov3   [.pso_desc.pRootSignature+rsp],rax,[scene1.rootsig]
                        lea3   [.pso_desc.InputLayout.pInputElementDescs+rsp],rax,[.input_element_desc+rsp]
@@ -202,10 +198,7 @@ end virtual
                         lea   r8,[IID_ID3D12PipelineState]
                         lea   r9,[scene1.pso]
                     comcall   ID3D12Device.CreateGraphicsPipelineState    ; create pso
-                        mov   esi,eax
-                       free   [.pso_desc.VS.pShaderBytecode+rsp]
-                       free   [.pso_desc.PS.pShaderBytecode+rsp]
-                    checkhr   esi,.error
+                    checkhr   eax,.error
                             ; success
                         mov   eax,1
                         add   rsp,.k_stack_size

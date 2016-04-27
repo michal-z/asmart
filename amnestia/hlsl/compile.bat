@@ -1,19 +1,17 @@
 @echo off
 
 set FXC=..\..\fxc\fxc.exe
-
-set CSO_PATH=..\data
-
+ /Ges /O3 /WX /Qstrip_reflect /Qstrip_debug /Qstrip_priv /Qstrip_rootsignature
 
 
 
-%FXC% /Ges /O3 /E vs_transform /Fo %CSO_PATH%\vs_transform.cso /WX /T vs_5_1 vs_transform.hlsl
+%FXC% /E vs_transform /Fo vs_transform.cso /T vs_5_1 vs_transform.hlsl
 
 if errorlevel 1 goto eof
 
 
 
-%FXC% /Ges /O3 /E ps_shade /Fo %CSO_PATH%\ps_shade.cso /WX /T ps_5_1 ps_shade.hlsl
+%FXC% /E ps_shade /Fo ps_shade.cso /T ps_5_1 ps_shade.hlsl
 
 if errorlevel 1 goto eof
 
