@@ -1,41 +1,41 @@
 format PE64 GUI 4.0
 entry start
 
-  INFINITE = 0xffffffff
-  IDI_APPLICATION = 32512
-  IDC_ARROW = 32512
-  WS_VISIBLE = 010000000h
-  WS_OVERLAPPED = 000000000h
-  WS_CAPTION = 000C00000h
-  WS_SYSMENU = 000080000h
-  WS_VISIBLE = 010000000h
-  WS_MINIMIZEBOX = 000020000h
-  CW_USEDEFAULT = 80000000h
-  PM_REMOVE = 0001h
-  WM_QUIT = 0012h
-  WM_KEYDOWN = 0100h
-  WM_DESTROY = 0002h
-  VK_ESCAPE = 01Bh
-  SRCCOPY = 0x00CC0020
-  OPEN_EXISTING = 3
-  GENERIC_READ = 0x80000000
-  INVALID_HANDLE_VALUE = 0xffffffffffffffff
-  INVALID_FILE_SIZE = 0xffffffff
-  FILE_ATTRIBUTE_NORMAL = 128
-  FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
-  EVENT_ALL_ACCESS = 0x1F0003
+INFINITE = 0xffffffff
+IDI_APPLICATION = 32512
+IDC_ARROW = 32512
+WS_VISIBLE = 010000000h
+WS_OVERLAPPED = 000000000h
+WS_CAPTION = 000C00000h
+WS_SYSMENU = 000080000h
+WS_VISIBLE = 010000000h
+WS_MINIMIZEBOX = 000020000h
+CW_USEDEFAULT = 80000000h
+PM_REMOVE = 0001h
+WM_QUIT = 0012h
+WM_KEYDOWN = 0100h
+WM_DESTROY = 0002h
+VK_ESCAPE = 01Bh
+SRCCOPY = 0x00CC0020
+OPEN_EXISTING = 3
+GENERIC_READ = 0x80000000
+INVALID_HANDLE_VALUE = 0xffffffffffffffff
+INVALID_FILE_SIZE = 0xffffffff
+FILE_ATTRIBUTE_NORMAL = 128
+FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
+EVENT_ALL_ACCESS = 0x1F0003
 
-  CLSCTX_INPROC_SERVER = 0x1
-  CLSCTX_INPROC_HANDLER = 0x2
-  CLSCTX_LOCAL_SERVER = 0x4
-  CLSCTX_REMOTE_SERVER = 0x10
-  CLSCTX_ALL = CLSCTX_INPROC_SERVER+CLSCTX_INPROC_HANDLER+CLSCTX_LOCAL_SERVER+CLSCTX_REMOTE_SERVER
-  eRender = 0
-  eConsole = 0
-  WAVE_FORMAT_PCM = 1
-  AUDCLNT_SHAREMODE_EXCLUSIVE = 1
-  AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000
-  AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED = 0x88890019
+CLSCTX_INPROC_SERVER = 0x1
+CLSCTX_INPROC_HANDLER = 0x2
+CLSCTX_LOCAL_SERVER = 0x4
+CLSCTX_REMOTE_SERVER = 0x10
+CLSCTX_ALL = CLSCTX_INPROC_SERVER+CLSCTX_INPROC_HANDLER+CLSCTX_LOCAL_SERVER+CLSCTX_REMOTE_SERVER
+eRender = 0
+eConsole = 0
+WAVE_FORMAT_PCM = 1
+AUDCLNT_SHAREMODE_EXCLUSIVE = 1
+AUDCLNT_STREAMFLAGS_EVENTCALLBACK = 0x00040000
+AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED = 0x88890019
 
 struc POINT {
   .x dd ?
@@ -543,77 +543,77 @@ winproc:
 ;========================================================================
 section '.data' data readable
 
-  program_section = 'cdata'
-  include 'amnestia_math.inc'
+program_section = 'cdata'
+include 'amnestia_math.inc'
 
-  align 1
-  k_win_class_name db 'amnestia',0
+align 1
+k_win_class_name db 'amnestia',0
 
-  align 8
-  CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
-  IID_IMMDeviceEnumerator GUID 0xA95664D2,0x9614,0x4F35,0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6
-  IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
-  IID_IAudioRenderClient GUID 0xF294ACFC,0x3146,0x4483,0xA7,0xBF,0xAD,0xDC,0xA7,0xC2,0x60,0xE2
+align 8
+CLSID_MMDeviceEnumerator GUID 0xBCDE0395,0xE52F,0x467C,0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E
+IID_IMMDeviceEnumerator GUID 0xA95664D2,0x9614,0x4F35,0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6
+IID_IAudioClient GUID 0x1CB9AD4C,0xDBFA,0x4c32,0xB1,0x78,0xC2,0xF5,0x68,0xA7,0x03,0xB2
+IID_IAudioRenderClient GUID 0xF294ACFC,0x3146,0x4483,0xA7,0xBF,0xAD,0xDC,0xA7,0xC2,0x60,0xE2
 
-  IID_IDXGISwapChain3 GUID 0x94d99bdb,0xf1f8,0x4ab0,0xb2,0x36,0x7d,0xa0,0x17,0x0e,0xda,0xb1
-  IID_IDXGIFactory4 GUID 0x1bc6ea02,0xef36,0x464f,0xbf,0x0c,0x21,0xca,0x39,0xe5,0x16,0x8a
-  IID_ID3D12Device GUID 0x189819f1,0x1db6,0x4b57,0xbe,0x54,0x18,0x21,0x33,0x9b,0x85,0xf7
-  IID_ID3D12Debug GUID 0x344488b7,0x6846,0x474b,0xb9,0x89,0xf0,0x27,0x44,0x82,0x45,0xe0
-  IID_ID3D12CommandQueue GUID 0x0ec870a6,0x5d7e,0x4c22,0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x16,0xed
-  IID_ID3D12CommandAllocator GUID 0x6102dee4,0xaf59,0x4b09,0xb9,0x99,0xb4,0x4d,0x73,0xf0,0x9b,0x24
-  IID_ID3D12CommandList GUID 0x7116d91c,0xe7e4,0x47ce,0xb8,0xc6,0xec,0x81,0x68,0xf4,0x37,0xe5
-  IID_ID3D12GraphicsCommandList GUID 0x5b160d0f,0xac1b,0x4185,0x8b,0xa8,0xb3,0xae,0x42,0xa5,0xa4,0x55
-  IID_ID3D12DescriptorHeap GUID 0x8efb471d,0x616c,0x4f49,0x90,0xf7,0x12,0x7b,0xb7,0x63,0xfa,0x51
-  IID_ID3D12Resource GUID 0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad
-  IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a,0x76
-  IID_ID3D12RootSignature GUID 0xc54a6b66,0x72df,0x4ee8,0x8b,0xe5,0xa9,0x46,0xa1,0x42,0x92,0x14
-  IID_ID3D12PipelineState GUID 0x765a30f3,0xf624,0x4c6f,0xa8,0x28,0xac,0xe9,0x48,0x62,0x24,0x45
+IID_IDXGISwapChain3 GUID 0x94d99bdb,0xf1f8,0x4ab0,0xb2,0x36,0x7d,0xa0,0x17,0x0e,0xda,0xb1
+IID_IDXGIFactory4 GUID 0x1bc6ea02,0xef36,0x464f,0xbf,0x0c,0x21,0xca,0x39,0xe5,0x16,0x8a
+IID_ID3D12Device GUID 0x189819f1,0x1db6,0x4b57,0xbe,0x54,0x18,0x21,0x33,0x9b,0x85,0xf7
+IID_ID3D12Debug GUID 0x344488b7,0x6846,0x474b,0xb9,0x89,0xf0,0x27,0x44,0x82,0x45,0xe0
+IID_ID3D12CommandQueue GUID 0x0ec870a6,0x5d7e,0x4c22,0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x16,0xed
+IID_ID3D12CommandAllocator GUID 0x6102dee4,0xaf59,0x4b09,0xb9,0x99,0xb4,0x4d,0x73,0xf0,0x9b,0x24
+IID_ID3D12CommandList GUID 0x7116d91c,0xe7e4,0x47ce,0xb8,0xc6,0xec,0x81,0x68,0xf4,0x37,0xe5
+IID_ID3D12GraphicsCommandList GUID 0x5b160d0f,0xac1b,0x4185,0x8b,0xa8,0xb3,0xae,0x42,0xa5,0xa4,0x55
+IID_ID3D12DescriptorHeap GUID 0x8efb471d,0x616c,0x4f49,0x90,0xf7,0x12,0x7b,0xb7,0x63,0xfa,0x51
+IID_ID3D12Resource GUID 0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad
+IID_ID3D12Fence GUID 0x0a753dcf,0xc4d8,0x4b91,0xad,0xf6,0xbe,0x5a,0x60,0xd9,0x5a,0x76
+IID_ID3D12RootSignature GUID 0xc54a6b66,0x72df,0x4ee8,0x8b,0xe5,0xa9,0x46,0xa1,0x42,0x92,0x14
+IID_ID3D12PipelineState GUID 0x765a30f3,0xf624,0x4c6f,0xa8,0x28,0xac,0xe9,0x48,0x62,0x24,0x45
 
-  align 8
-  vs_transform: file 'hlsl/vs_transform.cso'
-    .size = $ - vs_transform
-  align 8
-  ps_shade: file 'hlsl/ps_shade.cso'
-    .size = $ - ps_shade
+align 8
+vs_transform: file 'hlsl/vs_transform.cso'
+  .size = $ - vs_transform
+align 8
+ps_shade: file 'hlsl/ps_shade.cso'
+  .size = $ - ps_shade
 ;========================================================================
 section '.data' data readable writeable
 
-  program_section = 'data'
-  include 'amnestia_audio.inc'
-  include 'amnestia_demo.inc'
-  include 'amnestia_scene1.inc'
+program_section = 'data'
+include 'amnestia_audio.inc'
+include 'amnestia_demo.inc'
+include 'amnestia_scene1.inc'
 
-  align 8
-  win_handle dq 0
-  win_width dd 1280
-  win_height dd 720
+align 8
+win_handle dq 0
+win_width dd 1280
+win_height dd 720
 
-  align 8
-  process_heap dq 0
-  time dq 0
-  time_delta dd 0,0
+align 8
+process_heap dq 0
+time dq 0
+time_delta dd 0,0
 
-  align 8
-  get_time.perf_counter dq 0
-  get_time.perf_freq dq 0
-  get_time.first_perf_counter dq 0
+align 8
+get_time.perf_counter dq 0
+get_time.perf_freq dq 0
+get_time.first_perf_counter dq 0
 
-  update_frame_stats.prev_time dq 0
-  update_frame_stats.prev_update_time dq 0
-  update_frame_stats.frame dd 0,0
+update_frame_stats.prev_time dq 0
+update_frame_stats.prev_update_time dq 0
+update_frame_stats.frame dd 0,0
 ;========================================================================
 section '.idata' import data readable writeable
 
-  dd 0,0,0,rva _kernel32,rva _kernel32_table
-  dd 0,0,0,rva _user32,rva _user32_table
-  dd 0,0,0,rva _gdi32,rva _gdi32_table
-  dd 0,0,0,rva _ole32,rva _ole32_table
-  dd 0,0,0,rva _avrt,rva _avrt_table
-  dd 0,0,0,rva _dxgi,rva _dxgi_table
-  dd 0,0,0,rva _d3d12,rva _d3d12_table
-  dd 0,0,0,0,0
+dd 0,0,0,rva _kernel32,rva _kernel32_table
+dd 0,0,0,rva _user32,rva _user32_table
+dd 0,0,0,rva _gdi32,rva _gdi32_table
+dd 0,0,0,rva _ole32,rva _ole32_table
+dd 0,0,0,rva _avrt,rva _avrt_table
+dd 0,0,0,rva _dxgi,rva _dxgi_table
+dd 0,0,0,rva _d3d12,rva _d3d12_table
+dd 0,0,0,0,0
 
-  _kernel32_table:
+_kernel32_table:
   GetModuleHandle dq rva _GetModuleHandle
   ExitProcess dq rva _ExitProcess
   ExitThread dq rva _ExitThread
@@ -638,7 +638,7 @@ section '.idata' import data readable writeable
   WaitForMultipleObjects dq rva _WaitForMultipleObjects
   dq 0
 
-  _user32_table:
+_user32_table:
   wsprintf dq rva _wsprintf
   RegisterClass dq rva _RegisterClass
   CreateWindowEx dq rva _CreateWindowEx
@@ -654,39 +654,39 @@ section '.idata' import data readable writeable
   MessageBox dq rva _MessageBox
   dq 0
 
-  _gdi32_table:
+_gdi32_table:
   DeleteDC dq rva _DeleteDC
   SetPixelFormat dq rva _SetPixelFormat
   ChoosePixelFormat dq rva _ChoosePixelFormat
   SwapBuffers dq rva _SwapBuffers
   dq 0
 
-  _ole32_table:
+_ole32_table:
   CoInitialize dq rva _CoInitialize
   CoCreateInstance dq rva _CoCreateInstance
   dq 0
 
-  _avrt_table:
+_avrt_table:
   AvSetMmThreadCharacteristics dq rva _AvSetMmThreadCharacteristics
   dq 0
 
-  _dxgi_table:
+_dxgi_table:
   CreateDXGIFactory1 dq rva _CreateDXGIFactory1
   dq 0
 
-  _d3d12_table:
+_d3d12_table:
   D3D12CreateDevice dq rva _D3D12CreateDevice
   D3D12GetDebugInterface dq rva _D3D12GetDebugInterface
   D3D12SerializeRootSignature dq rva _D3D12SerializeRootSignature
   dq 0
 
-  _kernel32 db 'kernel32.dll',0
-  _user32 db 'user32.dll',0
-  _gdi32 db 'gdi32.dll',0
-  _ole32 db 'ole32.dll',0
-  _avrt db 'avrt.dll',0
-  _dxgi db 'dxgi.dll',0
-  _d3d12 db 'd3d12.dll',0
+_kernel32 db 'kernel32.dll',0
+_user32 db 'user32.dll',0
+_gdi32 db 'gdi32.dll',0
+_ole32 db 'ole32.dll',0
+_avrt db 'avrt.dll',0
+_dxgi db 'dxgi.dll',0
+_d3d12 db 'd3d12.dll',0
 
 emit <_GetModuleHandle dw 0>,<db 'GetModuleHandleA',0>
 emit <_ExitProcess dw 0>,<db 'ExitProcess',0>

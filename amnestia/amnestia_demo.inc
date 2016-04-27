@@ -1,35 +1,35 @@
 if program_section = 'data'
 
+align 8
+demo:
+  .dxgifactory dq 0
+  .device dq 0
+  .cmdqueue dq 0
+  .cmdalloc dq k_frame_count dup 0
+  .cmdlist dq 0
+  .swapchain dq 0
+  .swapchain_heap dq 0
+  .swapchain_heap_start dq 0
+  .swapchain_buffer dq k_swapchain_buffer_count dup 0
+  .frame_fence dq 0
+  .frame_fence_event dq 0
+  .cpu_completed_frames dq 0
+
+  .scene_init dq 0
+  .scene_deinit dq 0
+  .scene_update dq 0
+
   align 8
-  demo:
-    .dxgifactory dq 0
-    .device dq 0
-    .cmdqueue dq 0
-    .cmdalloc dq k_frame_count dup 0
-    .cmdlist dq 0
-    .swapchain dq 0
-    .swapchain_heap dq 0
-    .swapchain_heap_start dq 0
-    .swapchain_buffer dq k_swapchain_buffer_count dup 0
-    .frame_fence dq 0
-    .frame_fence_event dq 0
-    .cpu_completed_frames dq 0
+  .viewport D3D12_VIEWPORT
+  align 8
+  .scissor D3D12_RECT
 
-    .scene_init dq 0
-    .scene_deinit dq 0
-    .scene_update dq 0
-
-    align 8
-    .viewport D3D12_VIEWPORT
-    align 8
-    .scissor D3D12_RECT
-
-    align 4
-    .rtv_size dd 0
-    .cbv_srv_uav_size dd 0
-    .back_buffer_index dd 0
-    .frame_index dd 0
-    .clear_color dd 0.0,0.2,0.4,1.0
+  align 4
+  .rtv_size dd 0
+  .cbv_srv_uav_size dd 0
+  .back_buffer_index dd 0
+  .frame_index dd 0
+  .clear_color dd 0.0,0.2,0.4,1.0
 
 else if program_section = 'code'
 ;=============================================================================
@@ -209,7 +209,7 @@ end virtual
                        lea3   [demo.scene_init],rax,[scene1_init]
                        lea3   [demo.scene_deinit],rax,[scene1_deinit]
                        lea3   [demo.scene_update],rax,[scene1_update]
-                       call   [demo.scene_init]
+                      icall   demo.scene_init
                        test   eax,eax
                          jz   .error
 
@@ -240,9 +240,9 @@ end virtual
                       icall   WaitForSingleObject
 
                             ; audio
-                      ;call   audio_play
-                      ;test   eax,eax
-                        ;jz   .error
+                       call   audio_play
+                       test   eax,eax
+                         jz   .error
                         mov   eax,1
                         add   rsp,.k_stack_size
                         pop   rsi

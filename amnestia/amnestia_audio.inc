@@ -1,16 +1,16 @@
 if program_section = 'data'
 
 align 8
-  audio:
-    .stream dq 0
-    .thread dq 0
-    .shutdown_event dq 0
-    .buffer_ready_event dq 0
-    .render_client dq 0
-    .client dq 0
-    .device dq 0
-    .enumerator dq 0
-    .buffer_size_in_frames dd 0,0
+audio:
+  .stream dq 0
+  .thread dq 0
+  .shutdown_event dq 0
+  .buffer_ready_event dq 0
+  .render_client dq 0
+  .client dq 0
+  .device dq 0
+  .enumerator dq 0
+  .buffer_size_in_frames dd 0,0
 
 else if program_section = 'code'
 ;=============================================================================
@@ -18,18 +18,14 @@ macro get_buffer {
                         mov   rcx,[audio.render_client]
                         mov   edx,[audio.buffer_size_in_frames]
                         lea   r8,[.ptr+rsp]
-                        mov   rax,[rcx]
-                       call   [IAudioRenderClient.GetBuffer+rax]
-                       test   eax,eax
-                         js   .error }
+                    comcall   IAudioRenderClient.GetBuffer
+                    checkhr   eax,.error }
 macro release_buffer {
                         mov   rcx,[audio.render_client]
                         mov   edx,[audio.buffer_size_in_frames]
                         xor   r8d,r8d
-                        mov   rax,[rcx]
-                       call   [IAudioRenderClient.ReleaseBuffer+rax]
-                       test   eax,eax
-                         js   .error }
+                    comcall   IAudioRenderClient.ReleaseBuffer
+                    checkhr   eax,.error }
 macro fill_buffer {
                         mov   rcx,[audio.stream]
                         mov   rdx,[.ptr+rsp]
@@ -37,7 +33,7 @@ macro fill_buffer {
                         shl   r8d,2
                         lea   r9,[.read_bytes+rsp]
                         mov   qword[rsp+32],0
-                       call   [ReadFile] }
+                      icall   ReadFile }
 ;=============================================================================
 ; out: eax - result
 falign
@@ -48,36 +44,29 @@ macro activate_device {
                         lea   rdx,[IID_IAudioClient]
                         mov   r8d,CLSCTX_ALL
                         xor   r9d,r9d
-                        lea   rax,[audio.client]
-                        mov   [rsp+32],rax
-                        mov   rax,[rcx]
-                       call   [IMMDevice.Activate+rax]
-                       test   eax,eax
-                         js   .error }
+                       lea3   [rsp+32],rax,[audio.client]
+                    comcall   IMMDevice.Activate
+                    checkhr   eax,.error }
 macro init_client {
                         mov   rcx,[audio.client]
                         mov   edx,AUDCLNT_SHAREMODE_EXCLUSIVE
                         mov   r8d,AUDCLNT_STREAMFLAGS_EVENTCALLBACK
                         mov   r9,[.period+rsp]
                         mov   [rsp+32],r9
-                        lea   rax,[.k_format]
-                        mov   [rsp+40],rax
+                       lea3   [rsp+40],rax,[.k_format]
                         mov   qword[rsp+48],0
-                        mov   rax,[rcx]
-                       call   [IAudioClient.Initialize+rax] }
+                    comcall   IAudioClient.Initialize }
 macro get_buffer_size {
                         mov   rcx,[audio.client]
                         lea   rdx,[audio.buffer_size_in_frames]
-                        mov   rax,[rcx]
-                       call   [IAudioClient.GetBufferSize+rax]
-                       test   eax,eax
-                         js   .error }
+                    comcall   IAudioClient.GetBufferSize
+                    checkhr   eax,.error }
 macro create_event {
                         xor   ecx,ecx
                         xor   edx,edx
                         xor   r8d,r8d
                         mov   r9d,EVENT_ALL_ACCESS
-                       call   [CreateEventEx]
+                      icall   CreateEventEx
                        test   rax,rax
                          jz   .error }
 virtual at 0
@@ -91,46 +80,37 @@ end virtual
                        push   rsi
                         sub   rsp,.k_stack_size
                         xor   ecx,ecx
-                       call   [CoInitialize]
-                       test   eax,eax
-                         js   .error
+                      icall   CoInitialize
+                    checkhr   eax,.error
                             ; device enumerator
                         lea   rcx,[CLSID_MMDeviceEnumerator]
                         xor   edx,edx
                         mov   r8d,CLSCTX_ALL
                         lea   r9,[IID_IMMDeviceEnumerator]
-                        lea   rax,[audio.enumerator]
-                        mov   [rsp+32],rax
-                       call   [CoCreateInstance]
-                       test   eax,eax
-                         js   .error
+                       lea3   [rsp+32],rax,[audio.enumerator]
+                      icall   CoCreateInstance
+                    checkhr   eax,.error
                             ; audio endpoint
                         mov   rcx,[audio.enumerator]
                         mov   edx,eRender
                         mov   r8d,eConsole
                         lea   r9,[audio.device]
-                        mov   rax,[rcx]
-                       call   [IMMDeviceEnumerator.GetDefaultAudioEndpoint+rax]
-                       test   eax,eax
-                         js   .error
+                    comcall   IMMDeviceEnumerator.GetDefaultAudioEndpoint
+                    checkhr   eax,.error
             activate_device
                             ; check device support
                         mov   rcx,[audio.client]
                         mov   edx,AUDCLNT_SHAREMODE_EXCLUSIVE
                         lea   r8,[.k_format]
                         xor   r9d,r9d
-                        mov   rax,[rcx]
-                       call   [IAudioClient.IsFormatSupported+rax]
-                       test   eax,eax
-                         js   .error
+                    comcall   IAudioClient.IsFormatSupported
+                    checkhr   eax,.error
                             ; get device period
                         mov   rcx,[audio.client]
                         xor   edx,edx
                         lea   r8,[.period+rsp]
-                        mov   rax,[rcx]
-                       call   [IAudioClient.GetDevicePeriod+rax]
-                       test   eax,eax
-                         js   .error
+                    comcall   IAudioClient.GetDevicePeriod
+                    checkhr   eax,.error
                             ; try to initialize audio client
                 init_client
                        test   eax,eax
@@ -151,8 +131,7 @@ end virtual
                        call   [IAudioClient.Release+rax]
             activate_device
                 init_client
-                       test   eax,eax
-                         js   .error
+                    checkhr   eax,.error
   .initialize_ok:
                create_event
                         mov   [audio.buffer_ready_event],rax
@@ -160,17 +139,14 @@ end virtual
                         mov   [audio.shutdown_event],rax
                         mov   rcx,[audio.client]
                         mov   rdx,[audio.buffer_ready_event]
-                        mov   rax,[rcx]
-                       call   [IAudioClient.SetEventHandle+rax]
+                    comcall   IAudioClient.SetEventHandle
             get_buffer_size
                             ; get audio render client
                         mov   rcx,[audio.client]
                         lea   rdx,[IID_IAudioRenderClient]
                         lea   r8,[audio.render_client]
-                        mov   rax,[rcx]
-                       call   [IAudioClient.GetService+rax]
-                       test   eax,eax
-                         js   .error
+                    comcall   IAudioClient.GetService
+                    checkhr   eax,.error
                             ; open audio file
                         lea   rcx,[.k_audio_file]
                         mov   edx,GENERIC_READ
@@ -179,7 +155,7 @@ end virtual
                         mov   dword[rsp+32],OPEN_EXISTING
                         mov   dword[rsp+40],FILE_ATTRIBUTE_NORMAL+FILE_FLAG_SEQUENTIAL_SCAN
                         mov   qword[rsp+48],0
-                       call   [CreateFile]
+                      icall   CreateFile
                         cmp   rax,INVALID_HANDLE_VALUE
                          je   .error
                         mov   [audio.stream],rax
@@ -190,7 +166,7 @@ end virtual
                         xor   r9d,r9d
                         mov   dword[rsp+32],0
                         mov   qword[rsp+40],0
-                       call   [CreateThread]
+                      icall   CreateThread
                         mov   [audio.thread],rax
                        test   rax,rax
                          jz   .error
@@ -200,21 +176,18 @@ end virtual
              release_buffer
                             ; start
                         mov   rcx,[audio.client]
-                        mov   rax,[rcx]
-                       call   [IAudioClient.Start+rax]
-                       test   eax,eax
-                         js   .error
+                    comcall   IAudioClient.Start
+                    checkhr   eax,.error
                             ; success
                         mov   eax,1
                         add   rsp,.k_stack_size
                         pop   rsi
                         ret
-  .error:
-                        xor   eax,eax
+  .error:               xor   eax,eax
                         add   rsp,.k_stack_size
                         pop   rsi
                         ret
-align 8
+  align 8
   .k_10000000_0 dq 10000000.0
   .k_44100_0 dq 44100.0
   .k_0_5 dq 0.5
@@ -233,18 +206,17 @@ audio_stop:
                         mov   rcx,[audio.shutdown_event]
                        test   rcx,rcx
                          jz   @f
-                       call   [SetEvent]
+                      icall   SetEvent
   @@:                   mov   rcx,[audio.thread]
                         mov   edx,INFINITE
                        test   rcx,rcx
                          jz   @f
-                       call   [WaitForSingleObject]
+                      icall   WaitForSingleObject
   @@:            safe_close   [audio.thread]
                         mov   rcx,[audio.client]
                        test   rcx,rcx
                          jz   @f
-                        mov   rax,[rcx]
-                       call   [IAudioClient.Stop+rax]
+                    comcall   IAudioClient.Stop
   @@:            safe_close   [audio.stream]
                  safe_close   [audio.shutdown_event]
                  safe_close   [audio.buffer_ready_event]
@@ -272,27 +244,24 @@ end virtual
                         sub   rsp,.k_stack_size
 
                         xor   ecx,ecx
-                       call   [CoInitialize]
-                       test   eax,eax
-                         js   .error
+                      icall   CoInitialize
+                    checkhr   eax,.error
 
-                        lea   rcx,[.k_task_name]
                         mov   [.task_index+rsp],0
+                        lea   rcx,[.k_task_name]
                         lea   rdx,[.task_index+rsp]
-                       call   [AvSetMmThreadCharacteristics]
+                      icall   AvSetMmThreadCharacteristics
                        test   rax,rax
                          jz   .error
 
-                        mov   rax,[audio.shutdown_event]
-                        mov   [.wait_array+rsp],rax
-                        mov   rax,[audio.buffer_ready_event]
-                        mov   [.wait_array+rsp+8],rax
+                       mov3   [.wait_array+rsp],rax,[audio.shutdown_event]
+                       mov3   [.wait_array+rsp+8],rax,[audio.buffer_ready_event]
   .play_loop:
                         mov   ecx,2
                         lea   rdx,[.wait_array+rsp]
                         xor   r8d,r8d
                         mov   r9d,INFINITE
-                       call   [WaitForMultipleObjects]
+                      icall   WaitForMultipleObjects
                        test   eax,eax
                          jz   .error
 
@@ -315,9 +284,9 @@ end virtual
                         jmp   .play_loop
   .error:
                         xor   ecx,ecx
-                       call   [ExitThread]
+                      icall   ExitThread
                         ret
-align 1
+  align 1
   .k_task_name db 'Playback',0
 
 purge get_buffer,release_buffer,fill_buffer

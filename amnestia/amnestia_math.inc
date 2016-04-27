@@ -1,27 +1,27 @@
 if program_section = 'cdata'
 
 align 64
-  k_f32_identity_r0: dd 1.0,0.0,0.0,0.0
-  k_f32_identity_r1: dd 0.0,1.0,0.0,0.0
-  k_f32_identity_r2: dd 0.0,0.0,1.0,0.0
-  k_f32_identity_r3: dd 0.0,0.0,0.0,1.0
-  k_f32_pi: dd 8 dup 3.141592654
-  k_f32_two_pi: dd 8 dup 6.283185307
-  k_f32_reciprocal_two_pi: dd 8 dup 0.159154943
-  k_f32_half_pi: dd 8 dup 1.570796327
-  k_f32_half: dd 8 dup 0.5
-  k_f32_sin_coefficients: dd -0.16666667,0.0083333310,-0.00019840874,2.7525562e-06,-2.3889859e-08,-0.16665852,0.0083139502,-0.00018524670
-  k_f32_cos_coefficients: dd -0.5,0.041666638,-0.0013888378,2.4760495e-05,-2.6051615e-07,-0.49992746,0.041493919,-0.0012712436
-  k_f32_one: dd 8 dup 1.0
-  k_f32_negative_one: dd 8 dup -1.0
-  k_i32_negative_zero: dd 8 dup 0x80000000
-  k_i32_negative_zero_x0: dd 0x80000000,0,0,0,0,0,0,0
-  k_i32_negative_zero_y0: dd 0,0x80000000,0,0,0,0,0,0
-  k_i32_negative_zero_z0: dd 0,0,0x80000000,0,0,0,0,0
-  k_i32_perm_x0_y1: dd 0,0,0,0,5,5,5,5
-  k_i32_perm_z0_w1: dd 2,2,2,2,7,7,7,7
-  k_i32_perm_y0_x1: dd 1,1,1,1,4,4,4,4
-  k_i32_perm_w0_z1: dd 3,3,3,3,6,6,6,6
+k_f32_identity_r0: dd 1.0,0.0,0.0,0.0
+k_f32_identity_r1: dd 0.0,1.0,0.0,0.0
+k_f32_identity_r2: dd 0.0,0.0,1.0,0.0
+k_f32_identity_r3: dd 0.0,0.0,0.0,1.0
+k_f32_pi: dd 8 dup 3.141592654
+k_f32_two_pi: dd 8 dup 6.283185307
+k_f32_reciprocal_two_pi: dd 8 dup 0.159154943
+k_f32_half_pi: dd 8 dup 1.570796327
+k_f32_half: dd 8 dup 0.5
+k_f32_sin_coefficients: dd -0.16666667,0.0083333310,-0.00019840874,2.7525562e-06,-2.3889859e-08,-0.16665852,0.0083139502,-0.00018524670
+k_f32_cos_coefficients: dd -0.5,0.041666638,-0.0013888378,2.4760495e-05,-2.6051615e-07,-0.49992746,0.041493919,-0.0012712436
+k_f32_one: dd 8 dup 1.0
+k_f32_negative_one: dd 8 dup -1.0
+k_i32_negative_zero: dd 8 dup 0x80000000
+k_i32_negative_zero_x0: dd 0x80000000,0,0,0,0,0,0,0
+k_i32_negative_zero_y0: dd 0,0x80000000,0,0,0,0,0,0
+k_i32_negative_zero_z0: dd 0,0,0x80000000,0,0,0,0,0
+k_i32_perm_x0_y1: dd 0,0,0,0,5,5,5,5
+k_i32_perm_z0_w1: dd 2,2,2,2,7,7,7,7
+k_i32_perm_y0_x1: dd 1,1,1,1,4,4,4,4
+k_i32_perm_w0_z1: dd 3,3,3,3,6,6,6,6
 
 else if program_section = 'code'
 ;=============================================================================
