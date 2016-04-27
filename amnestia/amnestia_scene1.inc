@@ -9,12 +9,14 @@ struc frame_resources {
   .vertex_buffer_view D3D12_VERTEX_BUFFER_VIEW }
 struc_offsets_size frame_resources
 
-struc scene {
+align 8
+scene1:
   .pso dq 0
   .rootsig dq 0
 
   align 8
-  rept k_frame_count n:0 \{ .frame_resources\#n frame_resources \}
+  rept k_frame_count n:0 { .frame_resources#n frame_resources }
+  restruc frame_resources
 
   align 4
   .eye_half_fovy dd 0.52359876 ; pi / 6
@@ -31,13 +33,6 @@ struc scene {
 
   align 1
   .s_position db 'POSITION',0
-  .s_vs db 'data/vs_transform.cso',0
-  .s_ps db 'data/ps_shade.cso',0 }
-
-align 8
-scene1 scene
-
-restruc scene,frame_resources
 
 else if program_section = 'code'
 ;=============================================================================

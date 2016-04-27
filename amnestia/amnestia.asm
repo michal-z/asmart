@@ -541,10 +541,32 @@ winproc:
                         add   rsp,.k_stack_size
                         ret
 ;========================================================================
-section '.data' data readable
+section '.data' data readable writeable
 
-program_section = 'cdata'
+program_section = 'data'
 include 'amnestia_math.inc'
+include 'amnestia_audio.inc'
+include 'amnestia_demo.inc'
+include 'amnestia_scene1.inc'
+
+align 8
+win_handle dq 0
+win_width dd 1280
+win_height dd 720
+
+align 8
+process_heap dq 0
+time dq 0
+time_delta dd 0,0
+
+align 8
+get_time.perf_counter dq 0
+get_time.perf_freq dq 0
+get_time.first_perf_counter dq 0
+
+update_frame_stats.prev_time dq 0
+update_frame_stats.prev_update_time dq 0
+update_frame_stats.frame dd 0,0
 
 align 1
 k_win_class_name db 'amnestia',0
@@ -575,32 +597,6 @@ vs_transform: file 'hlsl/vs_transform.cso'
 align 8
 ps_shade: file 'hlsl/ps_shade.cso'
   .size = $ - ps_shade
-;========================================================================
-section '.data' data readable writeable
-
-program_section = 'data'
-include 'amnestia_audio.inc'
-include 'amnestia_demo.inc'
-include 'amnestia_scene1.inc'
-
-align 8
-win_handle dq 0
-win_width dd 1280
-win_height dd 720
-
-align 8
-process_heap dq 0
-time dq 0
-time_delta dd 0,0
-
-align 8
-get_time.perf_counter dq 0
-get_time.perf_freq dq 0
-get_time.first_perf_counter dq 0
-
-update_frame_stats.prev_time dq 0
-update_frame_stats.prev_update_time dq 0
-update_frame_stats.frame dd 0,0
 ;========================================================================
 section '.idata' import data readable writeable
 

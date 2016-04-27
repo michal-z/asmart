@@ -1,4 +1,4 @@
-if program_section = 'cdata'
+if program_section = 'data'
 
 align 64
 k_f32_identity_r0: dd 1.0,0.0,0.0,0.0
