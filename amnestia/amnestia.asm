@@ -283,12 +283,12 @@ get_time:
                        test   rax,rax
                         jnz   @f
                         lea   rcx,[.perf_freq]
-                       call   [QueryPerformanceFrequency]
+                      icall   QueryPerformanceFrequency
                         lea   rcx,[.first_perf_counter]
-                       call   [QueryPerformanceCounter]
+                      icall   QueryPerformanceCounter
 
   @@:                   lea   rcx,[.perf_counter]
-                       call   [QueryPerformanceCounter]
+                      icall   QueryPerformanceCounter
                         mov   rcx,[.perf_counter]
                         sub   rcx,[.first_perf_counter]
                         mov   rdx,[.perf_freq]
@@ -339,10 +339,10 @@ end virtual
                         lea   rdx,[.k_win_text_fmt]
                   vcvtsd2si   r8,xmm0
                   vcvtsd2si   r9,xmm1
-                       call   [wsprintf]
+                      icall   wsprintf
                         mov   rcx,[win_handle]
                         lea   rdx,[.text+rsp]
-                       call   [SetWindowText]
+                      icall   SetWindowText
   @@:                   add   [.frame],1
                         add   rsp,.k_stack_size
                         ret
@@ -371,14 +371,14 @@ end virtual
                        lea3   [.wc.lpfnWndProc+rsp],rax,[winproc]
                        lea3   [.wc.lpszClassName+rsp],rax,[k_win_class_name]
                         xor   ecx,ecx
-                       call   [GetModuleHandle]
+                      icall   GetModuleHandle
                         mov   [.wc.hInstance+rsp],rax
                         xor   ecx,ecx
                         mov   edx,IDC_ARROW
-                       call   [LoadCursor]
+                      icall   LoadCursor
                         mov   [.wc.hCursor+rsp],rax
                         lea   rcx,[.wc+rsp]
-                       call   [RegisterClass]
+                      icall   RegisterClass
                        test   eax,eax
                          jz   .error
                             ; compute window size
@@ -387,7 +387,7 @@ end virtual
                         lea   rcx,[.rect+rsp]
                         mov   edx,k_win_style
                         xor   r8d,r8d
-                       call   [AdjustWindowRect]
+                      icall   AdjustWindowRect
                         mov   r10d,[.rect.right+rsp]
                         mov   r11d,[.rect.bottom+rsp]
                         sub   r10d,[.rect.left+rsp]
@@ -406,7 +406,7 @@ end virtual
                         mov   [rsp+72],ecx
                        mov3   [rsp+80],rax,[.wc.hInstance+rsp]
                         mov   [rsp+88],ecx
-                       call   [CreateWindowEx]
+                      icall   CreateWindowEx
                         mov   [win_handle],rax
                        test   rax,rax
                          jz   .error
@@ -430,7 +430,7 @@ init:
                        test   eax,eax
                          jz   .error
                             ; get process heap
-                       call   [GetProcessHeap]
+                      icall   GetProcessHeap
                         mov   [process_heap],rax
                        test   rax,rax
                          jz   .error
@@ -495,12 +495,12 @@ end virtual
                         xor   r8d,r8d
                         xor   r9d,r9d
                         mov   dword[rsp+32],PM_REMOVE
-                       call   [PeekMessage]
+                      icall   PeekMessage
                        test   eax,eax
                          jz   .update
 
                         lea   rcx,[.msg+rsp]
-                       call   [DispatchMessage]
+                      icall   DispatchMessage
                         cmp   [.msg.message+rsp],WM_QUIT
                          je   .quit
 
@@ -513,7 +513,7 @@ end virtual
   .quit:
                        call   deinit
                         xor   ecx,ecx
-                       call   [ExitProcess]
+                      icall   ExitProcess
 ;=============================================================================
 falign
 winproc:
@@ -524,18 +524,18 @@ winproc:
                          je   .keydown
                         cmp   edx,WM_DESTROY
                          je   .destroy
-                       call   [DefWindowProc]
+                      icall   DefWindowProc
                         jmp   .return
   .keydown:
                         cmp   r8d,VK_ESCAPE
                         jne   .return
                         xor   ecx,ecx
-                       call   [PostQuitMessage]
+                      icall   PostQuitMessage
                         xor   eax,eax
                         jmp   .return
   .destroy:
                         xor   ecx,ecx
-                       call   [PostQuitMessage]
+                      icall   PostQuitMessage
                         xor   eax,eax
   .return:
                         add   rsp,.k_stack_size

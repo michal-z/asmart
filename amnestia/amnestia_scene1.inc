@@ -72,7 +72,6 @@ end virtual
                         mov   [.buffer_res_desc.SampleDesc.Count+rsp],1
                         mov   [.buffer_res_desc.Layout+rsp],D3D12_TEXTURE_LAYOUT_ROW_MAJOR
 
-
                         mov   esi,k_frame_count
                         lea   rbx,[scene1.frame_resources0]
   .frame_resources_loop:
@@ -163,19 +162,16 @@ end virtual
                safe_release   [.d3dblob+rsp]
                     checkhr   esi,.error
 
-
                        lea3   [.input_element_desc.SemanticName+rsp],rax,[scene1.s_position]
                         mov   [.input_element_desc.SemanticIndex+rsp],0
                         mov   [.input_element_desc.Format+rsp],DXGI_FORMAT_R32G32B32A32_FLOAT
                         mov   [.input_element_desc.InputSlot+rsp],0
                         mov   [.input_element_desc.AlignedByteOffset+rsp],0
-                            ; VS
+
                        lea3   [.pso_desc.VS.pShaderBytecode+rsp],rax,[vs_transform]
                         mov   [.pso_desc.VS.BytecodeLength+rsp],vs_transform.size
-                            ; PS
                        lea3   [.pso_desc.PS.pShaderBytecode+rsp],rax,[ps_shade]
                         mov   [.pso_desc.PS.BytecodeLength+rsp],ps_shade.size
-                            ; PSO
                        mov3   [.pso_desc.pRootSignature+rsp],rax,[scene1.rootsig]
                        lea3   [.pso_desc.InputLayout.pInputElementDescs+rsp],rax,[.input_element_desc+rsp]
                         mov   [.pso_desc.InputLayout.NumElements+rsp],1
