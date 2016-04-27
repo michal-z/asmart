@@ -240,9 +240,9 @@ end virtual
                       icall   WaitForSingleObject
 
                             ; audio
-                       call   audio_play
-                       test   eax,eax
-                         jz   .error
+                      ;call   audio_play
+                      ;test   eax,eax
+                        ;jz   .error
                         mov   eax,1
                         add   rsp,.k_stack_size
                         pop   rsi
