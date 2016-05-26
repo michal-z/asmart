@@ -7,4 +7,4 @@ amnestia - 3D rotating triangle coded in pure ASM using DX12 for educational pur
 
 buddhabrot - Mandelbrot fractal variation.
 
-cpuraymarching - Real-time ray marching of simple distance field on the CPU with soft shadows. Pure vectorized and multithreaded ASM code.
+cpuraymarching - Real-time ray marching of simple distance field on the CPU with soft shadows. Vectorized and multithreaded ASM code.
