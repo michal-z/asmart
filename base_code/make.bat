@@ -1,1 +1,1 @@
-fasm\fasm.exe base_code.asm
+..\fasm\fasm.exe base_code.asm

@@ -25,25 +25,25 @@ FILE_ATTRIBUTE_NORMAL = 128
 FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
 EVENT_ALL_ACCESS = 0x1F0003
 
-__begin fix {
-__end fix }
+@begin fix {
+@end fix }
 
 macro struc_offsets_size s
-__begin
-virtual at 0
-  s s
-  sizeof.#s = $
-end virtual
-__end
+  @begin
+  virtual at 0
+    s s
+    sizeof.#s = $
+  end virtual
+  @end
 
 struc POINT
-__begin
+  @begin
   .x dd ?
   .y dd ?
-__end
+  @end
 
 struc MSG
-__begin
+  @begin
   .hwnd dq ?
   .message dd ?,?
   .wParam dq ?
@@ -51,10 +51,10 @@ __begin
   .time dd ?
   .pt POINT
   dd ?
-__end
+  @end
 
 struc WNDCLASS
-__begin
+  @begin
   .style dd ?,?
   .lpfnWndProc dq ?
   .cbClsExtra dd ?
@@ -65,18 +65,18 @@ __begin
   .hbrBackground dq ?
   .lpszMenuName dq ?
   .lpszClassName dq ?
-__end
+  @end
 
 struc RECT
-__begin
+  @begin
   .left dd ?
   .top dd ?
   .right dd ?
   .bottom dd ?
-__end
+  @end
 
 struc BITMAPINFOHEADER
-__begin
+  @begin
   .biSize dd ?
   .biWidth dd ?
   .biHeight dd ?
@@ -88,30 +88,30 @@ __begin
   .biYPelsPerMeter dd ?
   .biClrUsed dd ?
   .biClrImportant dd ?
-__end
+  @end
 
 struc_offsets_size BITMAPINFOHEADER
 ;========================================================================
 macro iaca_begin
-__begin
+  @begin
                         mov  ebx, 111
                          db  $64, $67, $90
-__end
+  @end
 
 macro iaca_end
-__begin
+  @begin
                         mov  ebx, 222
                          db  $64, $67, $90
-__end
+  @end
 
 macro debug_break
-__begin
+  @begin
                        int3
                         nop
-__end
+  @end
 
 macro zero_stack size*
-__begin
+  @begin
                       vpxor  ymm0, ymm0, ymm0
                         xor  eax, eax
                         mov  ecx, size/32
@@ -119,7 +119,7 @@ __begin
                         add  eax, 32
                         sub  ecx, 1
                         jnz  @b
-__end
+  @end
 
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 ;=============================================================================
@@ -343,14 +343,14 @@ align 32
 init:
 ;-----------------------------------------------------------------------------
 macro get_func lib, proc
-__begin
+  @begin
                         mov  rcx, [lib#_dll]
                         lea  rdx, [_#proc]
                        call  [GetProcAddress]
                         mov  [proc], rax
                        test  rax, rax
                          jz  .error
-__end
+  @end
 
   .k_stack_size = 32*1+24
                         sub  rsp, .k_stack_size
@@ -426,7 +426,7 @@ __end
 
                           ; create window
                        call  init_window
-                       test  eax,eax
+                       test  eax, eax
                          jz  .error
 
                         mov  eax, 1
