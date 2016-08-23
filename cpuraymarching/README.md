@@ -1,1 +1,1 @@
-![Current Look](/screen.png)
+![image](/cpuraymarching/screen.png)
