@@ -25,37 +25,27 @@ FILE_ATTRIBUTE_NORMAL = 128
 FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
 EVENT_ALL_ACCESS = 0x1F0003
 
-@begin fix {
-@end fix }
-
-macro struc_offsets_size s
-  @begin
+macro strucOffsetsSize s {
   virtual at 0
     s s
     sizeof.#s = $
-  end virtual
-  @end
+  end virtual }
 
-struc POINT
-  @begin
-  .x dd ?
-  .y dd ?
-  @end
+struc POINT {
+  .x dd 0
+  .y dd 0 }
 
-struc MSG
-  @begin
+struc MSG {
   .hwnd dq ?
-  .message dd ?,?
+  .message dd ?, ?
   .wParam dq ?
   .lParam dq ?
   .time dd ?
   .pt POINT
-  dd ?
-  @end
+  dd ? }
 
-struc WNDCLASS
-  @begin
-  .style dd ?,?
+struc WNDCLASS {
+  .style dd ?, ?
   .lpfnWndProc dq ?
   .cbClsExtra dd ?
   .cbWndExtra dd ?
@@ -64,19 +54,15 @@ struc WNDCLASS
   .hCursor dq ?
   .hbrBackground dq ?
   .lpszMenuName dq ?
-  .lpszClassName dq ?
-  @end
+  .lpszClassName dq ? }
 
-struc RECT
-  @begin
+struc RECT {
   .left dd ?
   .top dd ?
   .right dd ?
-  .bottom dd ?
-  @end
+  .bottom dd ? }
 
-struc BITMAPINFOHEADER
-  @begin
+struc BITMAPINFOHEADER {
   .biSize dd ?
   .biWidth dd ?
   .biHeight dd ?
@@ -87,10 +73,9 @@ struc BITMAPINFOHEADER
   .biXPelsPerMeter dd ?
   .biYPelsPerMeter dd ?
   .biClrUsed dd ?
-  .biClrImportant dd ?
-  @end
+  .biClrImportant dd ? }
 
-struc_offsets_size BITMAPINFOHEADER
+strucOffsetsSize BITMAPINFOHEADER
 ;========================================================================
 macro iaca_begin
   @begin
@@ -530,7 +515,7 @@ win_message_handler:
                         cmp  r8d, VK_ESCAPE
                         jne  .return
                         xor  ecx, ecx
-                       call  [PostQuitMessage]
+                      icall  PostQuitMessage
                         xor  eax, eax
                         jmp  .return
   .destroy:
@@ -668,8 +653,8 @@ _DeleteObject db 'DeleteObject',0
 ;========================================================================
 section '.idata' import data readable writeable
 
-dd 0,0,0,rva _kernel32_dll,rva _kernel32_table
-dd 0,0,0,0,0
+dd 0, 0, 0, rva _kernel32_dll, rva _kernel32_table
+dd 0, 0, 0, 0, 0
 
 _kernel32_table:
   LoadLibrary dq rva _LoadLibrary
