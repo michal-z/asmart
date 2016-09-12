@@ -24,88 +24,131 @@ INVALID_FILE_SIZE = 0xffffffff
 FILE_ATTRIBUTE_NORMAL = 128
 FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
 EVENT_ALL_ACCESS = 0x1F0003
-
+;=============================================================================
 macro strucOffsetsSize s {
   virtual at 0
     s s
     sizeof.#s = $
   end virtual }
 
-struc POINT {
-  .x dd 0
-  .y dd 0 }
+macro dalign value* {
+  db ((value - 1) - (($-$$) + (value - 1)) mod value) dup 0 }
 
-struc MSG {
-  .hwnd dq ?
-  .message dd ?, ?
-  .wParam dq ?
-  .lParam dq ?
-  .time dd ?
-  .pt POINT
-  dd ? }
-
-struc WNDCLASS {
-  .style dd ?, ?
-  .lpfnWndProc dq ?
-  .cbClsExtra dd ?
-  .cbWndExtra dd ?
-  .hInstance dq ?
-  .hIcon dq ?
-  .hCursor dq ?
-  .hbrBackground dq ?
-  .lpszMenuName dq ?
-  .lpszClassName dq ? }
-
-struc RECT {
-  .left dd ?
-  .top dd ?
-  .right dd ?
-  .bottom dd ? }
-
-struc BITMAPINFOHEADER {
-  .biSize dd ?
-  .biWidth dd ?
-  .biHeight dd ?
-  .biPlanes dw ?
-  .biBitCount dw ?
-  .biCompression dd ?
-  .biSizeImage dd ?
-  .biXPelsPerMeter dd ?
-  .biYPelsPerMeter dd ?
-  .biClrUsed dd ?
-  .biClrImportant dd ? }
-
-strucOffsetsSize BITMAPINFOHEADER
-;========================================================================
-macro iaca_begin
-  @begin
+macro mov op1*, op2*, op3 {
+  if op3 eq
+                        mov  op1, op2
+  else
+                        mov  op2, op3
+                        mov  op1, op2
+  end if }
+ 
+macro lea op1*, op2*, op3 {
+  if op3 eq
+                        lea  op1, op2
+  else
+                        lea  op2, op3
+                        mov  op1, op2
+  end if }
+ 
+macro iacaBegin {
                         mov  ebx, 111
-                         db  $64, $67, $90
-  @end
+                         db  64h, 67h, 90h }
 
-macro iaca_end
-  @begin
+macro iacaEnd {
                         mov  ebx, 222
-                         db  $64, $67, $90
-  @end
+                         db  64h, 67h, 90h }
 
-macro debug_break
-  @begin
+macro debugBreak {
                        int3
-                        nop
-  @end
+                        nop }
 
-macro zero_stack size*
-  @begin
+macro zeroStack size* {
                       vpxor  ymm0, ymm0, ymm0
                         xor  eax, eax
                         mov  ecx, size/32
   @@:               vmovdqa  [rsp+rax], ymm0
                         add  eax, 32
                         sub  ecx, 1
-                        jnz  @b
-  @end
+                        jnz  @b }
 
+macro icall target* {
+                       call  [target] }
+;=============================================================================
+struc dwa [data] {
+  common
+  dalign 2
+  . dw data }
+
+struc dda [data] {
+  common
+  dalign 4
+  . dd data }
+
+struc dqa [data] {
+  common
+  dalign 8
+  . dq data }
+
+struc POINT {
+  dalign 4
+  .:
+  .x    dda 0
+  .y    dda 0
+  dalign 4 }
+
+struc MSG {
+  dalign 8
+  .:
+  .hwnd         dqa 0
+  .message      dda 0
+  .wParam       dqa 0
+  .lParam       dqa 0
+  .time         dda 0
+  .pt           POINT
+  dalign 8 }
+
+struc WNDCLASS {
+  dalign 8
+  .:
+  .style                dda 0
+  .lpfnWndProc          dqa 0
+  .cbClsExtra           dda 0
+  .cbWndExtra           dda 0
+  .hInstance            dqa 0
+  .hIcon                dqa 0
+  .hCursor              dqa 0
+  .hbrBackground        dqa 0
+  .lpszMenuName         dqa 0
+  .lpszClassName        dqa 0
+  dalign 8 }
+
+struc RECT {
+  dalign 4
+  .:
+  .left         dda 0
+  .top          dda 0
+  .right        dda 0
+  .bottom       dda 0
+  dalign 4 }
+
+struc BITMAPINFOHEADER {
+  dalign 4
+  .:
+  .biSize               dda 0
+  .biWidth              dda 0
+  .biHeight             dda 0
+  .biPlanes             dwa 0
+  .biBitCount           dwa 0
+  .biCompression        dda 0
+  .biSizeImage          dda 0
+  .biXPelsPerMeter      dda 0
+  .biYPelsPerMeter      dda 0
+  .biClrUsed            dda 0
+  .biClrImportant       dda 0
+  dalign 4 }
+
+strucOffsetsSize BITMAPINFOHEADER
+;=============================================================================
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 ;=============================================================================
 section '.text' code readable executable
@@ -115,19 +158,19 @@ check_cpu_extensions:
 ;-----------------------------------------------------------------------------
                         mov  eax, 1
                       cpuid
-                        and  ecx, $58001000          ; check RDRAND,AVX,OSXSAVE,FMA
-                        cmp  ecx, $58001000
+                        and  ecx, 58001000h          ; check RDRAND,AVX,OSXSAVE,FMA
+                        cmp  ecx, 58001000h
                         jne  .not_supported
                         mov  eax, 7
                         xor  ecx, ecx
                       cpuid
-                        and  ebx, $20                ; check AVX2
-                        cmp  ebx, $20
+                        and  ebx, 20h                ; check AVX2
+                        cmp  ebx, 20h
                         jne  .not_supported
                         xor  ecx, ecx
                      xgetbv
-                        and  eax, $6                 ; check OS support
-                        cmp  eax, $6
+                        and  eax, 6h                 ; check OS support
+                        cmp  eax, 6h
                         jne  .not_supported
                         mov  eax, 1
                         jmp  .ret
@@ -143,11 +186,11 @@ get_time:
                        test  rax, rax
                         jnz  @f
                         lea  rcx, [.perf_freq]
-                       call  [QueryPerformanceFrequency]
+                      icall  QueryPerformanceFrequency
                         lea  rcx, [.first_perf_counter]
-                       call  [QueryPerformanceCounter]
+                      icall  QueryPerformanceCounter
   @@:                   lea  rcx, [.perf_counter]
-                       call  [QueryPerformanceCounter]
+                      icall  QueryPerformanceCounter
                         mov  rcx, [.perf_counter]
                         sub  rcx, [.first_perf_counter]
                         mov  rdx, [.perf_freq]
@@ -161,12 +204,12 @@ get_time:
 align 32
 update_frame_stats:
 ;-----------------------------------------------------------------------------
-virtual at 0
+  virtual at rsp
   rq 4
   .text rb 64
-  align 32
-  .k_stack_size = $+24
-end virtual
+  dalign 32
+  .k_stack_size = $-$$+24
+  end virtual
                         sub  rsp, .k_stack_size
                         mov  rax, [.prev_time]
                        test  rax, rax
@@ -194,14 +237,14 @@ end virtual
                      vdivsd  xmm1, xmm2, xmm1
                      vmulsd  xmm1, xmm1, [.k_1000000_0]
                         mov  [.frame], 0
-                        lea  rcx, [.text+rsp]
+                        lea  rcx, [.text]
                         lea  rdx, [_win_text_fmt]
                   vcvtsd2si  r8, xmm0
                   vcvtsd2si  r9, xmm1
-                       call  [wsprintf]
+                      icall  wsprintf
                         mov  rcx, [win_handle]
-                        lea  rdx, [.text+rsp]
-                       call  [SetWindowText]
+                        lea  rdx, [.text]
+                      icall  SetWindowText
   @@:                   add  [.frame], 1
                         add  rsp, .k_stack_size
                         ret
@@ -209,109 +252,97 @@ end virtual
 align 32
 init_window:
 ;-----------------------------------------------------------------------------
-virtual at 0
-  rq 12
-  .wc WNDCLASS
-  align 8
-  .rect RECT
-  align 8
-  .bmp_info BITMAPINFOHEADER
-  rq 4
-  align 32
-  .k_stack_size = $+16
-end virtual
+  virtual at rsp
+  rept 12 n:1 { .param#n dq ? }
+  .wc           WNDCLASS
+  .rect         RECT
+  .bmp_info     BITMAPINFOHEADER
+  dalign 32
+  .k_stack_size = $-$$+16
+  end virtual
                        push  rsi
 
                           ; alloc and clear the stack
                         sub  rsp, .k_stack_size
-                 zero_stack  .k_stack_size
+                  zeroStack  .k_stack_size
 
                           ; create window class
-                        lea  rax, [win_message_handler]
-                        mov  [.wc.lpfnWndProc+rsp], rax
-                        lea  rax, [_win_class_name]
-                        mov  [.wc.lpszClassName+rsp], rax
+                        lea  [.wc.lpfnWndProc], rax, [win_message_handler]
+                        lea  [.wc.lpszClassName], rax, [_win_class_name]
                         xor  ecx, ecx
-                       call  [GetModuleHandle]
-                        mov  [.wc.hInstance+rsp], rax
+                      icall  GetModuleHandle
+                        mov  [.wc.hInstance], rax
                         xor  ecx, ecx
                         mov  edx, IDC_ARROW
-                       call  [LoadCursor]
-                        mov  [.wc.hCursor+rsp], rax
-                        lea  rcx, [.wc+rsp]
+                      icall  LoadCursor
+                        mov  [.wc.hCursor], rax
+                        lea  rcx, [.wc]
                        call  [RegisterClass]
                        test  eax, eax
                          jz  .error
 
                           ; compute window size
-                        mov  eax, [win_width]
-                        mov  [.rect.right+rsp], eax
-                        mov  eax, [win_height]
-                        mov  [.rect.bottom+rsp], eax
-                        lea  rcx, [.rect+rsp]
+                        mov  [.rect.right], eax, [win_width]
+                        mov  [.rect.bottom], eax, [win_height]
+                        lea  rcx, [.rect]
                         mov  edx, k_win_style
                         xor  r8d, r8d
-                       call  [AdjustWindowRect]
-                        mov  r10d, [.rect.right+rsp]
-                        mov  r11d, [.rect.bottom+rsp]
-                        sub  r10d, [.rect.left+rsp]
-                        sub  r11d, [.rect.top+rsp]
+                      icall  AdjustWindowRect
+                        mov  r10d, [.rect.right]
+                        mov  r11d, [.rect.bottom]
+                        sub  r10d, [.rect.left]
+                        sub  r11d, [.rect.top]
 
                           ; create window
                         xor  ecx, ecx
                         lea  rdx, [_win_class_name]
                         mov  r8, rdx
                         mov  r9d, WS_VISIBLE+k_win_style
-                        mov  eax, CW_USEDEFAULT
-                        mov  [rsp+32], eax
-                        mov  [rsp+40], eax
-                        mov  [rsp+48], r10d
-                        mov  [rsp+56], r11d
-                        mov  [rsp+64], ecx
-                        mov  [rsp+72], ecx
-                        mov  rax, [.wc.hInstance+rsp]
-                        mov  [rsp+80], rax
-                        mov  [rsp+88], ecx
-                       call  [CreateWindowEx]
+                        mov  dword[.param5], CW_USEDEFAULT
+                        mov  dword[.param6], CW_USEDEFAULT
+                        mov  [.param7], r10
+                        mov  [.param8], r11
+                        mov  [.param9], 0
+                        mov  [.param10], 0
+                        mov  [.param11], rax, [.wc.hInstance]
+                        mov  [.param12], 0
+                      icall  CreateWindowEx
                         mov  [win_handle], rax
                        test  rax, rax
                          jz  .error
 
                           ; create bitmap
                         mov  rcx, [win_handle]
-                       call  [GetDC]
+                      icall  GetDC
                         mov  [win_hdc], rax
                        test  rax, rax
                          jz  .error
-                        mov  eax, sizeof.BITMAPINFOHEADER
-                        mov  [.bmp_info.biSize+rsp], eax
-                        mov  eax, [win_width]
-                        mov  [.bmp_info.biWidth+rsp], eax
-                        mov  eax, [win_height]
-                        mov  [.bmp_info.biHeight+rsp], eax
-                        mov  [.bmp_info.biPlanes+rsp], 1
-                        mov  [.bmp_info.biBitCount+rsp], 32
+                        mov  [.bmp_info.biSize], eax, sizeof.BITMAPINFOHEADER
+                        mov  [.bmp_info.biWidth], eax, [win_width]
+                        mov  [.bmp_info.biHeight], eax, [win_height]
+                        mov  [.bmp_info.biPlanes], 1
+                        mov  [.bmp_info.biBitCount], 32
                         mov  eax, [win_width]
                        imul  eax, [win_height]
-                        mov  [.bmp_info.biSizeImage+rsp], eax
+                        mov  [.bmp_info.biSizeImage], eax
                         mov  rcx, [win_hdc]
-                        lea  rdx, [.bmp_info+rsp]
+                        lea  rdx, [.bmp_info]
                         xor  r8d, r8d
                         lea  r9, [win_pixels]
-                        mov  qword[rsp+32], 0
-                        mov  qword[rsp+40], 0
-                       call  [CreateDIBSection]
+                        mov  [.param5], 0
+                        mov  [.param6], 0
+                      icall  CreateDIBSection
                         mov  [win_bmp_handle], rax
                        test  rax, rax
                          jz  .error
                         mov  rcx, [win_hdc]
-                       call  [CreateCompatibleDC]
+                      icall  CreateCompatibleDC
                         mov  [win_bmp_hdc], rax
                        test  rax, rax
                          jz  .error
                         mov  rcx, [win_bmp_hdc]
                         mov  rdx, [win_bmp_handle]
-                       call  [SelectObject]
+                      icall  SelectObject
                        test  eax, eax
                          jz  .error
 
@@ -327,76 +358,74 @@ end virtual
 align 32
 init:
 ;-----------------------------------------------------------------------------
-macro get_func lib, proc
-  @begin
+macro getFunc lib, proc {
                         mov  rcx, [lib#_dll]
                         lea  rdx, [_#proc]
-                       call  [GetProcAddress]
+                      icall  GetProcAddress
                         mov  [proc], rax
                        test  rax, rax
-                         jz  .error
-  @end
+                         jz  .error }
 
   .k_stack_size = 32*1+24
                         sub  rsp, .k_stack_size
                           ; load APIs
                         lea  rcx, [_kernel32_dll]
-                       call  [LoadLibrary]
+                      icall  LoadLibrary
                         mov  [kernel32_dll], rax
                        test  rax, rax
                          jz  .error
                         lea  rcx, [_user32_dll]
-                       call  [LoadLibrary]
+                      icall  LoadLibrary
                         mov  [user32_dll], rax
                        test  rax, rax
                          jz  .error
                         lea  rcx, [_gdi32_dll]
-                       call  [LoadLibrary]
+                      icall  LoadLibrary
                         mov  [gdi32_dll], rax
                        test  rax, rax
                          jz  .error
 
-                   get_func  kernel32, ExitProcess
-                   get_func  kernel32, GetModuleHandle
-                   get_func  kernel32, ExitThread
-                   get_func  kernel32, QueryPerformanceFrequency
-                   get_func  kernel32, QueryPerformanceCounter
-                   get_func  kernel32, CloseHandle
-                   get_func  kernel32, Sleep
-                   get_func  kernel32, FreeLibrary
-                   get_func  kernel32, HeapAlloc
-                   get_func  kernel32, HeapReAlloc
-                   get_func  kernel32, HeapFree
-                   get_func  kernel32, CreateFile
-                   get_func  kernel32, ReadFile
-                   get_func  kernel32, GetFileSize
-                   get_func  kernel32, GetProcessHeap
-                   get_func  kernel32, CreateEventEx
-                   get_func  kernel32, CreateThread
-                   get_func  kernel32, SetEvent
-                   get_func  kernel32, WaitForSingleObject
-                   get_func  kernel32, WaitForMultipleObjects
+                    getFunc  kernel32, ExitProcess
+                    getFunc  kernel32, GetModuleHandle
+                    getFunc  kernel32, ExitThread
+                    getFunc  kernel32, QueryPerformanceFrequency
+                    getFunc  kernel32, QueryPerformanceCounter
+                    getFunc  kernel32, CloseHandle
+                    getFunc  kernel32, Sleep
+                    getFunc  kernel32, FreeLibrary
+                    getFunc  kernel32, HeapAlloc
+                    getFunc  kernel32, HeapReAlloc
+                    getFunc  kernel32, HeapFree
+                    getFunc  kernel32, CreateFile
+                    getFunc  kernel32, ReadFile
+                    getFunc  kernel32, GetFileSize
+                    getFunc  kernel32, GetProcessHeap
+                    getFunc  kernel32, CreateEventEx
+                    getFunc  kernel32, CreateThread
+                    getFunc  kernel32, SetEvent
+                    getFunc  kernel32, WaitForSingleObject
+                    getFunc  kernel32, WaitForMultipleObjects
 
-                   get_func  user32, wsprintf
-                   get_func  user32, RegisterClass
-                   get_func  user32, CreateWindowEx
-                   get_func  user32, DefWindowProc
-                   get_func  user32, PeekMessage
-                   get_func  user32, DispatchMessage
-                   get_func  user32, LoadCursor
-                   get_func  user32, SetWindowText
-                   get_func  user32, AdjustWindowRect
-                   get_func  user32, GetDC
-                   get_func  user32, ReleaseDC
-                   get_func  user32, PostQuitMessage
-                   get_func  user32, MessageBox
+                    getFunc  user32, wsprintf
+                    getFunc  user32, RegisterClass
+                    getFunc  user32, CreateWindowEx
+                    getFunc  user32, DefWindowProc
+                    getFunc  user32, PeekMessage
+                    getFunc  user32, DispatchMessage
+                    getFunc  user32, LoadCursor
+                    getFunc  user32, SetWindowText
+                    getFunc  user32, AdjustWindowRect
+                    getFunc  user32, GetDC
+                    getFunc  user32, ReleaseDC
+                    getFunc  user32, PostQuitMessage
+                    getFunc  user32, MessageBox
 
-                   get_func  gdi32, CreateDIBSection
-                   get_func  gdi32, CreateCompatibleDC
-                   get_func  gdi32, SelectObject
-                   get_func  gdi32, BitBlt
-                   get_func  gdi32, DeleteDC
-                   get_func  gdi32, DeleteObject
+                    getFunc  gdi32, CreateDIBSection
+                    getFunc  gdi32, CreateCompatibleDC
+                    getFunc  gdi32, SelectObject
+                    getFunc  gdi32, BitBlt
+                    getFunc  gdi32, DeleteDC
+                    getFunc  gdi32, DeleteObject
 
                           ; check CPU
                        call  check_cpu_extensions
@@ -404,7 +433,7 @@ macro get_func lib, proc
                          jz  .error
 
                           ; get process heap
-                       call  [GetProcessHeap]
+                      icall  GetProcessHeap
                         mov  [process_heap], rax
                        test  rax, rax
                          jz  .error
@@ -420,7 +449,7 @@ macro get_func lib, proc
   .error:               xor  eax, eax
                         add  rsp, .k_stack_size
                         ret
-purge get_func
+purge getFunc
 ;=============================================================================
 align 32
 deinit:
@@ -433,7 +462,11 @@ deinit:
 align 32
 update:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 32*2+24
+  virtual at rsp
+  rept 9 n:1 { .param#n dq ? }
+  dalign 32
+  .k_stack_size = $-$$+24
+  end virtual
                         sub  rsp, .k_stack_size
                        call  update_frame_stats
 
@@ -451,14 +484,12 @@ update:
                         xor  edx, edx
                         xor  r8d, r8d
                         mov  r9d, [win_width]
-                        mov  eax, [win_height]
-                        mov  dword[rsp+32], eax
-                        mov  rax, [win_bmp_hdc]
-                        mov  [rsp+40], rax
-                        mov  qword[rsp+48], 0
-                        mov  qword[rsp+56], 0
-                        mov  dword[rsp+64], SRCCOPY
-                       call  [BitBlt]
+                        mov  dword[.param5], eax, [win_height]
+                        mov  [.param6], rax, [win_bmp_hdc]
+                        mov  [.param7], 0
+                        mov  [.param8], 0
+                        mov  dword[.param9], SRCCOPY
+                      icall  BitBlt
 
                         add  rsp, .k_stack_size
                         ret
@@ -483,12 +514,12 @@ end virtual
                         xor  r8d, r8d
                         xor  r9d, r9d
                         mov  dword[rsp+32], PM_REMOVE
-                       call  [PeekMessage]
+                      icall  PeekMessage
                        test  eax, eax
                          jz  .update
 
                         lea  rcx, [.msg+rsp]
-                       call  [DispatchMessage]
+                      icall  DispatchMessage
                         cmp  [.msg.message+rsp], WM_QUIT
                          je  .quit
                         jmp  .main_loop
@@ -498,7 +529,7 @@ end virtual
   .quit:
                        call  deinit
                         xor  ecx, ecx
-                       call  [ExitProcess]
+                      icall  ExitProcess
 ;=============================================================================
 align 32
 win_message_handler:
