@@ -217,23 +217,23 @@ update_frame_stats:
                        call  get_time
                      vmovsd  [.prev_time], xmm0
                      vmovsd  [.prev_update_time], xmm0
-  @@:                  call  get_time                       ; xmm0 = (0,time)
+  @@:                  call  get_time                           ; xmm0 = (0,time)
                      vmovsd  [time], xmm0
-                     vsubsd  xmm1, xmm0, [.prev_time]       ; xmm1 = (0,time_delta)
+                     vsubsd  xmm1, xmm0, [.prev_time]           ; xmm1 = (0,time_delta)
                      vmovsd  [.prev_time], xmm0
                      vxorps  xmm2, xmm2, xmm2
-                  vcvtsd2ss  xmm1, xmm2, xmm1            ; xmm1 = (0,0,0,time_delta)
+                  vcvtsd2ss  xmm1, xmm2, xmm1                   ; xmm1 = (0,0,0,time_delta)
                      vmovss  [time_delta], xmm1
-                     vmovsd  xmm1, [.prev_update_time]     ; xmm1 = (0,prev_update_time)
-                     vsubsd  xmm2, xmm0, xmm1               ; xmm2 = (0,time-prev_update_time)
-                     vmovsd  xmm3, [.k_1_0]                ; xmm3 = (0,1.0)
+                     vmovsd  xmm1, [.prev_update_time]          ; xmm1 = (0,prev_update_time)
+                     vsubsd  xmm2, xmm0, xmm1                   ; xmm2 = (0,time-prev_update_time)
+                     vmovsd  xmm3, [.k_1_0]                     ; xmm3 = (0,1.0)
                     vcomisd  xmm2, xmm3
                          jb  @f
                      vmovsd  [.prev_update_time], xmm0
                         mov  eax, [.frame]
                      vxorpd  xmm1, xmm1, xmm1
-                  vcvtsi2sd  xmm1, xmm1, eax             ; xmm1 = (0,frame)
-                     vdivsd  xmm0, xmm1, xmm2               ; xmm0 = (0,frame/(time-prev_update_time))
+                  vcvtsi2sd  xmm1, xmm1, eax                    ; xmm1 = (0,frame)
+                     vdivsd  xmm0, xmm1, xmm2                   ; xmm0 = (0,frame/(time-prev_update_time))
                      vdivsd  xmm1, xmm2, xmm1
                      vmulsd  xmm1, xmm1, [.k_1000000_0]
                         mov  [.frame], 0
@@ -497,30 +497,30 @@ update:
 align 32
 start:
 ;-----------------------------------------------------------------------------
-virtual at 0
-  rq 5
+  virtual at rsp
+  rept 5 n:1 { .param#n dq ? }
   .msg MSG
-  align 32
-  .k_stack_size = $
-end virtual
+  dalign 32
+  .k_stack_size = $-$$
+  end virtual
                         and  rsp, -32
                         sub  rsp, .k_stack_size
                        call  init
                        test  eax, eax
                          jz  .quit
   .main_loop:
-                        lea  rcx, [.msg+rsp]
+                        lea  rcx, [.msg]
                         xor  edx, edx
                         xor  r8d, r8d
                         xor  r9d, r9d
-                        mov  dword[rsp+32], PM_REMOVE
+                        mov  dword[.param5], PM_REMOVE
                       icall  PeekMessage
                        test  eax, eax
                          jz  .update
 
-                        lea  rcx, [.msg+rsp]
+                        lea  rcx, [.msg]
                       icall  DispatchMessage
-                        cmp  [.msg.message+rsp], WM_QUIT
+                        cmp  [.msg.message], WM_QUIT
                          je  .quit
                         jmp  .main_loop
   .update:
@@ -534,13 +534,13 @@ end virtual
 align 32
 win_message_handler:
 ;-----------------------------------------------------------------------------
-  .k_stack_size = 16*2+8
+  .k_stack_size = 32*1+24
                         sub  rsp, .k_stack_size
                         cmp  edx, WM_KEYDOWN
                          je  .keydown
                         cmp  edx, WM_DESTROY
                          je  .destroy
-                       call  [DefWindowProc]
+                      icall  DefWindowProc
                         jmp  .return
   .keydown:
                         cmp  r8d, VK_ESCAPE
@@ -551,7 +551,7 @@ win_message_handler:
                         jmp  .return
   .destroy:
                         xor  ecx, ecx
-                       call  [PostQuitMessage]
+                      icall  PostQuitMessage
                         xor  eax, eax
   .return:
                         add  rsp, .k_stack_size
