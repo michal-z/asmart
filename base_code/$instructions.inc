@@ -35,3 +35,6 @@ $vpcmpeqd fix vpcmpeqd
 $vmovntdq fix vmovntdq
 $mfence fix mfence
 $je fix je
+$vmovaps fix vmovaps
+$dec fix dec
+$inc fix inc

@@ -26,6 +26,8 @@ INVALID_FILE_SIZE = 0xffffffff
 FILE_ATTRIBUTE_NORMAL = 128
 FILE_FLAG_SEQUENTIAL_SCAN = 0x08000000
 EVENT_ALL_ACCESS = 0x1F0003
+CREATE_EVENT_INITIAL_SET = 2
+CREATE_EVENT_MANUAL_RESET = 1
 
 macro strucOffsetsSize s {
   virtual at 0
@@ -152,21 +154,6 @@ struc BITMAPINFOHEADER {
   .biClrImportant dda 0
   dalign 4
 }
-struc SYSTEM_INFO {
-  dalign 8
-  .:
-  .dwOemId dda 0
-  .dwPageSize dda 0
-  .lpMinimumApplicationAddress dqa 0
-  .lpMaximumApplicationAddress dqa 0
-  .dwActiveProcessorMask dqa 0
-  .dwNumberOfProcessors dda 0
-  .dwProcessorType dda 0
-  .dwAllocationGranularity dda 0
-  .wProcessorLevel dwa 0
-  .wProcessorRevision dwa 0
-  dalign 8
-}
 struc WorkerThread {
   dalign 8
   .:
@@ -180,14 +167,77 @@ strucOffsetsSize BITMAPINFOHEADER
 strucOffsetsSize WorkerThread
 
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+k_max_num_threads equ 64
 
 section '.text' code readable executable
 
 falign
+worker_thread:
+; in: rcx - WorkerThread address
+      virtual at r12
+      .thread WorkerThread
+      end virtual
+        $and rsp, -32
+        $sub rsp, 64
+        $mov r12, rcx
+      .repeat:
+        $mov rcx, [.thread.begin_event]
+        $mov edx, INFINITE
+        $icall WaitForSingleObject
+        $lea rcx, [s_win_class_name]
+        $icall OutputDebugString
+        $mov ecx, 1000
+        $icall Sleep
+        $mov rcx, [.thread.end_event]
+        $icall SetEvent
+        $jmp .repeat
+        $icall ExitThread
+falign
+create_worker_thread:
+; in: rcx - WorkerThread address
+      virtual at rsp
+      rept 6 n:1 { .param#n dq ? }
+      dalign 32
+      .k_stack_size = $-$$+16
+      end virtual
+        ; input thread
+      virtual at r12
+      .thread WorkerThread
+      end virtual
+        $push r12
+        $sub rsp, .k_stack_size
+        $mov r12, rcx
+        ; begin event
+        $mov ecx, 0
+        $mov edx, 0
+        $mov r8d, 0
+        $mov r9d, EVENT_ALL_ACCESS
+        $icall CreateEventEx
+        $mov [.thread.begin_event], rax
+        ; end event
+        $mov ecx, 0
+        $mov edx, 0
+        $mov r8d, 0
+        $mov r9d, EVENT_ALL_ACCESS
+        $icall CreateEventEx
+        $mov [.thread.end_event], rax
+        ; thread
+        $mov ecx, 0
+        $mov edx, 0
+        $lea r8, [worker_thread]
+        $mov r9, r12
+        $mov [.param5], 0
+        $mov [.param6], 0
+        $icall CreateThread
+        $mov [.thread.handle], rax
+        $add rsp, .k_stack_size
+        $pop r12
+        $ret
+falign
 check_cpu_extensions:
         $mov eax, 1
         $cpuid
-        $and ecx, 58001000h          ; check RDRAND,AVX,OSXSAVE,FMA
+        $and ecx, 58001000h          ; check RDRAND, AVX, OSXSAVE, FMA
         $cmp ecx, 58001000h
         $jne .not_supported
         $mov eax, 7
@@ -388,7 +438,12 @@ init:
         $test rax, rax
         $jz .error
       }
-      .k_stack_size = 32*1+24
+      virtual at rsp
+      rq 4
+      dalign 32
+      .k_stack_size = $-$$+8
+      end virtual
+        $push rsi rdi
         $sub  rsp, .k_stack_size
         ; load APIs
         $lea rcx, [s_kernel32_dll]
@@ -427,6 +482,8 @@ init:
         $getFunc kernel32, SetEvent
         $getFunc kernel32, WaitForSingleObject
         $getFunc kernel32, WaitForMultipleObjects
+        $getFunc kernel32, GetActiveProcessorCount
+        $getFunc kernel32, OutputDebugString
         ; user32 functions
         $getFunc user32, wsprintf
         $getFunc user32, RegisterClass
@@ -453,6 +510,20 @@ init:
         $call check_cpu_extensions
         $test eax, eax
         $jz .error
+        ; get number of logical cores
+        $mov ecx, 0
+        $icall GetActiveProcessorCount
+        $dec eax
+        $mov [num_worker_threads], eax
+        ; create worker threads
+        $lea rdi, [worker_threads]
+        $mov esi, [num_worker_threads]
+      .threads_loop:
+        $mov rcx, rdi
+        $call create_worker_thread
+        $add rdi, sizeof.WorkerThread
+        $dec esi
+        $jnz .threads_loop
         ; get process heap
         $icall GetProcessHeap
         $mov [process_heap], rax
@@ -464,11 +535,12 @@ init:
         $jz .error
         ; finish
         $mov eax, 1
-        $add rsp, .k_stack_size
-        $ret
+        $jmp .ret
       .error:
         $xor eax, eax
+      .ret:
         $add rsp, .k_stack_size
+        $pop rdi rsi
         $ret
 falign
 deinit:
@@ -480,11 +552,31 @@ falign
 update:
       virtual at rsp
       rept 9 n:1 { .param#n dq ? }
+      .thread_end_events rq k_max_num_threads
       dalign 32
-      .k_stack_size = $-$$+24
+      .k_stack_size = $-$$+8
       end virtual
+        $push rsi rdi
         $sub rsp, .k_stack_size
         $call update_frame_stats
+        ; dispatch all worker threads
+        $lea rdi, [worker_threads]
+        $xor esi, esi
+      @@:
+        $mov [rsi*8+.thread_end_events], rax, [rdi+WorkerThread.end_event]
+        $mov rcx, [rdi+WorkerThread.begin_event]
+        $icall SetEvent
+        $add rdi, sizeof.WorkerThread
+        $inc esi
+        $cmp esi, [num_worker_threads]
+        $jne @b
+        ; wait for all threads
+        $mov ecx, [num_worker_threads]
+        $lea rdx, [.thread_end_events]
+        $mov r8d, 1
+        $mov r9d, INFINITE
+        $icall WaitForMultipleObjects
+        ; fill some pixels
         $vpcmpeqd ymm0, ymm0, ymm0
         $mov rax, [win_pixels]
         $mov ecx, 100000
@@ -505,7 +597,9 @@ update:
         $mov [.param8], 0
         $mov dword[.param9], SRCCOPY
         $icall BitBlt
+        ; finish
         $add rsp, .k_stack_size
+        $pop rdi rsi
         $ret
 falign
 start:
@@ -568,11 +662,9 @@ win_message_handler:
 
 section '.data' data readable writeable
 
-k_max_num_threads equ 64
-
 dalign 8
-threads rb k_max_num_threads * sizeof.WorkerThread
-num_threads dd 0
+worker_threads rb k_max_num_threads * sizeof.WorkerThread
+num_worker_threads dd 0
 
 dalign 8
 win_handle dq 0
@@ -625,6 +717,8 @@ CreateThread dq 0
 SetEvent dq 0
 WaitForSingleObject dq 0
 WaitForMultipleObjects dq 0
+GetActiveProcessorCount dq 0
+OutputDebugString dq 0
 
 wsprintf dq 0
 RegisterClass dq 0
@@ -674,6 +768,8 @@ s_CreateThread db 'CreateThread', 0
 s_SetEvent db 'SetEvent', 0
 s_WaitForSingleObject db 'WaitForSingleObject', 0
 s_WaitForMultipleObjects db 'WaitForMultipleObjects', 0
+s_GetActiveProcessorCount db 'GetActiveProcessorCount', 0
+s_OutputDebugString db 'OutputDebugStringA', 0
 
 s_wsprintf db 'wsprintfA', 0
 s_RegisterClass db 'RegisterClassA', 0
