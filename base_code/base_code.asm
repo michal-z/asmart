@@ -246,28 +246,28 @@ update_frame_stats:
         $vmovsd [.prev_time], xmm0
         $vmovsd [.prev_update_time], xmm0
       @@:
-        $call get_time                          ; xmm0 = (0,time)
+        $call get_time                          ; xmm0 = (0, time)
         $vmovsd [time], xmm0
-        $vsubsd xmm1, xmm0, [.prev_time]        ; xmm1 = (0,time_delta)
+        $vsubsd xmm1, xmm0, [.prev_time]        ; xmm1 = (0, time_delta)
         $vmovsd [.prev_time], xmm0
         $vxorps xmm2, xmm2, xmm2
-        $vcvtsd2ss xmm1, xmm2, xmm1             ; xmm1 = (0,0,0,time_delta)
+        $vcvtsd2ss xmm1, xmm2, xmm1             ; xmm1 = (0, 0, 0, time_delta)
         $vmovss [time_delta], xmm1
-        $vmovsd xmm1, [.prev_update_time]       ; xmm1 = (0,prev_update_time)
-        $vsubsd xmm2, xmm0, xmm1                ; xmm2 = (0,time-prev_update_time)
-        $vmovsd xmm3, [.k_1_0]                  ; xmm3 = (0,1.0)
+        $vmovsd xmm1, [.prev_update_time]       ; xmm1 = (0, prev_update_time)
+        $vsubsd xmm2, xmm0, xmm1                ; xmm2 = (0, time - prev_update_time)
+        $vmovsd xmm3, [.k_1_0]                  ; xmm3 = (0, 1.0)
         $vcomisd xmm2, xmm3
         $jb @f
         $vmovsd [.prev_update_time], xmm0
         $mov eax, [.frame]
         $vxorpd xmm1, xmm1, xmm1
-        $vcvtsi2sd xmm1, xmm1, eax              ; xmm1 = (0,frame)
-        $vdivsd xmm0, xmm1, xmm2                ; xmm0 = (0,frame/(time-prev_update_time))
+        $vcvtsi2sd xmm1, xmm1, eax              ; xmm1 = (0, frame)
+        $vdivsd xmm0, xmm1, xmm2                ; xmm0 = (0, frame / (time - prev_update_time))
         $vdivsd xmm1, xmm2, xmm1
         $vmulsd xmm1, xmm1, [.k_1000000_0]
         $mov [.frame], 0
         $lea rcx, [.text]
-        $lea rdx, [_win_text_fmt]
+        $lea rdx, [s_win_text_fmt]
         $vcvtsd2si r8, xmm0
         $vcvtsd2si r9, xmm1
         $icall wsprintf
@@ -294,7 +294,7 @@ init_window:
         $zeroStack .k_stack_size
         ; create window class
         $lea [.wc.lpfnWndProc], rax, [win_message_handler]
-        $lea [.wc.lpszClassName], rax, [_win_class_name]
+        $lea [.wc.lpszClassName], rax, [s_win_class_name]
         $xor ecx, ecx
         $icall GetModuleHandle
         $mov [.wc.hInstance], rax
@@ -319,7 +319,7 @@ init_window:
         $sub r11d, [.rect.top]
         ; create window
         $xor ecx, ecx
-        $lea rdx, [_win_class_name]
+        $lea rdx, [s_win_class_name]
         $mov r8, rdx
         $mov r9d, WS_VISIBLE+k_win_style
         $mov dword[.param5], CW_USEDEFAULT
@@ -382,7 +382,7 @@ falign
 init:
       macro $getFunc lib, proc {
         $mov rcx, [lib#_dll]
-        $lea rdx, [_#proc]
+        $lea rdx, [s_#proc]
         $icall GetProcAddress
         $mov [proc], rax
         $test rax, rax
@@ -391,17 +391,17 @@ init:
       .k_stack_size = 32*1+24
         $sub  rsp, .k_stack_size
         ; load APIs
-        $lea rcx, [_kernel32_dll]
+        $lea rcx, [s_kernel32_dll]
         $icall LoadLibrary
         $mov [kernel32_dll], rax
         $test rax, rax
         $jz .error
-        $lea rcx, [_user32_dll]
+        $lea rcx, [s_user32_dll]
         $icall LoadLibrary
         $mov [user32_dll], rax
         $test rax, rax
         $jz .error
-        $lea rcx, [_gdi32_dll]
+        $lea rcx, [s_gdi32_dll]
         $icall LoadLibrary
         $mov [gdi32_dll], rax
         $test rax, rax
@@ -647,58 +647,58 @@ SelectObject dq 0
 BitBlt dq 0
 DeleteObject dq 0
 
-_win_text_fmt db '[%d fps  %d us] Base Code',0
-_win_class_name db 'Base Code',0
+s_win_text_fmt db '[%d fps  %d us] Base Code', 0
+s_win_class_name db 'Base Code', 0
 
-_kernel32_dll db 'kernel32.dll',0
-_user32_dll db 'user32.dll',0
-_gdi32_dll db 'gdi32.dll',0
+s_kernel32_dll db 'kernel32.dll', 0
+s_user32_dll db 'user32.dll', 0
+s_gdi32_dll db 'gdi32.dll', 0
 
-_GetModuleHandle db 'GetModuleHandleA',0
-_ExitProcess db 'ExitProcess',0
-_ExitThread db 'ExitThread',0
-_QueryPerformanceFrequency db 'QueryPerformanceFrequency',0
-_QueryPerformanceCounter db 'QueryPerformanceCounter',0
-_CloseHandle db 'CloseHandle',0
-_Sleep db 'Sleep',0
-_FreeLibrary db 'FreeLibrary',0
-_HeapAlloc db 'HeapAlloc',0
-_HeapReAlloc db 'HeapReAlloc',0
-_HeapFree db 'HeapFree',0
-_CreateFile db 'CreateFileA',0
-_ReadFile db 'ReadFile',0
-_GetFileSize db 'GetFileSize',0
-_GetProcessHeap db 'GetProcessHeap',0
-_CreateEventEx db 'CreateEventExA',0
-_CreateThread db 'CreateThread',0
-_SetEvent db 'SetEvent',0
-_WaitForSingleObject db 'WaitForSingleObject',0
-_WaitForMultipleObjects db 'WaitForMultipleObjects',0
+s_GetModuleHandle db 'GetModuleHandleA', 0
+s_ExitProcess db 'ExitProcess', 0
+s_ExitThread db 'ExitThread', 0
+s_QueryPerformanceFrequency db 'QueryPerformanceFrequency', 0
+s_QueryPerformanceCounter db 'QueryPerformanceCounter', 0
+s_CloseHandle db 'CloseHandle', 0
+s_Sleep db 'Sleep', 0
+s_FreeLibrary db 'FreeLibrary', 0
+s_HeapAlloc db 'HeapAlloc', 0
+s_HeapReAlloc db 'HeapReAlloc', 0
+s_HeapFree db 'HeapFree', 0
+s_CreateFile db 'CreateFileA', 0
+s_ReadFile db 'ReadFile', 0
+s_GetFileSize db 'GetFileSize', 0
+s_GetProcessHeap db 'GetProcessHeap', 0
+s_CreateEventEx db 'CreateEventExA', 0
+s_CreateThread db 'CreateThread', 0
+s_SetEvent db 'SetEvent', 0
+s_WaitForSingleObject db 'WaitForSingleObject', 0
+s_WaitForMultipleObjects db 'WaitForMultipleObjects', 0
 
-_wsprintf db 'wsprintfA',0
-_RegisterClass db 'RegisterClassA',0
-_CreateWindowEx db 'CreateWindowExA',0
-_DefWindowProc db 'DefWindowProcA',0
-_PeekMessage db 'PeekMessageA',0
-_DispatchMessage db 'DispatchMessageA',0
-_LoadCursor db 'LoadCursorA',0
-_SetWindowText db 'SetWindowTextA',0
-_AdjustWindowRect db 'AdjustWindowRect',0
-_GetDC db 'GetDC',0
-_ReleaseDC db 'ReleaseDC',0
-_PostQuitMessage db 'PostQuitMessage',0
-_MessageBox db 'MessageBoxA',0
+s_wsprintf db 'wsprintfA', 0
+s_RegisterClass db 'RegisterClassA', 0
+s_CreateWindowEx db 'CreateWindowExA', 0
+s_DefWindowProc db 'DefWindowProcA', 0
+s_PeekMessage db 'PeekMessageA', 0
+s_DispatchMessage db 'DispatchMessageA', 0
+s_LoadCursor db 'LoadCursorA', 0
+s_SetWindowText db 'SetWindowTextA', 0
+s_AdjustWindowRect db 'AdjustWindowRect', 0
+s_GetDC db 'GetDC', 0
+s_ReleaseDC db 'ReleaseDC', 0
+s_PostQuitMessage db 'PostQuitMessage', 0
+s_MessageBox db 'MessageBoxA', 0
 
-_DeleteDC db 'DeleteDC',0
-_CreateDIBSection db 'CreateDIBSection',0
-_CreateCompatibleDC db 'CreateCompatibleDC',0
-_SelectObject db 'SelectObject',0
-_BitBlt db 'BitBlt',0
-_DeleteObject db 'DeleteObject',0
+s_DeleteDC db 'DeleteDC', 0
+s_CreateDIBSection db 'CreateDIBSection', 0
+s_CreateCompatibleDC db 'CreateCompatibleDC', 0
+s_SelectObject db 'SelectObject', 0
+s_BitBlt db 'BitBlt', 0
+s_DeleteObject db 'DeleteObject', 0
 
 section '.idata' import data readable writeable
 
-dd 0, 0, 0, rva _kernel32_dll, rva _kernel32_table
+dd 0, 0, 0, rva s_kernel32_dll, rva _kernel32_table
 dd 0, 0, 0, 0, 0
 
 dalign 8
@@ -708,6 +708,6 @@ _kernel32_table:
   dq 0
 
 _LoadLibrary dw 0
-db 'LoadLibraryA',0
+db 'LoadLibraryA', 0
 _GetProcAddress dw 0
-db 'GetProcAddress',0
+db 'GetProcAddress', 0
