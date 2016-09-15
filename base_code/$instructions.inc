@@ -42,3 +42,5 @@ $lock fix lock
 $xadd fix xadd
 $jae fix jae
 $vsqrtpd fix vsqrtpd
+$div fix div
+$shl fix shl

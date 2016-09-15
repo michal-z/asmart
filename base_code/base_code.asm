@@ -189,11 +189,28 @@ generate_image:
         $lock $xadd [tile_index], eax
         $cmp eax, k_tile_num
         $jae .ret
-        $mov ecx, 100000
-      @@:
-        $vsqrtpd ymm0, ymm1
-        $dec ecx
-        $jnz @b
+        $xor edx, edx
+        $mov ecx, k_tile_numx
+        $div ecx
+        ; eax = (k_tile_num / k_tile_numx)
+        ; edx = (k_tile_num % k_tile_numx)
+        $mov r14d, k_tile_res
+        $mov r15d, r14d
+        $imul edx, r14d
+        $imul eax, r15d
+        ; eax = (k_tile_num / k_tile_numx) * k_tile_res
+        ; edx = (k_tile_num % k_tile_numx) * k_tile_res
+        $mov r12d, edx                                  ; r12d = x0
+        $mov r13d, eax                                  ; r13d = y0
+        $add r14d, r12d                                 ; r14d = x1 = x0 + k_tile_res
+        $add r15d, r13d                                 ; r15d = y1 = y0 + k_tile_res
+        $imul eax, k_win_resx
+        $add eax, edx
+        $shl eax, 2
+        $mov rbx, [win_pixels]
+        $add rbx, rax
+        $vpcmpeqd ymm0, ymm0, ymm0
+        $vmovdqa [rbx], ymm0
         $jmp .for_each_tile
       .ret:
         $add rsp, .k_stack_size
