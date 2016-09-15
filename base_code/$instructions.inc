@@ -44,3 +44,8 @@ $jae fix jae
 $vsqrtpd fix vsqrtpd
 $div fix div
 $shl fix shl
+$vmovapd fix vmovapd
+$vmaxpd fix vmaxpd
+$vminpd fix vminpd
+$vcvttpd2dq fix vcvttpd2dq
+$vmulpd fix vmulpd

@@ -33,39 +33,39 @@ macro strucOffsetsSize s {
   virtual at 0
     s s
     sizeof.#s = $
-  end virtual
-}
+  end virtual }
+
 macro dalign value* {
-  db ((value - 1) - (($-$$) + (value - 1)) mod value) dup 0
-}
+  db ((value - 1) - (($-$$) + (value - 1)) mod value) dup 0 }
+
 macro $mov op1*, op2*, op3 {
   if op3 eq
         $mov op1, op2
   else
         $mov op2, op3
         $mov op1, op2
-  end if
-}
+  end if }
+
 macro $lea op1*, op2*, op3 {
   if op3 eq
         $lea op1, op2
   else
         $lea op2, op3
         $mov op1, op2
-  end if
-}
+  end if }
+
 macro $iacaBegin {
         $mov ebx, 111
-        db 64h, 67h, 90h
-}
+        db 64h, 67h, 90h }
+
 macro $iacaEnd {
         $mov ebx, 222
-        db 64h, 67h, 90h
-}
+        db 64h, 67h, 90h }
+
 macro $debugBreak {
         $int3
-        $nop
-}
+        $nop }
+
 macro $zeroStack size* {
         $vpxor ymm0, ymm0, ymm0
         $xor eax, eax
@@ -74,35 +74,35 @@ macro $zeroStack size* {
         $vmovdqa [rsp+rax], ymm0
         $add eax, 32
         $sub ecx, 1
-        $jnz @b
-}
+        $jnz @b }
+
 macro $icall target* {
-        $call [target]
-}
+        $call [target] }
+
 macro falign { align 32 }
 
 struc dwa [data] {
   common
   dalign 2
-  . dw data
-}
+  . dw data }
+
 struc dda [data] {
   common
   dalign 4
-  . dd data
-}
+  . dd data }
+
 struc dqa [data] {
   common
   dalign 8
-  . dq data
-}
+  . dq data }
+
 struc POINT {
   dalign 4
   .:
   .x dda 0
   .y dda 0
-  dalign 4
-}
+  dalign 4 }
+
 struc MSG {
   dalign 8
   .:
@@ -112,8 +112,8 @@ struc MSG {
   .lParam dqa 0
   .time dda 0
   .pt POINT
-  dalign 8
-}
+  dalign 8 }
+
 struc WNDCLASS {
   dalign 8
   .:
@@ -127,8 +127,8 @@ struc WNDCLASS {
   .hbrBackground dqa 0
   .lpszMenuName dqa 0
   .lpszClassName dqa 0
-  dalign 8
-}
+  dalign 8 }
+
 struc RECT {
   dalign 4
   .:
@@ -136,8 +136,8 @@ struc RECT {
   .top dda 0
   .right dda 0
   .bottom dda 0
-  dalign 4
-}
+  dalign 4 }
+
 struc BITMAPINFOHEADER {
   dalign 4
   .:
@@ -152,16 +152,15 @@ struc BITMAPINFOHEADER {
   .biYPelsPerMeter dda 0
   .biClrUsed dda 0
   .biClrImportant dda 0
-  dalign 4
-}
+  dalign 4 }
+
 struc WorkerThread {
   dalign 8
   .:
   .handle dqa 0
   .begin_event dqa 0
   .end_event dqa 0
-  dalign 8
-}
+  dalign 8 }
 
 strucOffsetsSize BITMAPINFOHEADER
 strucOffsetsSize WorkerThread
@@ -208,9 +207,29 @@ generate_image:
         $add eax, edx
         $shl eax, 2
         $mov rbx, [win_pixels]
-        $add rbx, rax
-        $vpcmpeqd ymm0, ymm0, ymm0
-        $vmovdqa [rbx], ymm0
+        $add rbx, rax                                   ; start of the tile
+      .for_each_4x2:
+        $vmovapd ymm0, [k_1_0]
+        $vmovapd ymm1, ymm0
+        $vmovapd ymm2, ymm0
+        $vmovapd ymm3, ymm0
+        $vmovapd ymm4, ymm0
+        $vmovapd ymm5, ymm0
+        ; clamp to [0.0 ; 1.0]
+        $vxorpd ymm14, ymm14, ymm14
+        $vmovapd ymm15, [k_1_0]
+        $vmovapd ymm13, [k_255_0]
+        rept 6 n:0 {
+        $vmaxpd ymm#n, ymm#n, ymm14 }
+        rept 6 n:0 {
+        $vminpd ymm#n, ymm#n, ymm15 }
+        rept 6 n:0 {
+        $vmulpd ymm#n, ymm#n, ymm13 }
+        rept 6 n:0 {
+        $vcvttpd2dq xmm#n, ymm#n }
+        $vmovdqa [rbx], xmm0
+        $vmovdqa [rbx+4*k_win_resx], ymm0
+
         $jmp .for_each_tile
       .ret:
         $add rsp, .k_stack_size
@@ -219,9 +238,9 @@ generate_image:
 falign
 worker_thread:
 ; in: rcx - WorkerThread address
-      virtual at r12
+        virtual at r12
       .thread WorkerThread
-      end virtual
+        end virtual
         $and rsp, -32
         $sub rsp, 32
         $mov r12, rcx
@@ -236,15 +255,16 @@ worker_thread:
 falign
 create_worker_thread:
 ; in: rcx - WorkerThread address
-      virtual at rsp
-      rept 6 n:1 { .param#n dq ? }
-      dalign 32
+        virtual at rsp
+        rept 6 n:1 {
+      .param#n dq ? }
+        dalign 32
       .k_stack_size = $-$$+16
-      end virtual
-      ; input thread
-      virtual at r12
+        end virtual
+        ; input thread
+        virtual at r12
       .thread WorkerThread
-      end virtual
+        end virtual
         $push r12
         $sub rsp, .k_stack_size
         $mov r12, rcx
@@ -323,12 +343,12 @@ get_time:
         $ret
 falign
 update_frame_stats:
-      virtual at rsp
-      rq 4
+        virtual at rsp
+        rq 4
       .text rb 64
-      dalign 32
+        dalign 32
       .k_stack_size = $-$$+24
-      end virtual
+        end virtual
         $sub rsp, .k_stack_size
         $mov rax, [.prev_time]
         $test rax, rax
@@ -371,14 +391,15 @@ update_frame_stats:
         $ret
 falign
 init_window:
-      virtual at rsp
-      rept 12 n:1 { .param#n dq ? }
+        virtual at rsp
+        rept 12 n:1 {
+      .param#n dq ? }
       .wc WNDCLASS
       .rect RECT
       .bmp_info BITMAPINFOHEADER
-      dalign 32
+        dalign 32
       .k_stack_size = $-$$+16
-      end virtual
+        end virtual
         $push  rsi
         ; alloc and clear the stack
         $sub rsp, .k_stack_size
@@ -469,21 +490,21 @@ init_window:
         $add rsp, .k_stack_size
         $pop rsi
         $ret
-falign
-init:
-      macro $getFunc lib, proc {
+; helper macro for loading entry points
+macro $getFunc lib, proc {
         $mov rcx, [lib#_dll]
         $lea rdx, [s_#proc]
         $icall GetProcAddress
         $mov [proc], rax
         $test rax, rax
-        $jz .error
-      }
-      virtual at rsp
-      rq 4
-      dalign 32
+        $jz .error }
+falign
+init:
+        virtual at rsp
+        rq 4
+        dalign 32
       .k_stack_size = $-$$+8
-      end virtual
+        end virtual
         $push rsi rdi
         $sub  rsp, .k_stack_size
         ; load APIs
@@ -545,7 +566,6 @@ init:
         $getFunc gdi32, BitBlt
         $getFunc gdi32, DeleteDC
         $getFunc gdi32, DeleteObject
-      purge $getFunc
         ; check CPU
         $call check_cpu_extensions
         $test eax, eax
@@ -582,6 +602,7 @@ init:
         $add rsp, .k_stack_size
         $pop rdi rsi
         $ret
+purge $getFunc
 falign
 deinit:
       .k_stack_size = 32*1+24
@@ -693,6 +714,10 @@ win_message_handler:
         $ret
 
 section '.data' data readable writeable
+
+dalign 32
+k_1_0: dq 4 dup 1.0
+k_255_0: dq 4 dup 255.0
 
 dalign 8
 worker_threads rb k_max_num_threads * sizeof.WorkerThread
