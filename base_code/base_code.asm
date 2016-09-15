@@ -166,11 +166,39 @@ struc WorkerThread {
 strucOffsetsSize BITMAPINFOHEADER
 strucOffsetsSize WorkerThread
 
-k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
 k_max_num_threads equ 64
+
+k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
+k_win_resx equ 1280
+k_win_resy equ 720
+
+k_tile_res equ 80
+k_tile_numx equ (k_win_resx / k_tile_res)
+k_tile_numy equ (k_win_resy / k_tile_res)
+k_tile_num equ (k_tile_numx * k_tile_numy)
 
 section '.text' code readable executable
 
+falign
+generate_image:
+      .k_stack_size = 32*1+24
+        $push rsi rdi rbx rbp r12 r13 r14 r15
+        $sub rsp, .k_stack_size
+      .for_each_tile:
+        $mov eax, 1
+        $lock $xadd [tile_index], eax
+        $cmp eax, k_tile_num
+        $jae .ret
+        $mov ecx, 100000
+      @@:
+        $vsqrtpd ymm0, ymm1
+        $dec ecx
+        $jnz @b
+        $jmp .for_each_tile
+      .ret:
+        $add rsp, .k_stack_size
+        $pop r15 r14 r13 r12 rbp rbx rdi rsi
+        $ret
 falign
 worker_thread:
 ; in: rcx - WorkerThread address
@@ -178,20 +206,16 @@ worker_thread:
       .thread WorkerThread
       end virtual
         $and rsp, -32
-        $sub rsp, 64
+        $sub rsp, 32
         $mov r12, rcx
       .repeat:
         $mov rcx, [.thread.begin_event]
         $mov edx, INFINITE
         $icall WaitForSingleObject
-        $lea rcx, [s_win_class_name]
-        $icall OutputDebugString
-        $mov ecx, 1000
-        $icall Sleep
+        $call generate_image
         $mov rcx, [.thread.end_event]
         $icall SetEvent
         $jmp .repeat
-        $icall ExitThread
 falign
 create_worker_thread:
 ; in: rcx - WorkerThread address
@@ -200,7 +224,7 @@ create_worker_thread:
       dalign 32
       .k_stack_size = $-$$+16
       end virtual
-        ; input thread
+      ; input thread
       virtual at r12
       .thread WorkerThread
       end virtual
@@ -496,7 +520,6 @@ init:
         $getFunc user32, AdjustWindowRect
         $getFunc user32, GetDC
         $getFunc user32, ReleaseDC
-        $getFunc user32, PostQuitMessage
         $getFunc user32, MessageBox
         ; gdi32 functions
         $getFunc gdi32, CreateDIBSection
@@ -559,6 +582,7 @@ update:
         $push rsi rdi
         $sub rsp, .k_stack_size
         $call update_frame_stats
+        $mov [tile_index], 0
         ; dispatch all worker threads
         $lea rdi, [worker_threads]
         $xor esi, esi
@@ -570,22 +594,13 @@ update:
         $inc esi
         $cmp esi, [num_worker_threads]
         $jne @b
+        $call generate_image
         ; wait for all threads
         $mov ecx, [num_worker_threads]
         $lea rdx, [.thread_end_events]
         $mov r8d, 1
         $mov r9d, INFINITE
         $icall WaitForMultipleObjects
-        ; fill some pixels
-        $vpcmpeqd ymm0, ymm0, ymm0
-        $mov rax, [win_pixels]
-        $mov ecx, 100000
-      @@:
-        $vmovntdq [rax], ymm0
-        $add rax, 32
-        $sub ecx, 1
-        $jnz @b
-        $mfence
         ; transfer image data
         $mov rcx, [win_hdc]
         $xor edx, edx
@@ -625,7 +640,7 @@ start:
         $jz .update
         $lea rcx, [.msg]
         $icall DispatchMessage
-        $cmp [.msg.message], WM_QUIT
+        $cmp [quit], 1
         $je .quit
         $jmp .main_loop
       .update:
@@ -643,19 +658,19 @@ win_message_handler:
         $je .keydown
         $cmp edx, WM_DESTROY
         $je .destroy
+      .default:
         $icall DefWindowProc
         $jmp .return
       .keydown:
         $cmp r8d, VK_ESCAPE
-        $jne .return
-        $xor ecx, ecx
-        $icall PostQuitMessage
+        $jne .default
+        $mov [quit], 1
         $xor eax, eax
         $jmp .return
       .destroy:
-        $xor ecx, ecx
-        $icall PostQuitMessage
+        $mov [quit], 1
         $xor eax, eax
+        $jmp .return
       .return:
         $add rsp, .k_stack_size
         $ret
@@ -664,7 +679,10 @@ section '.data' data readable writeable
 
 dalign 8
 worker_threads rb k_max_num_threads * sizeof.WorkerThread
-num_worker_threads dd 0
+
+num_worker_threads dda 0
+tile_index dda 0
+quit dda 0
 
 dalign 8
 win_handle dq 0
@@ -672,13 +690,13 @@ win_hdc dq 0
 win_bmp_handle dq 0
 win_bmp_hdc dq 0
 win_pixels dq 0
-win_width dd 1280
-win_height dd 720
+win_width dd k_win_resx
+win_height dd k_win_resy
 
 dalign 8
 process_heap dq 0
 time dq 0
-time_delta dd 0,0
+time_delta dd 0, 0
 
 dalign 8
 get_time.perf_counter dq 0
@@ -731,7 +749,6 @@ SetWindowText dq 0
 AdjustWindowRect dq 0
 GetDC dq 0
 ReleaseDC dq 0
-PostQuitMessage dq 0
 MessageBox dq 0
 
 DeleteDC dq 0
@@ -782,7 +799,6 @@ s_SetWindowText db 'SetWindowTextA', 0
 s_AdjustWindowRect db 'AdjustWindowRect', 0
 s_GetDC db 'GetDC', 0
 s_ReleaseDC db 'ReleaseDC', 0
-s_PostQuitMessage db 'PostQuitMessage', 0
 s_MessageBox db 'MessageBoxA', 0
 
 s_DeleteDC db 'DeleteDC', 0

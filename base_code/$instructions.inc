@@ -38,3 +38,7 @@ $je fix je
 $vmovaps fix vmovaps
 $dec fix dec
 $inc fix inc
+$lock fix lock
+$xadd fix xadd
+$jae fix jae
+$vsqrtpd fix vsqrtpd
