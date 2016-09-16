@@ -49,3 +49,5 @@ $vmaxpd fix vmaxpd
 $vminpd fix vminpd
 $vcvttpd2dq fix vcvttpd2dq
 $vmulpd fix vmulpd
+$vpslld fix vpslld
+$vpor fix vpor

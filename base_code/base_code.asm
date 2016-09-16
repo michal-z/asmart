@@ -211,10 +211,10 @@ generate_image:
       .for_each_4x2:
         $vmovapd ymm0, [k_1_0]
         $vmovapd ymm1, ymm0
-        $vmovapd ymm2, ymm0
+        $vxorpd ymm2, ymm2, ymm2
         $vmovapd ymm3, ymm0
         $vmovapd ymm4, ymm0
-        $vmovapd ymm5, ymm0
+        $vxorpd ymm5, ymm5, ymm5
         ; clamp to [0.0 ; 1.0]
         $vxorpd ymm14, ymm14, ymm14
         $vmovapd ymm15, [k_1_0]
@@ -227,9 +227,25 @@ generate_image:
         $vmulpd ymm#n, ymm#n, ymm13 }
         rept 6 n:0 {
         $vcvttpd2dq xmm#n, ymm#n }
+        $vpslld xmm0, xmm0, 16
+        $vpslld xmm1, xmm1, 8
+        $vpslld xmm3, xmm3, 16
+        $vpslld xmm4, xmm4, 8
+        $vpor xmm0, xmm0, xmm1
+        $vpor xmm3, xmm3, xmm4
+        $vpor xmm0, xmm0, xmm2
+        $vpor xmm3, xmm3, xmm5
         $vmovdqa [rbx], xmm0
-        $vmovdqa [rbx+4*k_win_resx], ymm0
-
+        $vmovdqa [rbx+4*k_win_resx], xmm3
+        $add rbx, 16
+        $add r12d, 4
+        $cmp r12d, r14d
+        $jne .for_each_4x2
+        $add rbx, 2*(k_win_resx*4)-k_tile_res*4
+        $sub r12d, k_tile_res
+        $add r13d, 2
+        $cmp r13d, r15d
+        $jne .for_each_4x2
         $jmp .for_each_tile
       .ret:
         $add rsp, .k_stack_size
@@ -611,12 +627,13 @@ deinit:
         $ret
 falign
 update:
-      virtual at rsp
-      rept 9 n:1 { .param#n dq ? }
+        virtual at rsp
+        rept 9 n:1 {
+      .param#n dq ? }
       .thread_end_events rq k_max_num_threads
-      dalign 32
+        dalign 32
       .k_stack_size = $-$$+8
-      end virtual
+        end virtual
         $push rsi rdi
         $sub rsp, .k_stack_size
         $call update_frame_stats
@@ -656,12 +673,13 @@ update:
         $ret
 falign
 start:
-      virtual at rsp
-      rept 5 n:1 { .param#n dq ? }
+        virtual at rsp
+        rept 5 n:1 {
+      .param#n dq ? }
       .msg MSG
-      dalign 32
+        dalign 32
       .k_stack_size = $-$$
-      end virtual
+        end virtual
         $and rsp, -32
         $sub rsp, .k_stack_size
         $call init
