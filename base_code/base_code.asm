@@ -168,10 +168,10 @@ strucOffsetsSize WorkerThread
 k_max_num_threads equ 64
 
 k_win_style equ WS_OVERLAPPED+WS_SYSMENU+WS_CAPTION+WS_MINIMIZEBOX
-k_win_resx equ 1280
-k_win_resy equ 720
+k_win_resx equ 1024
+k_win_resy equ 1024
 
-k_tile_res equ 80
+k_tile_res equ 64
 k_tile_numx equ (k_win_resx / k_tile_res)
 k_tile_numy equ (k_win_resy / k_tile_res)
 k_tile_num equ (k_tile_numx * k_tile_numy)
@@ -235,8 +235,8 @@ generate_image:
         $vpor xmm3, xmm3, xmm4
         $vpor xmm0, xmm0, xmm2
         $vpor xmm3, xmm3, xmm5
-        $vmovdqa [rbx], xmm0
-        $vmovdqa [rbx+4*k_win_resx], xmm3
+        $vmovntdq [rbx], xmm0
+        $vmovntdq [rbx+4*k_win_resx], xmm3
         $add rbx, 16
         $add r12d, 4
         $cmp r12d, r14d
@@ -248,6 +248,7 @@ generate_image:
         $jne .for_each_4x2
         $jmp .for_each_tile
       .ret:
+        $mfence
         $add rsp, .k_stack_size
         $pop r15 r14 r13 r12 rbp rbx rdi rsi
         $ret
