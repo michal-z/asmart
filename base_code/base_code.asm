@@ -180,7 +180,11 @@ section '.text' code readable executable
 
 falign
 generate_image:
-      .k_stack_size = 32*1+24
+      virtual at rsp
+        rq 4
+        dalign 32
+        .k_stack_size = $-$$+24
+      end virtual
         $push rsi rdi rbx rbp r12 r13 r14 r15
         $sub rsp, .k_stack_size
       .for_each_tile:
@@ -255,9 +259,9 @@ generate_image:
 falign
 worker_thread:
 ; in: rcx - WorkerThread address
-        virtual at r12
-      .thread WorkerThread
-        end virtual
+      virtual at r12
+        .thread WorkerThread
+      end virtual
         $and rsp, -32
         $sub rsp, 32
         $mov r12, rcx
@@ -272,16 +276,16 @@ worker_thread:
 falign
 create_worker_thread:
 ; in: rcx - WorkerThread address
-        virtual at rsp
+      virtual at rsp
         rept 6 n:1 {
-      .param#n dq ? }
+        .param#n dq ? }
         dalign 32
-      .k_stack_size = $-$$+16
-        end virtual
+        .k_stack_size = $-$$+16
+      end virtual
         ; input thread
-        virtual at r12
-      .thread WorkerThread
-        end virtual
+      virtual at r12
+        .thread WorkerThread
+      end virtual
         $push r12
         $sub rsp, .k_stack_size
         $mov r12, rcx
@@ -337,7 +341,11 @@ check_cpu_extensions:
         $ret
 falign
 get_time:
-      .k_stack_size = 32*1+24
+      virtual at rsp
+        rq 4
+        dalign 32
+        .k_stack_size = $-$$+24
+      end virtual
         $sub rsp, .k_stack_size
         $mov rax, [.perf_freq]
         $test rax, rax
@@ -360,12 +368,12 @@ get_time:
         $ret
 falign
 update_frame_stats:
-        virtual at rsp
+      virtual at rsp
         rq 4
-      .text rb 64
+        .text rb 64
         dalign 32
-      .k_stack_size = $-$$+24
-        end virtual
+        .k_stack_size = $-$$+24
+      end virtual
         $sub rsp, .k_stack_size
         $mov rax, [.prev_time]
         $test rax, rax
@@ -408,16 +416,16 @@ update_frame_stats:
         $ret
 falign
 init_window:
-        virtual at rsp
+      virtual at rsp
         rept 12 n:1 {
-      .param#n dq ? }
-      .wc WNDCLASS
-      .rect RECT
-      .bmp_info BITMAPINFOHEADER
+        .param#n dq ? }
+        .wc WNDCLASS
+        .rect RECT
+        .bmp_info BITMAPINFOHEADER
         dalign 32
-      .k_stack_size = $-$$+16
-        end virtual
-        $push  rsi
+        .k_stack_size = $-$$+16
+      end virtual
+        $push rsi
         ; alloc and clear the stack
         $sub rsp, .k_stack_size
         $zeroStack .k_stack_size
@@ -517,11 +525,11 @@ macro $getFunc lib, proc {
         $jz .error }
 falign
 init:
-        virtual at rsp
+      virtual at rsp
         rq 4
         dalign 32
-      .k_stack_size = $-$$+8
-        end virtual
+        .k_stack_size = $-$$+8
+      end virtual
         $push rsi rdi
         $sub  rsp, .k_stack_size
         ; load APIs
@@ -583,6 +591,7 @@ init:
         $getFunc gdi32, BitBlt
         $getFunc gdi32, DeleteDC
         $getFunc gdi32, DeleteObject
+        purge $getFunc
         ; check CPU
         $call check_cpu_extensions
         $test eax, eax
@@ -619,22 +628,18 @@ init:
         $add rsp, .k_stack_size
         $pop rdi rsi
         $ret
-purge $getFunc
 falign
 deinit:
-      .k_stack_size = 32*1+24
-        $sub rsp, .k_stack_size
-        $add rsp, .k_stack_size
         $ret
 falign
 update:
-        virtual at rsp
+      virtual at rsp
         rept 9 n:1 {
-      .param#n dq ? }
-      .thread_end_events rq k_max_num_threads
+        .param#n dq ? }
+        .thread_end_events rq k_max_num_threads
         dalign 32
-      .k_stack_size = $-$$+8
-        end virtual
+        .k_stack_size = $-$$+8
+      end virtual
         $push rsi rdi
         $sub rsp, .k_stack_size
         $call update_frame_stats
@@ -674,13 +679,13 @@ update:
         $ret
 falign
 start:
-        virtual at rsp
+      virtual at rsp
         rept 5 n:1 {
-      .param#n dq ? }
-      .msg MSG
+        .param#n dq ? }
+        .msg MSG
         dalign 32
-      .k_stack_size = $-$$
-        end virtual
+        .k_stack_size = $-$$
+      end virtual
         $and rsp, -32
         $sub rsp, .k_stack_size
         $call init
@@ -709,7 +714,11 @@ start:
         $icall ExitProcess
 falign
 win_message_handler:
-      .k_stack_size = 32*1+24
+      virtual at rsp
+        rq 4
+        dalign 32
+        .k_stack_size = $-$$+24
+      end virtual
         $sub rsp, .k_stack_size
         $cmp edx, WM_KEYDOWN
         $je .keydown
